@@ -2,9 +2,9 @@
 Gamified Math Learning Web App with Dynamic Difficulty Adjustment.
 
 ## Tools Used
-**Django** - A Python-based web framework that runs on a web server for testing and back-end development. 
-**VS Code** - The main IDE used for developing Equinox.
-**Bootstrap** - A front-end CSS framework used for styling and layout templates.
+**Django** - A Python-based web framework that runs on a web server for testing and back-end development.\n
+**VS Code** - The main IDE used for developing Equinox.\n
+**Bootstrap** - A front-end CSS framework used for styling and layout templates.\n
 **React** - A Javascript library for building user interfaces.
 
 ## Planned Updates
