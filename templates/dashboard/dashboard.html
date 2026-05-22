@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h1 class="mb-4">
+    Welcome, {{ user.username }}!
+</h1>
+
+<p class="lead">
+    Ready to improve your mathematical expertise today?
+</p>
+
+<div class="row mt-5">
+
+    <div class="col-md-6 col-lg-3 mb-4">
+
+        <div class="card shadow-sm h-100">
+
+            <div class="card-body">
+
+                <h5 class="card-title">
+                    Topic Catalogue
+                </h5>
+
+                <p class="card-text">
+                    Review available K-12 math topics.
+                </p>
+
+                <a href="/topics/" class="btn btn-primary">
+                    Open
+                </a>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3 mb-4">
+
+        <div class="card shadow-sm h-100">
+
+            <div class="card-body">
+
+                <h5 class="card-title">
+                    Progress History
+                </h5>
+
+                <p class="card-text">
+                    View your quiz progress and performance.
+                </p>
+
+                <a href="/progress/" class="btn btn-success">
+                    Open
+                </a>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3 mb-4">
+
+        <div class="card shadow-sm h-100">
+
+            <div class="card-body">
+
+                <h5 class="card-title">
+                    Achievements
+                </h5>
+
+                <p class="card-text">
+                    View unlocked badges and rewards.
+                </p>
+
+                <a href="#" class="btn btn-primary">
+                    Open
+                </a>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3 mb-4">
+
+        <div class="card shadow-sm h-100">
+
+            <div class="card-body">
+
+                <h5 class="card-title">
+                    Start Challenge Playthrough
+                </h5>
+
+                <p class="card-text">
+                    Begin a new adaptive quiz challenge.
+                </p>
+
+                <a href="/topics/" class="btn btn-danger">
+                    Start
+                </a>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

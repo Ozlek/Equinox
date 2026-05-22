@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h1 class="mb-4">
+    {{ topic.name }} Playthrough
+</h1>
+
+<div class="mb-3">
+
+    <strong>
+        Question {{ question_number }}
+        of
+        {{ total_questions }}
+    </strong>
+
+</div>
+
+<div class="mb-3">
+
+    <strong>
+        Current Score:
+        {{ score }}
+    </strong>
+
+</div>
+
+<div class="card shadow-sm">
+
+    <div class="card-body">
+
+        <h4 class="mb-4">
+            {{ question.question_text }}
+        </h4>
+
+        <form method="POST">
+
+            {% csrf_token %}
+
+            <div class="form-check mb-3">
+
+                <input
+                    class="form-check-input"
+                    type="radio"
+                    name="answer"
+                    value="A"
+                    required
+                >
+
+                <label class="form-check-label">
+                    {{ question.choice_a }}
+                </label>
+
+            </div>
+
+            <div class="form-check mb-3">
+
+                <input
+                    class="form-check-input"
+                    type="radio"
+                    name="answer"
+                    value="B"
+                >
+
+                <label class="form-check-label">
+                    {{ question.choice_b }}
+                </label>
+
+            </div>
+
+            <div class="form-check mb-3">
+
+                <input
+                    class="form-check-input"
+                    type="radio"
+                    name="answer"
+                    value="C"
+                >
+
+                <label class="form-check-label">
+                    {{ question.choice_c }}
+                </label>
+
+            </div>
+
+            <div class="form-check mb-3">
+
+                <input
+                    class="form-check-input"
+                    type="radio"
+                    name="answer"
+                    value="D"
+                >
+
+                <label class="form-check-label">
+                    {{ question.choice_d }}
+                </label>
+
+            </div>
+
+            <button class="btn btn-success">
+                Submit Answer
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}
