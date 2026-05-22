@@ -5,7 +5,7 @@ Gamified Math Learning Web App with Dynamic Difficulty Adjustment.
 **Django** - A Python-based web framework that runs on a web server for testing and back-end development.\
 **VS Code** - The main IDE used for developing Equinox.\
 **Bootstrap** - A front-end CSS framework used for styling and layout templates.\
-**React** - A Javascript library for building user interfaces.\
+**React** - A Javascript library for building user interfaces.
 
 ## Planned Updates
 - **UX & UI Design Overhauls**
