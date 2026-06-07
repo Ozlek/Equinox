@@ -6,106 +6,107 @@
     {{ topic.name }} Playthrough
 </h1>
 
-<div class="mb-3">
-
-    <strong>
-        Question {{ question_number }}
-        of
-        {{ total_questions }}
-    </strong>
-
-</div>
-
-<div class="mb-3">
-
-    <strong>
-        Current Score:
-        {{ score }}
-    </strong>
-
-</div>
-
-<div class="card shadow-sm">
-
-    <div class="card-body">
-
-        <h4 class="mb-4">
-            {{ question.question_text }}
-        </h4>
-
-        <form method="POST">
-
-            {% csrf_token %}
-
-            <div class="form-check mb-3">
-
-                <input
-                    class="form-check-input"
-                    type="radio"
-                    name="answer"
-                    value="A"
-                    required
-                >
-
-                <label class="form-check-label">
-                    {{ question.choice_a }}
-                </label>
-
-            </div>
-
-            <div class="form-check mb-3">
-
-                <input
-                    class="form-check-input"
-                    type="radio"
-                    name="answer"
-                    value="B"
-                >
-
-                <label class="form-check-label">
-                    {{ question.choice_b }}
-                </label>
-
-            </div>
-
-            <div class="form-check mb-3">
-
-                <input
-                    class="form-check-input"
-                    type="radio"
-                    name="answer"
-                    value="C"
-                >
-
-                <label class="form-check-label">
-                    {{ question.choice_c }}
-                </label>
-
-            </div>
-
-            <div class="form-check mb-3">
-
-                <input
-                    class="form-check-input"
-                    type="radio"
-                    name="answer"
-                    value="D"
-                >
-
-                <label class="form-check-label">
-                    {{ question.choice_d }}
-                </label>
-
-            </div>
-
-            <button class="btn btn-success">
-                Submit Answer
-            </button>
-
-        </form>
-
+{% if error_message %}
+    <div class="alert alert-danger shadow-sm" role="alert">
+        <h4 class="alert-heading font-weight-bold">Setup Incomplete</h4>
+        <p class="mb-3">{{ error_message }}</p>
+        <hr>
+        <a href="/topics/" class="btn btn-outline-danger btn-sm">
+            Return to Topics Catalogue
+        </a>
+    </div>
+{% else %}
+    <div class="mb-3">
+        <strong>
+            Question {{ question_number }} of {{ total_questions }}
+        </strong>
     </div>
 
-</div>
+    <div class="mb-3">
+        <strong>
+            Current Score: {{ score }}
+        </strong>
+    </div>
+
+    <div class="mb-4">
+        <strong>Adaptive Difficulty:</strong> 
+        {% if current_tier == "Novice" %}
+            <span class="badge bg-info text-dark">Novice</span>
+        {% elif current_tier == "Intermediate" %}
+            <span class="badge bg-warning text-dark">Intermediate</span>
+        {% elif current_tier == "Advanced" %}
+            <span class="badge bg-danger">Advanced</span>
+        {% else %}
+            <span class="badge bg-dark text-light">🌟 Expert</span>
+        {% endif %}
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h4 class="mb-4">
+                {{ question.question_text }}
+            </h4>
+
+            <form method="POST">
+                {% csrf_token %}
+
+                {% if question.choice_a %}
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="answer" value="A" required>
+                        <label class="form-check-label">{{ question.choice_a }}</label>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="answer" value="B">
+                        <label class="form-check-label">{{ question.choice_b }}</label>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="answer" value="C">
+                        <label class="form-check-label">{{ question.choice_c }}</label>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="answer" value="D">
+                        <label class="form-check-label">{{ question.choice_d }}</label>
+                    </div>
+                {% else %}
+                    <div class="mb-4">
+                        <label for="textAnswer" class="form-label text-muted">Type your answer below:</label>
+                        <input 
+                            type="text" 
+                            class="form-control form-control-lg shadow-sm" 
+                            id="textAnswer" 
+                            name="answer" 
+                            placeholder="Type numbers, letters, fractions, or symbols..." 
+                            autocomplete="off"
+                            required
+                        >
+                    </div>
+                {% endif %}
+
+                <button class="btn btn-success mt-2">
+                    Submit Answer
+                </button>
+            </form>
+
+{% endif %} 
+
+<script>
+    let submittingAnswer = false;
+
+    const quizForm = document.querySelector('form');
+    if (quizForm) {
+        quizForm.addEventListener('submit', () => {
+            submittingAnswer = true;
+        });
+    }
+
+    window.addEventListener('beforeunload', (event) => {
+        if (!submittingAnswer) {
+            const message = "Are you sure you want to leave? Your current challenge progress will be lost.";
+            event.preventDefault();
+            event.returnValue = message; 
+            return message;
+        }
+    });
+</script>
 
 {% endblock %}

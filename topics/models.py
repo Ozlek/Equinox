@@ -11,7 +11,7 @@ class Topic(models.Model):
         ('Statistics', 'Statistics'),
     ]
 
-    DIFFICULTY_CHOICES = [
+    GRADE_CHOICES = [
         ('Elementary', 'Elementary'),
         ('Junior High', 'Junior High'),
         ('Senior High', 'Senior High'),
@@ -24,7 +24,7 @@ class Topic(models.Model):
 
     grade_level = models.CharField(
         max_length=50,
-        choices=DIFFICULTY_CHOICES
+        choices=GRADE_CHOICES
     )
 
     description = models.TextField()
