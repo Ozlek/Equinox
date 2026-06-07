@@ -9,7 +9,7 @@ Gamified Math Learning Web App with Dynamic Difficulty Adjustment.
 
 ## Planned Updates
 - **UX & UI Design Overhauls**
-- **Dynamic Difficulty Adjustment System Update**
+- **Dynamic Difficulty Adjustment System Update** [ :white_check_mark: ]
 - **Gamification Update**
 - **Catalogue Expansions (Includes both topics and questions)**
 
@@ -24,3 +24,10 @@ Gamified Math Learning Web App with Dynamic Difficulty Adjustment.
   - Progress History/Tracking
   - Playthrough Session (Baseplate for testing, planned features and overhauls in the future)
 - Uses bootstrap as base templates for UI. Future UX design updates are planned.
+
+**v1.1.0: Dynamic Difficulty Adjustment Engine Release** (June 7, 2026)
+- DDA for Equinox tested and released
+- Reworked database structures
+- Question Generator for testing
+- Minor bug fixes
+  
