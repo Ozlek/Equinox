@@ -33,3 +33,5 @@ Gamified Math Learning Web App with Dynamic Difficulty Adjustment.
 - Minor bug fixes
 
 **v1.2.0: React + Django Decoupled Architecture Recode** (June 10, 2025)
+- Seamlessly integrated React to Django, converting the architecture into a Decoupled Architecture
+- Complete recode
