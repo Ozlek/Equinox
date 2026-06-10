@@ -9,6 +9,7 @@ Gamified Math Learning Web App with Dynamic Difficulty Adjustment.
 
 ## Planned Updates
 - **UX & UI Design Overhauls**
+- **React + Django Decoupled Architecture Recode** [ :white_check_mark: ]
 - **Dynamic Difficulty Adjustment System Update** [ :white_check_mark: ]
 - **Gamification Update**
 - **Catalogue Expansions (Includes both topics and questions)**
@@ -30,4 +31,5 @@ Gamified Math Learning Web App with Dynamic Difficulty Adjustment.
 - Reworked database structures
 - Question Generator for testing
 - Minor bug fixes
-  
+
+**v1.2.0: React + Django Decoupled Architecture Recode** (June 10, 2025)
