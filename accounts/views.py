@@ -1,56 +1,58 @@
-from django.shortcuts import render, redirect
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
 from django.contrib.auth import login, logout
 from django.contrib.auth.forms import AuthenticationForm
-
 from .forms import RegisterForm
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login_api(request):
+    # Pass the JSON payload into Django's native authentication validator
+    form = AuthenticationForm(data=request.data)
+    if form.is_valid():
+        user = form.get_user()
+        login(request, user) # Sets the browser session cookie automatically!
+        return Response({
+            "authenticated": True,
+            "username": user.username,
+            "message": "Login successful"
+        }, status=status.HTTP_200_OK)
+        
+    return Response({
+        "authenticated": False,
+        "errors": form.errors
+    }, status=status.HTTP_400_BAD_REQUEST)
 
-def register_view(request):
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register_api(request):
+    form = RegisterForm(request.data)
+    if form.is_valid():
+        user = form.save()
+        login(request, user) # Automatically log in the student post-registration
+        return Response({
+            "authenticated": True,
+            "username": user.username,
+            "message": "Registration successful"
+        }, status=status.HTTP_201_CREATED)
+        
+    return Response({
+        "authenticated": False,
+        "errors": form.errors
+    }, status=status.HTTP_400_BAD_REQUEST)
 
-    if request.method == 'POST':
-
-        form = RegisterForm(request.POST)
-
-        if form.is_valid():
-
-            user = form.save()
-
-            login(request, user)
-
-            return redirect('/dashboard/')
-
-    else:
-        form = RegisterForm()
-
-    return render(request, 'accounts/register.html', {
-        'form': form
-    })
-
-
-def login_view(request):
-
-    if request.method == 'POST':
-
-        form = AuthenticationForm(data=request.POST)
-
-        if form.is_valid():
-
-            user = form.get_user()
-
-            login(request, user)
-
-            return redirect('/')
-
-    else:
-        form = AuthenticationForm()
-
-    return render(request, 'accounts/login.html', {
-        'form': form
-    })
-
-
-def logout_view(request):
-
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def logout_api(request):
     logout(request)
+    return Response({"authenticated": False, "message": "Logged out successfully"}, status=status.HTTP_200_OK)
 
-    return redirect('/dashboard/')
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def check_auth_status(request):
+    """Helper endpoint so React can check if a returning user is already logged in"""
+    if request.user.is_authenticated:
+        return Response({"authenticated": True, "username": request.user.username})
+    return Response({"authenticated": False})
