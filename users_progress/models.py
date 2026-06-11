@@ -32,3 +32,14 @@ class UserProgress(models.Model):
     def __str__(self):
 
         return f"{self.user.username} - {self.topic.name}"
+    
+class UnlockedAchievement(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='achievements')
+    achievement_id = models.CharField(max_length=100) # e.g., "algebra_master_1"
+    unlocked_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'achievement_id') # Prevents duplicate unlocks
+
+    def __str__(self):
+        return f"{self.user.username} unlocked {self.achievement_id}"

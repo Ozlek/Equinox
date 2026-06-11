@@ -9,6 +9,7 @@ from topics.models import Topic
 from .models import Question, UserSkillProfile
 from .dda_engine import EquinoxDDAEngine
 from users_progress.models import UserProgress
+from users_progress.achievements import AchievementRegistry
 
 MAX_QUESTIONS_PER_SESSION = 10
 
@@ -80,6 +81,8 @@ def playthrough_api_view(request, topic_id):
             difficulty=current_tier
         )
 
+        new_badges = AchievementRegistry.evaluate_user(request.user)
+
         # Clear active quiz storage
         del request.session['questions_served']
         del request.session['score']
@@ -90,7 +93,8 @@ def playthrough_api_view(request, topic_id):
         return Response({
             "session_complete": True,
             "final_score": score,
-            "total_questions": MAX_QUESTIONS_PER_SESSION
+            "total_questions": MAX_QUESTIONS_PER_SESSION,
+            "new_achievements": new_badges
         })
 
     # Query matching tier pool
@@ -103,7 +107,7 @@ def playthrough_api_view(request, topic_id):
             "error": f"No questions seeded for topic '{topic.name}' yet."
         }, status=status.HTTP_404_NOT_FOUND)
 
-    question = random.choice(matching_questions)
+    question = matching_questions.order_by('?').first()
     request.session['current_question_id'] = question.id
     request.session.modified = True
 

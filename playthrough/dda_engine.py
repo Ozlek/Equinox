@@ -29,7 +29,7 @@ class EquinoxDDAEngine:
         # 1. Fetch current profile
         profile, _ = UserSkillProfile.objects.get_or_create(user=user)
         current_rating = profile.get_rating(domain)
-        target_difficulty = self.DIFFICULTY_TIERS.get(question_obj, 1.0)
+        target_difficulty = self.DIFFICULTY_TIERS.get(question_obj.difficulty, 1.0)
 
         # 2. Log response to database for historical probability tracking
         ResponseLog.objects.create(
