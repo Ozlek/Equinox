@@ -53,13 +53,13 @@ export default function App() {
           <button className="navbar-brand btn btn-link text-decoration-none fw-bold text-white fs-4" onClick={() => setCurrentView(user ? 'dashboard' : 'home')}>
             Equinox
           </button>
+            <span className="navbar-text text-warning mx-2"> Hello, {user}!</span>
           <div className="navbar-nav ms-auto gap-2 align-items-center">
             {user ? (
               <>
                 <button className="nav-link btn btn-link" onClick={() => setCurrentView('dashboard')}>Dashboard</button>
                 <button className="nav-link btn btn-link" onClick={() => setCurrentView('catalogue')}>Topics</button>
                 <button className="nav-link btn btn-link" onClick={() => setCurrentView('progress')}>Progress Log</button>
-                <span className="navbar-text text-warning mx-2">Hello, {user}!</span>
                 <button className="btn btn-outline-danger btn-sm" onClick={handleLogout}>Logout</button>
               </>
             ) : (

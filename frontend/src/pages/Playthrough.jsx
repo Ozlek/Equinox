@@ -61,7 +61,7 @@ export default function PlaythroughChallenge({ topicId }) {
     <div className="card p-4 shadow-sm">
       <div className="d-flex justify-content-between mb-3">
         <span>Question {gameState.question_number} of {gameState.total_questions}</span>
-        <span className="badge bg-primary">Tier: {gameState.current_tier}</span>
+        <span className="badge bg-primary">Difficulty: {gameState.current_tier}</span>
       </div>
 
       <h3 className="mb-4">{gameState.question_text}</h3>
