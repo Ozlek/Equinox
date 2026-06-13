@@ -5,6 +5,7 @@ from rest_framework import status
 from django.contrib.auth import login, logout
 from django.contrib.auth.forms import AuthenticationForm
 from .forms import RegisterForm
+from .models import UserProfile
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -52,7 +53,25 @@ def logout_api(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def check_auth_status(request):
-    """Helper endpoint so React can check if a returning user is already logged in"""
     if request.user.is_authenticated:
-        return Response({"authenticated": True, "username": request.user.username})
+        profile = getattr(request.user, 'profile', None)
+        return Response({
+            "authenticated": True,
+            "username": request.user.username,
+            "needs_onboarding": profile is None or not profile.has_completed_onboarding
+        })
     return Response({"authenticated": False})
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def onboarding_api(request):
+    grade_level = request.data.get('grade_level')
+    if not grade_level or not (1 <= int(grade_level) <= 10):
+        return Response({"error": "Invalid grade level."}, status=status.HTTP_400_BAD_REQUEST)
+ 
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    profile.grade_level = int(grade_level)
+    profile.has_completed_onboarding = True
+    profile.save()
+ 
+    return Response({"success": True})

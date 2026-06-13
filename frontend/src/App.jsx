@@ -7,6 +7,7 @@ import TopicDetail from './pages/TopicDetail';
 import ProgressHistory from './pages/ProgressHistory';
 import DashboardWorkspace from './pages/Dashboard';
 import PlaythroughChallenge from './pages/Playthrough';
+import Questionnaire from './pages/Questionnaire';
 import { getCookie } from './utils';
 
 export default function App() {
@@ -14,6 +15,7 @@ export default function App() {
   const [currentView, setCurrentView] = useState('home'); 
   const [selectedTopicId, setSelectedTopicId] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
   // Establish validation sync on system boot execution
   useEffect(() => {
@@ -22,6 +24,7 @@ export default function App() {
       .then(data => {
         if (data.authenticated) {
           setUser(data.username);
+          setNeedsOnboarding(data.needs_onboarding);
           setCurrentView('dashboard');
         } else {
           setCurrentView('home');
@@ -39,6 +42,7 @@ export default function App() {
       credentials: 'include'
     }).then(() => {
       setUser(null);
+      setNeedsOnboarding(false);
       setCurrentView('home');
     });
   };
@@ -47,6 +51,11 @@ export default function App() {
 
   return (
     <div>
+      {/* Onboarding Questionnaire - shown once after first registration */}
+      {user && needsOnboarding && (
+        <Questionnaire onComplete={() => setNeedsOnboarding(false)} />
+      )}
+
       {/* Global Context Dual-State Navbar */}
       <nav className="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div className="container">
@@ -76,8 +85,8 @@ export default function App() {
       {/* Main Container Core View Switcher Engine */}
       <div className="container mt-5">
         {!user && currentView === 'home' && <Home onNavigate={setCurrentView} />}
-        {!user && currentView === 'login' && <Login onNavigate={setCurrentView} onLoginSuccess={(name) => { setUser(name); setCurrentView('dashboard'); }} />}
-        {!user && currentView === 'register' && <Register onNavigate={setCurrentView} onRegisterSuccess={(name) => { setUser(name); setCurrentView('dashboard'); }} />}
+        {!user && currentView === 'login' && <Login onNavigate={setCurrentView} onLoginSuccess={(name, needsOnboard) => { setUser(name); setNeedsOnboarding(needsOnboard); setCurrentView('dashboard'); }} />}
+        {!user && currentView === 'register' && <Register onNavigate={setCurrentView} onRegisterSuccess={(name) => { setUser(name); setNeedsOnboarding(true); setCurrentView('dashboard'); }} />}
 
         {user && (
           <>
