@@ -37,3 +37,5 @@ Gamified Math Learning Web App with Dynamic Difficulty Adjustment.
 - Complete recode
 
 **v1.3.0: Achievements Update** (June 11, 2026)
+
+**v1.3.1: System Flow Improvements & MathPad Addition** (June 13, 2026)
