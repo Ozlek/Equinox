@@ -24,6 +24,7 @@ def playthrough_api_view(request, topic_id):
         request.session['questions_served'] = 0
         request.session['score'] = 0
         request.session['current_question_id'] = None
+        request.session['active_topic_id'] = topic.id
 
     questions_served = request.session['questions_served']
     score = request.session['score']
@@ -84,10 +85,9 @@ def playthrough_api_view(request, topic_id):
         new_badges = AchievementRegistry.evaluate_user(request.user)
 
         # Clear active quiz storage
-        del request.session['questions_served']
-        del request.session['score']
-        if 'current_question_id' in request.session:
-            del request.session['current_question_id']
+        for key in ['questions_served', 'score', 'current_question_id', 'active_topic_id']:
+            if key in request.session:
+                del request.session[key]
 
         # Notify React that the session has concluded
         return Response({
@@ -133,7 +133,21 @@ def playthrough_api_view(request, topic_id):
 @permission_classes([IsAuthenticated])
 def quit_playthrough_api_view(request):
     """API endpoint to wipe cache if student confirms exit intention."""
-    for key in ['questions_served', 'score', 'current_question_id']:
+    for key in ['questions_served', 'score', 'current_question_id', 'active_topic_id']:
         if key in request.session:
             del request.session[key]
     return Response({"message": "Session terminated cleanly."}, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def check_active_session_api(request):
+    """Allows the React dashboard to check if the student has an abandoned playthrough."""
+    active_topic = request.session.get('active_topic_id')
+    
+    if active_topic is not None:
+        return Response({
+            "has_active_session": True, 
+            "topic_id": active_topic
+        }, status=status.HTTP_200_OK)
+        
+    return Response({"has_active_session": False}, status=status.HTTP_200_OK)

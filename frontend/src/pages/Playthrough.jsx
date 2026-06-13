@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import MathKeypad from './MathKeypad';
 import { getCookie } from '../utils';
 
 export default function PlaythroughChallenge({ topicId }) {
   const [gameState, setGameState] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState('');
   const [feedback, setFeedback] = useState(null);
+  
+  const [showKeypad, setShowKeypad] = useState(false); 
 
-  // Fetch view payload (GET)
   const fetchNextQuestion = () => {
     fetch(`http://127.0.0.1:8000/playthrough/${topicId}/`, {
       method: 'GET',
@@ -17,6 +19,7 @@ export default function PlaythroughChallenge({ topicId }) {
         setGameState(data);
         setFeedback(null);
         setSelectedAnswer('');
+        setShowKeypad(false);
       });
   };
 
@@ -24,29 +27,50 @@ export default function PlaythroughChallenge({ topicId }) {
     fetchNextQuestion();
   }, [topicId]);
 
-  // Submit answer payload (POST)
+  const handleInsertSymbol = (symbol) => {
+    setSelectedAnswer(prev => prev + symbol);
+  };
+
+  const handleQuitChallenge = () => {
+    if (window.confirm("Are you sure you want to give up? Your progress for this challenge will be lost.")) {
+      const csrfToken = getCookie('csrftoken');
+      
+      fetch('http://127.0.0.1:8000/playthrough/quit/', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'X-CSRFToken': csrfToken,
+        }
+      })
+      .then(res => {
+        if (res.ok) {
+          window.location.href = '/dashboard'; 
+        }
+      });
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    const csrfToken = getCookie('csrftoken'); // Pull the cookie token value
+    const csrfToken = getCookie('csrftoken');
 
     fetch(`http://127.0.0.1:8000/playthrough/${topicId}/`, {
       method: 'POST',
-      credentials: 'include', // Sends your session authorization cookie
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRFToken': csrfToken, // <-- CRITICAL: Pass validation token here!
+        'X-CSRFToken': csrfToken,
       },
       body: JSON.stringify({ answer: selectedAnswer }),
     })
       .then((res) => res.json())
       .then((data) => {
-        setFeedback(data); // Contains backend evaluation (is_correct)
+        setFeedback(data);
       });
   };
 
   if (!gameState) return <div>Loading Equinox Challenge Engine...</div>;
 
-  // Handle Session Completion Render Block
   if (gameState.session_complete) {
     return (
       <div className="card p-5 text-center shadow-lg">
@@ -58,10 +82,21 @@ export default function PlaythroughChallenge({ topicId }) {
   }
 
   return (
-    <div className="card p-4 shadow-sm">
-      <div className="d-flex justify-content-between mb-3">
-        <span>Question {gameState.question_number} of {gameState.total_questions}</span>
-        <span className="badge bg-primary">Difficulty: {gameState.current_tier}</span>
+    <div className="card p-4 shadow-sm"> 
+      
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <span className="fw-bold text-secondary">Question {gameState.question_number} of {gameState.total_questions}</span>
+        
+        <div>
+          <span className="badge bg-primary me-2">Difficulty: {gameState.current_tier}</span>
+          <button 
+            onClick={handleQuitChallenge} 
+            className="btn btn-sm btn-outline-danger"
+            title="Give up and return to Dashboard"
+          >
+            ✕ Quit
+          </button>
+        </div>
       </div>
 
       <h3 className="mb-4">{gameState.question_text}</h3>
@@ -69,7 +104,6 @@ export default function PlaythroughChallenge({ topicId }) {
       {!feedback ? (
         <form onSubmit={handleSubmit}>
           {gameState.choices ? (
-            // Render multiple choice template options dynamically
             Object.entries(gameState.choices).map(([key, value]) => (
               <div key={key} className="form-check mb-2">
                 <input className="form-check-input" type="radio" name="mathAns" value={key} id={key} onChange={(e) => setSelectedAnswer(e.target.value)} required />
@@ -77,13 +111,31 @@ export default function PlaythroughChallenge({ topicId }) {
               </div>
             ))
           ) : (
-            // Textbox input template fallback automatically
-            <input type="text" className="form-control mb-3" value={selectedAnswer} onChange={(e) => setSelectedAnswer(e.target.value)} placeholder="Type numerical answer..." required />
+            <div className="form-group mb-3">
+              <div className="input-group">
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  value={selectedAnswer} 
+                  onChange={(e) => setSelectedAnswer(e.target.value)} 
+                  placeholder="Type numerical answer..." 
+                  required 
+                />
+                <button 
+                  className={`btn ${showKeypad ? 'btn-secondary' : 'btn-outline-secondary'}`}
+                  type="button"
+                  onClick={() => setShowKeypad(!showKeypad)}
+                >
+                  {showKeypad ? 'Hide MathPad' : '🧮 MathPad'}
+                </button>
+              </div>
+              
+              {showKeypad && <MathKeypad onSymbolSelect={handleInsertSymbol} />}
+            </div>
           )}
           <button type="submit" className="btn btn-success mt-3">Submit Answer</button>
         </form>
       ) : (
-        // Real-Time Feedback Display Layout
         <div className="mt-3">
           {feedback.is_correct ? (
             <div className="alert alert-success">🎉 Correct! Outstanding work!</div>
@@ -93,6 +145,7 @@ export default function PlaythroughChallenge({ topicId }) {
           <button className="btn btn-primary mt-2" onClick={fetchNextQuestion}>Next Question ➔</button>
         </div>
       )}
+      
     </div>
   );
 }
