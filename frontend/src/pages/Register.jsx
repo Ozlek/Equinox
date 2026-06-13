@@ -15,12 +15,13 @@ export default function Register({ onNavigate, onRegisterSuccess }) {
         'Content-Type': 'application/json',
         'X-CSRFToken': csrfToken
       },
+      credentials: 'include',
       body: JSON.stringify(formData)
     })
       .then(res => res.json())
       .then(data => {
         if (data.authenticated) {
-          onRegisterSuccess(data.username);
+          setTimeout(() => onRegisterSuccess(data.username), 100);
         } else {
           setFieldErrors(data.errors);
         }

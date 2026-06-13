@@ -1,6 +1,8 @@
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.response import Response
+from django.db.models import Max, Count
 from .models import UserProgress
 from .models import UnlockedAchievement
 from .achievements import AchievementRegistry
@@ -44,3 +46,58 @@ def user_achievements_api(request):
         })
         
     return Response({"achievements": payload})
+
+
+class CsrfExemptSessionAuthentication(SessionAuthentication):
+    """Bypasses CSRF enforcement for read-only leaderboard GET requests."""
+    def enforce_csrf(self, request):
+        return
+
+@api_view(['GET'])
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def leaderboard_api(request, topic_id):
+    """
+    Returns the leaderboard for a specific topic.
+    Each user is ranked by their personal best score on that topic.
+    Ties are broken by total attempts (more attempts = higher rank).
+    """
+    # For each user who has attempted this topic, get their best score
+    # and total attempts
+    from django.contrib.auth.models import User
+
+    leaderboard_data = (
+        UserProgress.objects
+        .filter(topic_id=topic_id)
+        .values('user__id', 'user__username')
+        .annotate(
+            best_score=Max('score'),
+            attempts=Count('id')
+        )
+        .order_by('-best_score', '-attempts')
+    )
+
+    # Find the current user's rank
+    current_user_id = request.user.id
+    ranked = list(leaderboard_data)
+
+    result = []
+    current_user_rank = None
+
+    for rank, entry in enumerate(ranked, start=1):
+        is_current_user = entry['user__id'] == current_user_id
+        if is_current_user:
+            current_user_rank = rank
+        result.append({
+            "rank": rank,
+            "username": entry['user__username'],
+            "best_score": entry['best_score'],
+            "attempts": entry['attempts'],
+            "is_current_user": is_current_user,
+        })
+
+    return Response({
+        "topic_id": topic_id,
+        "current_user_rank": current_user_rank,
+        "leaderboard": result
+    })

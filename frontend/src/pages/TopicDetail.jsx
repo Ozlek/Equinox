@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import Leaderboard from './Leaderboard';
 
 export default function TopicDetail({ topicId, onBack, onStartChallenge }) {
   const [topic, setTopic] = useState(null);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
 
   useEffect(() => {
     fetch(`http://127.0.0.1:8000/topics/${topicId}/`, { method: 'GET' })
@@ -27,11 +29,22 @@ export default function TopicDetail({ topicId, onBack, onStartChallenge }) {
           <button className="btn btn-success px-4" onClick={() => onStartChallenge(topic.id)}>
             Start Challenge Playthrough
           </button>
+          <button className="btn btn-warning px-4" onClick={() => setShowLeaderboard(true)}>
+            🏆 View Leaderboard
+          </button>
           <button className="btn btn-secondary px-4" onClick={onBack}>
             Back to Catalogue
           </button>
         </div>
       </div>
+
+      {showLeaderboard && (
+        <Leaderboard
+          topicId={topic.id}
+          topicName={topic.name}
+          onClose={() => setShowLeaderboard(false)}
+        />
+      )}
     </div>
   );
 }
