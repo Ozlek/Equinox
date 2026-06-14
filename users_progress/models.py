@@ -5,29 +5,13 @@ from topics.models import Topic
 # Create your models here.
 
 class UserProgress(models.Model):
-
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE
-    )
-
-    topic = models.ForeignKey(
-        Topic,
-        on_delete=models.CASCADE
-    )
-
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE)
     score = models.IntegerField(default=0)
-
+    gamified_score = models.IntegerField(default=0, db_index=True)
     total_questions = models.IntegerField(default=0)
-
-    difficulty = models.CharField(
-        max_length=20,
-        default='Novice'
-    )
-
-    completed_at = models.DateTimeField(
-        auto_now_add=True
-    )
+    difficulty = models.CharField(max_length=20, default='Novice')
+    completed_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
 

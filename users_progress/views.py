@@ -59,39 +59,40 @@ class CsrfExemptSessionAuthentication(SessionAuthentication):
 def leaderboard_api(request, topic_id):
     """
     Returns the leaderboard for a specific topic.
-    Each user is ranked by their personal best score on that topic.
-    Ties are broken by total attempts (more attempts = higher rank).
+    Each user is ranked by their personal best gamified score on that topic.
     """
     # For each user who has attempted this topic, get their best score
-    # and total attempts
     from django.contrib.auth.models import User
+    current_user_id = request.user.id
 
     leaderboard_data = (
         UserProgress.objects
         .filter(topic_id=topic_id)
         .values('user__id', 'user__username')
         .annotate(
-            best_score=Max('score'),
+            best_academic=Max('score'),
+            best_gamified=Max('gamified_score'),
+            best_total_questions=Max('total_questions'),
             attempts=Count('id')
         )
-        .order_by('-best_score', '-attempts')
+        .order_by('-best_gamified', '-best_academic')
     )
-
-    # Find the current user's rank
-    current_user_id = request.user.id
-    ranked = list(leaderboard_data)
 
     result = []
     current_user_rank = None
 
-    for rank, entry in enumerate(ranked, start=1):
+    for rank, entry in enumerate(leaderboard_data, start=1):
         is_current_user = entry['user__id'] == current_user_id
+
         if is_current_user:
             current_user_rank = rank
+
         result.append({
             "rank": rank,
             "username": entry['user__username'],
-            "best_score": entry['best_score'],
+            "best_score": entry['best_academic'],
+            "gamified_score": entry['best_gamified'],
+            "total_questions": entry['best_total_questions'],
             "attempts": entry['attempts'],
             "is_current_user": is_current_user,
         })
