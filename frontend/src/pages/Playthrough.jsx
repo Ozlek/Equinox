@@ -7,7 +7,7 @@ const getTierColor = (tier) => {
     'Novice': '#58ec84',
     'Intermediate': '#63b3ed',
     'Advanced': '#b03cf8',
-    'Expert': '#f56565',
+    'Expert': '#f56565',       
   };
   return colors[tier] || '#a0aec0';
 };
@@ -27,7 +27,14 @@ export default function PlaythroughChallenge({ topicId }) {
     })
       .then((res) => res.json())
       .then((data) => {
-        setGameState(data);
+        if (data.session_complete || data.status === 'completed' || data.is_finished) {
+          setGameState({ 
+            is_completed: true, 
+            final_score: data.final_score || data.gamified_score || 0 
+          });
+        } else {
+          setGameState(data);
+        }
         setFeedback(null);
         setSelectedAnswer('');
         setShowKeypad(false);
@@ -65,10 +72,38 @@ export default function PlaythroughChallenge({ topicId }) {
       });
   };
 
+  if (gameState?.is_completed) {
+    return (
+      <div style={styles.container}>
+        <div style={{ ...styles.card, textAlign: 'center', padding: '3rem 2rem' }}>
+          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🏆</div>
+          <h2 style={{ color: '#68d391', margin: '0 0 0.5rem 0' }}>Challenge Completed!</h2>
+          <p style={{ color: '#a0aec0', margin: '0 0 2rem 0' }}>
+            Your performance data has been safely synced.
+          </p>
+          
+          <div style={styles.reviewSection}>
+            <span style={styles.label}>Total Score</span>
+            <h1 style={{ color: '#63b3ed', margin: '0.5rem 0 0 0', fontSize: '2.5rem' }}>
+              +{gameState.final_score.toLocaleString()} PTS
+            </h1>
+          </div>
+
+          <button 
+            style={{ ...styles.primaryBtn, marginTop: '2rem' }} 
+            onClick={() => window.location.href = '/dashboard'}
+          >
+            Return to Dashboard ➔
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
   if (!gameState) return <div style={styles.message}>Loading Engine...</div>;
 
-  const displayScore = feedback ? feedback.gamified_score : gameState.gamified_score;
-  const displayStreak = feedback ? feedback.current_streak : gameState.current_streak;
+  const displayScore = feedback ? feedback.gamified_score : (gameState.gamified_score || 0);
+  const displayStreak = feedback ? feedback.current_streak : (gameState.current_streak || 0);
   const tierColor = getTierColor(gameState.current_tier);
 
   return (
@@ -81,10 +116,8 @@ export default function PlaythroughChallenge({ topicId }) {
             <h3 style={styles.scoreText}>{displayScore.toLocaleString()}</h3>
           </div>
           <div style={styles.rightHeader}>
-            <div style={{ ...styles.tierBadge, borderColor: tierColor, color: tierColor }}>
-              {gameState.current_tier}
-            </div>
-            <div style={styles.label}>Question: {gameState.question_number} / {gameState.total_questions}</div>
+            <button onClick={handleQuitChallenge} style={styles.quitBtn}>✕ Quit</button>
+            <div style={styles.label2}>Question: {gameState.question_number} / {gameState.total_questions}</div>
           </div>
         </div>
 
@@ -94,7 +127,9 @@ export default function PlaythroughChallenge({ topicId }) {
 
         <div style={styles.questionSection}>
           <h4 style={styles.questionText}>{gameState.question_text}</h4>
-          <button onClick={handleQuitChallenge} style={styles.quitBtn}>✕ Quit</button>
+          <div style={{ ...styles.tierBadge, borderColor: tierColor, color: tierColor }}>
+            {gameState.current_tier}
+          </div>
         </div>
 
         {!feedback ? (
@@ -142,13 +177,15 @@ const styles = {
   container: { display: 'flex', justifyContent: 'center', padding: '1rem' },
   card: { backgroundColor: '#1a202c', borderRadius: '16px', padding: '1.5rem', width: '100%', maxWidth: '500px', color: '#f7fafc', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' },
   header: { display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', borderBottom: '1px solid #2d3748', paddingBottom: '1rem' },
+  rightHeader: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' },
   label: { fontSize: '0.7rem', color: '#718096', textTransform: 'uppercase', letterSpacing: '0.05em' },
+  label2: { fontSize: '0.7rem', color: '#718096', letterSpacing: '0.05em' },
   scoreText: { margin: '0', color: '#63b3ed', fontSize: '1.5rem' },
-  tierBadge: { fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', marginBottom: '4px', border: '1px solid', fontWeight: 'bold' },
+  tierBadge: { fontSize: '0.7rem', padding: '4px 10px', borderRadius: '6px', border: '1px solid', fontWeight: 'bold', textTransform: 'uppercase', height: 'fit-content', whiteSpace: 'nowrap' },
   streakBadge: { backgroundColor: '#ecc94b', color: '#744210', padding: '0.4rem', borderRadius: '8px', marginBottom: '1rem', textAlign: 'center', fontWeight: 'bold' },
-  questionSection: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' },
-  questionText: { margin: 0 },
-  quitBtn: { backgroundColor: 'rgba(245, 101, 101, 0.1)', color: '#fc8181', border: '1px solid rgba(245, 101, 101, 0.2)', padding: '0.3rem 0.6rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem' },
+  questionSection: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '12px' },
+  questionText: { margin: 0, lineHeight: '1.4' },
+  quitBtn: { backgroundColor: 'rgba(245, 101, 101, 0.1)', color: '#fc8181', border: '1px solid rgba(245, 101, 101, 0.2)', padding: '0.3rem 0.6rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' },
   choicesGrid: { display: 'grid', gap: '8px', marginBottom: '1rem' },
   choiceOption: { backgroundColor: '#2d3748', padding: '0.8rem', borderRadius: '8px', cursor: 'pointer', display: 'block' },
   inputWrapper: { display: 'flex', gap: '8px' },
@@ -160,5 +197,6 @@ const styles = {
   adminLabel: { display: 'block', fontSize: '0.65rem', color: '#ecc94b', marginBottom: '0.5rem', letterSpacing: '0.1em' },
   adminBtn: { background: 'none', border: '1px solid #ecc94b', color: '#ecc94b', borderRadius: '4px', padding: '0.3rem 0.8rem', cursor: 'pointer' },
   adminText: { marginTop: '0.5rem', color: '#ecc94b', fontSize: '0.8rem' },
-  message: { textAlign: 'center', color: '#a0aec0', padding: '2rem' }
+  message: { textAlign: 'center', color: '#a0aec0', padding: '2rem' },
+  reviewSection: { backgroundColor: '#2d3748', padding: '1.5rem', borderRadius: '12px', margin: '1rem 0' }
 };
