@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import Leaderboard from './Leaderboard';
+import ChallengeConfigModal from './ChallengeConfig';
 
 export default function TopicDetail({ topicId, onBack, onStartChallenge }) {
   const [topic, setTopic] = useState(null);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
 
   useEffect(() => {
     fetch(`http://127.0.0.1:8000/topics/${topicId}/`, { method: 'GET' })
@@ -43,7 +45,8 @@ export default function TopicDetail({ topicId, onBack, onStartChallenge }) {
         </div>
         
         <div style={styles.actionsPanel}>
-          <button style={styles.startBtn} onClick={() => onStartChallenge(topic.id)}>
+          {/* Intercepted: Opens modal instead of running backend handlers immediately */}
+          <button style={styles.startBtn} onClick={() => setIsConfigModalOpen(true)}>
             Start Challenge Playthrough ➔
           </button>
           
@@ -57,6 +60,7 @@ export default function TopicDetail({ topicId, onBack, onStartChallenge }) {
         </div>
       </div>
 
+      {/* Leaderboard Popup Display Module */}
       {showLeaderboard && (
         <Leaderboard
           topicId={topic.id}
@@ -64,13 +68,24 @@ export default function TopicDetail({ topicId, onBack, onStartChallenge }) {
           onClose={() => setShowLeaderboard(false)}
         />
       )}
+
+      {/* Seeding Configuration Modal Overlay */}
+      <ChallengeConfigModal 
+        isOpen={isConfigModalOpen}
+        topicTitle={topic.name}
+        onClose={() => setIsConfigModalOpen(false)}
+        onLaunch={(selectedDifficulty) => {
+          setIsConfigModalOpen(false);
+          onStartChallenge(topic.id, selectedDifficulty);
+        }}
+      />
     </div>
   );
 }
 
 const styles = {
-  container: { padding: '2rem', display: 'flex', justifyContent: 'center' },
-  card: { backgroundColor: '#1a202c', borderRadius: '16px', padding: '2.5rem', width: '100%', maxWidth: '850px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', color: '#f7fafc', position: 'relative', border: '1px solid #2d3748' },
+  container: { padding: '2rem 1rem', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', minHeight: '100vh', overflowY: 'auto', boxSizing: 'border-box' },
+  card: { backgroundColor: '#1a202c', borderRadius: '16px', padding: '2.5rem', width: '100%', maxWidth: '850px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', color: '#f7fafc', position: 'relative', border: '1px solid #2d3748', marginTop: 'auto', marginBottom: 'auto', boxSizing: 'border-box' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #2d3748', paddingBottom: '1.25rem', marginBottom: '1.5rem', gap: '16px' },
   gradeMeta: { color: '#63b3ed', fontWeight: 'bold', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.05em' },
   mainTitle: { margin: '4px 0 0 0', fontSize: '2rem', fontWeight: 'bold', color: '#fff' },

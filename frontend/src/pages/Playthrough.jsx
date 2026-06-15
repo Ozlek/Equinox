@@ -12,7 +12,7 @@ const getTierColor = (tier) => {
   return colors[tier] || '#a0aec0';
 };
 
-export default function PlaythroughChallenge({ topicId }) {
+export default function PlaythroughChallenge({ topicId, initialDifficulty }) {
   const [gameState, setGameState] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState('');
   const [feedback, setFeedback] = useState(null);
@@ -20,8 +20,12 @@ export default function PlaythroughChallenge({ topicId }) {
   const [showAdminAnswer, setShowAdminAnswer] = useState(false);
   const [showStreakPopup, setShowStreakPopup] = useState(false);
 
-  const fetchNextQuestion = () => {
-    fetch(`http://127.0.0.1:8000/playthrough/${topicId}/`, {
+  const fetchNextQuestion = (isFirstLoad = false) => {
+    const url = isFirstLoad && initialDifficulty
+      ? `http://127.0.0.1:8000/playthrough/${topicId}/?difficulty=${initialDifficulty}`
+      : `http://127.0.0.1:8000/playthrough/${topicId}/`;
+
+    fetch(url, {
       method: 'GET',
       credentials: 'include',
     })
@@ -30,7 +34,7 @@ export default function PlaythroughChallenge({ topicId }) {
         if (data.session_complete || data.status === 'completed' || data.is_finished) {
           setGameState({ 
             is_completed: true, 
-            final_score: data.final_score || data.gamified_score || 0 
+            final_score: data.final_gamified_score || 0 
           });
         } else {
           setGameState(data);
@@ -43,7 +47,9 @@ export default function PlaythroughChallenge({ topicId }) {
       });
   };
 
-  useEffect(() => { fetchNextQuestion(); }, [topicId]);
+  useEffect(() => { 
+    fetchNextQuestion(true); 
+  }, [topicId]);
 
   const handleInsertSymbol = (symbol) => setSelectedAnswer(prev => prev + symbol);
 
@@ -75,22 +81,22 @@ export default function PlaythroughChallenge({ topicId }) {
   if (gameState?.is_completed) {
     return (
       <div style={styles.container}>
-        <div style={{ ...styles.card, textAlign: 'center', padding: '3rem 2rem' }}>
-          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🏆</div>
+        <div style={{ ...styles.card, textAlign: 'center', padding: '2.5rem 1.5rem' }}>
+          <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>🏆</div>
           <h2 style={{ color: '#68d391', margin: '0 0 0.5rem 0' }}>Challenge Completed!</h2>
-          <p style={{ color: '#a0aec0', margin: '0 0 2rem 0' }}>
-            Your performance data has been safely synced.
+          <p style={{ color: '#a0aec0', margin: '0 0 2rem 0', fontSize: '0.9rem' }}>
+            Your performance data has been safely recorded.
           </p>
           
           <div style={styles.reviewSection}>
             <span style={styles.label}>Total Score</span>
-            <h1 style={{ color: '#63b3ed', margin: '0.5rem 0 0 0', fontSize: '2.5rem' }}>
-              +{gameState.final_score.toLocaleString()} PTS
+            <h1 style={{ color: '#63b3ed', margin: '0.5rem 0 0 0', fontSize: '2.2rem' }}>
+              {gameState.final_score.toLocaleString()}
             </h1>
           </div>
 
           <button 
-            style={{ ...styles.primaryBtn, marginTop: '2rem' }} 
+            style={{ ...styles.primaryBtn, marginTop: '1.5rem' }} 
             onClick={() => window.location.href = '/dashboard'}
           >
             Return to Dashboard ➔
@@ -145,8 +151,18 @@ export default function PlaythroughChallenge({ topicId }) {
               </div>
             ) : (
               <div style={styles.inputWrapper}>
-                <input style={styles.input} type="text" value={selectedAnswer} onChange={(e) => setSelectedAnswer(e.target.value)} placeholder="Type answer..." required />
-                <button type="button" style={styles.mathPadBtn} onClick={() => setShowKeypad(!showKeypad)}>🧮 Pad</button>
+                <input 
+                  style={styles.input} 
+                  type="text" 
+                  value={selectedAnswer} 
+                  onChange={(e) => setSelectedAnswer(e.target.value)} 
+                  placeholder="Type answer..." 
+                  required 
+                  inputMode={showKeypad ? "none" : "text"}
+                />
+                <button type="button" style={styles.mathPadBtn} onClick={() => setShowKeypad(!showKeypad)}>
+                  {showKeypad ? '✕ Close' : '🧮 Pad'}
+                </button>
               </div>
             )}
             {showKeypad && <MathKeypad onSymbolSelect={handleInsertSymbol} />}
@@ -154,7 +170,9 @@ export default function PlaythroughChallenge({ topicId }) {
           </form>
         ) : (
           <div style={{ ...styles.feedbackBox, backgroundColor: feedback.is_correct ? 'rgba(72, 187, 120, 0.2)' : 'rgba(245, 101, 101, 0.2)' }}>
-            <h3 style={{ color: feedback.is_correct ? '#68d391' : '#fc8181' }}>{feedback.is_correct ? '🎉 Correct!' : '❌ Not quite.'}</h3>
+            <h3 style={{ color: feedback.is_correct ? '#68d391' : '#fc8181', marginBottom: '1rem' }}>
+              {feedback.is_correct ? '🎉 Correct!' : '❌ Not quite.'}
+            </h3>
             <button style={styles.primaryBtn} onClick={fetchNextQuestion}>Next Question ➔</button>
           </div>
         )}
@@ -174,29 +192,29 @@ export default function PlaythroughChallenge({ topicId }) {
 }
 
 const styles = {
-  container: { display: 'flex', justifyContent: 'center', padding: '1rem' },
-  card: { backgroundColor: '#1a202c', borderRadius: '16px', padding: '1.5rem', width: '100%', maxWidth: '500px', color: '#f7fafc', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' },
+  container: { display: 'flex', justifyContent: 'center', padding: '0.5rem', width: '100%', boxSizing: 'border-box' },
+  card: { backgroundColor: '#1a202c', borderRadius: '16px', padding: '1.25rem', width: '100%', maxWidth: '500px', color: '#f7fafc', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', boxSizing: 'border-box' },
   header: { display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', borderBottom: '1px solid #2d3748', paddingBottom: '1rem' },
   rightHeader: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' },
   label: { fontSize: '0.7rem', color: '#718096', textTransform: 'uppercase', letterSpacing: '0.05em' },
   label2: { fontSize: '0.7rem', color: '#718096', letterSpacing: '0.05em' },
-  scoreText: { margin: '0', color: '#63b3ed', fontSize: '1.5rem' },
-  tierBadge: { fontSize: '0.7rem', padding: '4px 10px', borderRadius: '6px', border: '1px solid', fontWeight: 'bold', textTransform: 'uppercase', height: 'fit-content', whiteSpace: 'nowrap' },
-  streakBadge: { backgroundColor: '#ecc94b', color: '#744210', padding: '0.4rem', borderRadius: '8px', marginBottom: '1rem', textAlign: 'center', fontWeight: 'bold' },
+  scoreText: { margin: '0', color: '#63b3ed', fontSize: '1.4rem' },
+  tierBadge: { fontSize: '0.65rem', padding: '4px 8px', borderRadius: '6px', border: '1px solid', fontWeight: 'bold', textTransform: 'uppercase', height: 'fit-content', whiteSpace: 'nowrap' },
+  streakBadge: { backgroundColor: '#ecc94b', color: '#744210', padding: '0.4rem', borderRadius: '8px', marginBottom: '1rem', textAlign: 'center', fontWeight: 'bold', fontSize: '0.85rem' },
   questionSection: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '12px' },
-  questionText: { margin: 0, lineHeight: '1.4' },
+  questionText: { margin: 0, lineHeight: '1.4', fontSize: '1.1rem' },
   quitBtn: { backgroundColor: 'rgba(245, 101, 101, 0.1)', color: '#fc8181', border: '1px solid rgba(245, 101, 101, 0.2)', padding: '0.3rem 0.6rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' },
-  choicesGrid: { display: 'grid', gap: '8px', marginBottom: '1rem' },
-  choiceOption: { backgroundColor: '#2d3748', padding: '0.8rem', borderRadius: '8px', cursor: 'pointer', display: 'block' },
+  choicesGrid: { display: 'grid', gap: '10px', marginBottom: '1rem' },
+  choiceOption: { backgroundColor: '#2d3748', padding: '1rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', fontSize: '1rem' },
   inputWrapper: { display: 'flex', gap: '8px' },
-  input: { flex: 1, padding: '0.8rem', borderRadius: '8px', border: '1px solid #4a5568', backgroundColor: '#2d3748', color: 'white' },
-  mathPadBtn: { backgroundColor: '#4a5568', color: 'white', border: 'none', padding: '0 1rem', borderRadius: '8px', cursor: 'pointer' },
-  primaryBtn: { width: '100%', padding: '0.8rem', marginTop: '1rem', backgroundColor: '#63b3ed', border: 'none', borderRadius: '8px', color: '#1a202c', fontWeight: 'bold', cursor: 'pointer' },
-  feedbackBox: { padding: '1.5rem', borderRadius: '8px', textAlign: 'center', marginTop: '1rem' },
-  adminSection: { marginTop: '2rem', paddingTop: '1rem', borderTop: '1px dashed #4a5568', textAlign: 'center' },
+  input: { flex: 1, padding: '0.8rem', borderRadius: '8px', border: '1px solid #4a5568', backgroundColor: '#2d3748', color: 'white', fontSize: '16px' },
+  mathPadBtn: { backgroundColor: '#4a5568', color: 'white', border: 'none', padding: '0 0.75rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' },
+  primaryBtn: { width: '100%', padding: '0.85rem', marginTop: '1rem', backgroundColor: '#63b3ed', border: 'none', borderRadius: '8px', color: '#1a202c', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem', minHeight: '44px' },
+  feedbackBox: { padding: '1.25rem', borderRadius: '8px', textAlign: 'center', marginTop: '1rem' },
+  adminSection: { marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px dashed #4a5568', textAlign: 'center' },
   adminLabel: { display: 'block', fontSize: '0.65rem', color: '#ecc94b', marginBottom: '0.5rem', letterSpacing: '0.1em' },
-  adminBtn: { background: 'none', border: '1px solid #ecc94b', color: '#ecc94b', borderRadius: '4px', padding: '0.3rem 0.8rem', cursor: 'pointer' },
+  adminBtn: { background: 'none', border: '1px solid #ecc94b', color: '#ecc94b', borderRadius: '4px', padding: '0.3rem 0.8rem', cursor: 'pointer', fontSize: '0.75rem' },
   adminText: { marginTop: '0.5rem', color: '#ecc94b', fontSize: '0.8rem' },
   message: { textAlign: 'center', color: '#a0aec0', padding: '2rem' },
-  reviewSection: { backgroundColor: '#2d3748', padding: '1.5rem', borderRadius: '12px', margin: '1rem 0' }
+  reviewSection: { backgroundColor: '#2d3748', padding: '1.25rem', borderRadius: '12px', margin: '1rem 0' }
 };

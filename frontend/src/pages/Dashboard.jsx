@@ -22,7 +22,7 @@ export default function DashboardWorkspace({ onNavigate, onStartQuiz }) {
     <div style={styles.container}>
       <div style={styles.welcomeSection}>
         <h1 style={styles.mainTitle}>Welcome to Equinox</h1>
-        <p style={styles.subtitle}>Ready to improve your mathematical expertise today?</p>
+        <p style={styles.subtitle}>Ready to improve your math skills today?</p>
       </div>
 
       {activeSessionTopicId && (
@@ -115,25 +115,20 @@ const styles = {
   welcomeSection: { marginBottom: '2rem' },
   mainTitle: { margin: '0 0 0.5rem 0', fontSize: '2.2rem', fontWeight: 'bold' },
   subtitle: { margin: 0, color: '#a0aec0', fontSize: '1.1rem' },
-  
-  // Interceptor Banner Styling
+
   interceptorBanner: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(236, 201, 75, 0.15)', border: '1px solid #ecc94b', borderRadius: '12px', padding: '1.25rem', marginBottom: '2.5rem', gap: '1.5rem', flexWrap: 'wrap' },
   bannerTextContainer: { display: 'flex', flexDirection: 'column', gap: '4px', flex: '1 1 300px' },
   bannerTitle: { margin: 0, color: '#ecc94b', fontSize: '1.1rem', fontWeight: 'bold' },
   bannerDescription: { color: '#e2e8f0', fontSize: '0.95rem', lineHeight: '1.4' },
   resumeBtn: { backgroundColor: '#ecc94b', color: '#744210', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'transform 0.1s ease' },
 
-  // Responsive Grid
   actionGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '3rem' },
-  
-  // Custom Modules Design
   actionCard: { backgroundColor: '#1a202c', border: '1px solid #2d3748', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column' },
   cardContent: { display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', flexGrow: 1 },
   cardTitle: { margin: '0 0 0.75rem 0', fontSize: '1.25rem', fontWeight: 'bold', color: '#fff' },
   cardDescription: { margin: '0 0 1.5rem 0', color: '#a0aec0', fontSize: '0.9rem', lineHeight: '1.5', flexGrow: 1 },
   cardBtn: { width: '100%', padding: '0.75rem', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.95rem' },
 
-  // Achievements Display Toggle Layer
   toggleSection: { marginTop: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center' },
   achievementsToggleBtn: { backgroundColor: '#2d3748', color: '#63b3ed', border: '1px solid #4a5568', padding: '1rem 2rem', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem', transition: 'all 0.2s ease', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' },
   achievementsContainer: { width: '100%' },

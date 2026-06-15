@@ -23,6 +23,12 @@ def playthrough_api_view(request, topic_id):
 
     # 1. Initialize session properties inside the backend session cache
     if 'questions_served' not in request.session:
+        # Checks query params (?difficulty=novice) or JSON body payload data safely
+        chosen_difficulty = request.query_params.get('difficulty') or request.data.get('difficulty') or 'Intermediate'
+        
+        # Force-seed the engine rating baseline before building the question cache stack
+        EquinoxDDAEngine.seed_initial_rating(request.user, topic.name, chosen_difficulty)
+
         request.session['questions_served'] = 0
         request.session['score'] = 0 # Academic score
         request.session['current_question_id'] = None
@@ -36,6 +42,7 @@ def playthrough_api_view(request, topic_id):
     questions_served = request.session['questions_served']
     score = request.session['score']
 
+    # This profile read now accurately picks up the baseline seed we injected above!
     profile, _ = UserSkillProfile.objects.get_or_create(user=request.user)
     current_rating = profile.get_rating(topic.name)
     current_tier = dda.get_closest_tier(current_rating)
@@ -118,7 +125,7 @@ def playthrough_api_view(request, topic_id):
     # ACTION B: EVALUATE END GAME OR SERVE NEXT QUESTION (GET)
     # -------------------------------------------------------------------------
     if questions_served >= MAX_QUESTIONS_PER_SESSION:
-        # Save session history row (Consider adding gamified_score to this model later!)
+        # Save session history row
         UserProgress.objects.create(
             user=request.user,
             topic=topic,
