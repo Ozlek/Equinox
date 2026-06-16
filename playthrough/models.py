@@ -29,6 +29,7 @@ class Question(models.Model):
     def __str__(self):
         return self.question_text
 
+
 # ==========================================
 # DDA SUBSYSTEM MODELS
 # ==========================================
@@ -83,3 +84,37 @@ class ResponseLog(models.Model):
     def __str__(self):
         status = "Correct" if self.is_correct else "Incorrect"
         return f"{self.user.username} - QID {self.question.id} ({status})"
+
+
+# ==========================================
+# GAMIFICATION & MODIFIER SYSTEM MODELS
+# ==========================================
+
+class GamifiedModifier(models.Model):
+    """Defines the available game items/multipliers a user can equip."""
+    MODIFIER_TYPES = [
+        ('SCORE_BOOST', 'Score Multiplier'),
+        ('STREAK_SHIELD', 'Streak Protection'),
+    ]
+    
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True, help_text="Unique identifier used by frontend and session cache (e.g., 'double-xp')")
+    modifier_type = models.CharField(max_length=20, choices=MODIFIER_TYPES)
+    multiplier_value = models.FloatField(default=1.0, help_text="Multiplier applied to points (e.g., 1.5, 2.0). Ignore if type is a shield.")
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.get_modifier_type_display()})"
+
+class UserInventory(models.Model):
+    """Tracks item quantities owned by individual students."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='inventory')
+    modifier = models.ForeignKey(GamifiedModifier, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = ('user', 'modifier')
+        verbose_name_plural = "User Inventories"
+
+    def __str__(self):
+        return f"{self.user.username} owns {self.quantity}x {self.modifier.name}"

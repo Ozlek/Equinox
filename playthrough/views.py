@@ -6,9 +6,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
+from django.db.models import F 
 
 from topics.models import Topic
-from .models import Question, UserSkillProfile
+from .models import Question, UserSkillProfile, GamifiedModifier, UserInventory 
 from .dda_engine import EquinoxDDAEngine
 from users_progress.models import UserProgress
 from users_progress.achievements import AchievementRegistry
@@ -18,19 +19,48 @@ MAX_QUESTIONS_PER_SESSION = 10
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def playthrough_api_view(request, topic_id):
+    print(f"DEBUG: Current Session Key: {request.session.session_key} | Path: {request.path} | Method: {request.method}")
     topic = get_object_or_404(Topic, id=topic_id)
     dda = EquinoxDDAEngine()
 
     # 1. Initialize session properties inside the backend session cache
+    # 1. Initialize session properties inside the backend session cache
     if 'questions_served' not in request.session:
-        # Checks query params (?difficulty=novice) or JSON body payload data safely
         chosen_difficulty = request.query_params.get('difficulty') or request.data.get('difficulty') or 'Intermediate'
         
-        # Force-seed the engine rating baseline before building the question cache stack
+        # --- MODIFIER SYSTEM INITIALIZATION ---
+        # Capture both 'equipped_modifier' and the frontend's 'mods' query key
+        equipped_modifier_slug = (
+            request.query_params.get('equipped_modifier') or 
+            request.query_params.get('mods') or 
+            request.data.get('equipped_modifier')
+        )
+        
+        # Normalize the string alias if the frontend sends 'disable_adjuster'
+        if equipped_modifier_slug == 'disable_adjuster':
+            equipped_modifier_slug = 'dda_adjuster'
+
+        active_modifier_id = None
+        modifier_multiplier = 1.0
+        modifier_type = None
+
+        if equipped_modifier_slug:
+            try:
+                inv_item = UserInventory.objects.get(
+                    user=request.user,
+                    modifier__slug=equipped_modifier_slug,
+                    quantity__gt=0
+                )
+                active_modifier_id = inv_item.modifier.id
+                modifier_multiplier = inv_item.modifier.multiplier_value
+                modifier_type = inv_item.modifier.modifier_type
+            except UserInventory.DoesNotExist:
+                equipped_modifier_slug = None
+
         EquinoxDDAEngine.seed_initial_rating(request.user, topic.name, chosen_difficulty)
 
         request.session['questions_served'] = 0
-        request.session['score'] = 0 # Academic score
+        request.session['score'] = 0 
         request.session['current_question_id'] = None
         request.session['active_topic_id'] = topic.id
         request.session['seen_question_ids'] = []
@@ -38,11 +68,16 @@ def playthrough_api_view(request, topic_id):
         # --- Gamification Inits ---
         request.session['gamified_score'] = 0
         request.session['current_streak'] = 0
+        
+        # CRITICAL FIX: Explicitly cache the slug itself so we don't depend on raw DB type variations
+        request.session['modifier_slug'] = equipped_modifier_slug
+        request.session['active_modifier_id'] = active_modifier_id
+        request.session['modifier_multiplier'] = modifier_multiplier
+        request.session['modifier_type'] = modifier_type
 
     questions_served = request.session['questions_served']
     score = request.session['score']
 
-    # This profile read now accurately picks up the baseline seed we injected above!
     profile, _ = UserSkillProfile.objects.get_or_create(user=request.user)
     current_rating = profile.get_rating(topic.name)
     current_tier = dda.get_closest_tier(current_rating)
@@ -66,66 +101,122 @@ def playthrough_api_view(request, topic_id):
 
         if is_correct:
             request.session['score'] += 1
-            
-            # Increment Streak
             current_streak = request.session.get('current_streak', 0) + 1
             request.session['current_streak'] = current_streak
 
-            # Base Points per Tier
-            tier_points = {
-                "Novice": 1000,
-                "Intermediate": 1500,
-                "Advanced": 2000,
-                "Expert": 2500
-            }
-            base = tier_points.get(current_tier, 1000)
-
-            # Multipliers
+            base = {"Novice": 1000, "Intermediate": 1500, "Advanced": 2000, "Expert": 2500}.get(current_tier, 1000)
             m_time = max(1.0, 1.5 - (time_taken / 60.0))
             m_streak = min(1.5, 1.0 + (0.1 * current_streak))
-            m_modifier = 1.0 # Placeholder for future items
+            
+            m_modifier = 1.0
+            if request.session.get('modifier_type') == 'SCORE_BOOST':
+                m_modifier = request.session.get('modifier_multiplier', 1.0)
 
-            # Calculate and add to total
             points_earned = math.floor(base * m_time * m_streak * m_modifier)
             request.session['gamified_score'] += points_earned
             
         else:
-            # Reset streak to zero on incorrect answer
-            request.session['current_streak'] = 0
-            points_earned = 0
+            if request.session.get('modifier_type') == 'STREAK_SHIELD':
+                request.session['modifier_type'] = None
+                request.session['modifier_multiplier'] = 1.0
+                points_earned = 0
+            else:
+                request.session['current_streak'] = 0
+                points_earned = 0
 
-        # Run DDA Engine math
-        dda.adjust_difficulty(
-            user=request.user,
-            domain=topic.name,
-            question_obj=question,
-            is_correct=is_correct
+        session_mod_slug = request.session.get('modifier_slug')
+        incoming_mods = request.data.get('active_mods', [])
+        if isinstance(incoming_mods, str):
+            incoming_mods = [incoming_mods]
+        
+        is_dda_locked = (
+            session_mod_slug in ['dda_adjuster', 'disable_adjuster'] or 
+            'dda_adjuster' in incoming_mods or 
+            'disable_adjuster' in incoming_mods or
+            request.data.get('equipped_modifier') in ['dda_adjuster', 'disable_adjuster'] or
+            request.query_params.get('mods') == 'disable_adjuster'
         )
 
-        request.session['questions_served'] += 1
+        if is_dda_locked:
+            pass
+        else:
+            dda.adjust_difficulty(
+                user=request.user,
+                domain=topic.name,
+                question_obj=question,
+                is_correct=is_correct
+            )
 
-        # Clear the lock so the next GET request knows to pick a fresh question
+        request.session['questions_served'] += 1
         request.session['current_question_id'] = None 
+        request.session.modified = True
+
+        if not is_correct and ('one_life' in incoming_mods or session_mod_slug == 'one_life'):
+            # 1. Archive their progress immediately up to this mistake
+            UserProgress.objects.create(
+                user=request.user,
+                topic=topic,
+                score=request.session['score'],
+                gamified_score=request.session.get('gamified_score', 0),
+                total_questions=MAX_QUESTIONS_PER_SESSION,
+                difficulty=current_tier
+            )
+
+            # 2. Consume the active item from their bag since the run failed
+            used_modifier_id = request.session.get('active_modifier_id')
+            if used_modifier_id:
+                UserInventory.objects.filter(
+                    user=request.user,
+                    modifier_id=used_modifier_id,
+                    quantity__gt=0
+                ).update(quantity=F('quantity') - 1)
+
+            # 3. Take a quick local copy of scores before purging caches
+            final_score = request.session['score']
+            final_gamified_score = request.session.get('gamified_score', 0)
+
+            # 4. Wipe the session keys clean so the dashboard knows it's dead
+            keys_to_clear = [
+                'questions_served', 'score', 'current_question_id', 'active_topic_id', 
+                'seen_question_ids', 'gamified_score', 'current_streak', 'question_start_time',
+                'active_modifier_id', 'modifier_multiplier', 'modifier_type', 'modifier_slug'
+            ]
+            for key in keys_to_clear:
+                if key in request.session:
+                    del request.session[key]
+            request.session.modified = True
+
+            # 5. Force early completion payload back to React
+            return Response({
+                "is_correct": False,
+                "correct_answer": question.correct_answer,
+                "session_complete": True,
+                "status": "completed",
+                "is_finished": True,
+                "final_score": final_score,
+                "final_gamified_score": final_gamified_score,
+                "questions_served": questions_served + 1,
+                "points_earned": 0,
+                "gamified_score": final_gamified_score,
+                "current_streak": 0,
+                "shield_active": False
+            }, status=status.HTTP_200_OK)
         
-        request.session.modified = True 
-        
-        # Return immediate feedback to React
         return Response({
             "is_correct": is_correct,
             "correct_answer": question.correct_answer,
-            "current_score": request.session['score'], # Academic
+            "current_score": request.session['score'], 
             "questions_served": request.session['questions_served'],
-            # --- Gamification Feedback ---
             "points_earned": points_earned,
             "gamified_score": request.session['gamified_score'],
-            "current_streak": request.session['current_streak']
+            "current_streak": request.session['current_streak'],
+            "shield_active": (request.session.get('modifier_type') == 'STREAK_SHIELD')
         })
 
     # -------------------------------------------------------------------------
     # ACTION B: EVALUATE END GAME OR SERVE NEXT QUESTION (GET)
     # -------------------------------------------------------------------------
     if questions_served >= MAX_QUESTIONS_PER_SESSION:
-        # Save session history row
         UserProgress.objects.create(
             user=request.user,
             topic=topic,
@@ -135,13 +226,21 @@ def playthrough_api_view(request, topic_id):
             difficulty=current_tier
         )
 
+        used_modifier_id = request.session.get('active_modifier_id')
+        if used_modifier_id:
+            UserInventory.objects.filter(
+                user=request.user,
+                modifier_id=used_modifier_id,
+                quantity__gt=0
+            ).update(quantity=F('quantity') - 1)
+
         new_badges = AchievementRegistry.evaluate_user(request.user)
         final_gamified_score = request.session.get('gamified_score', 0)
 
-        # Clear active quiz storage comprehensively
         keys_to_clear = [
             'questions_served', 'score', 'current_question_id', 'active_topic_id', 
-            'seen_question_ids', 'gamified_score', 'current_streak', 'question_start_time'
+            'seen_question_ids', 'gamified_score', 'current_streak', 'question_start_time',
+            'active_modifier_id', 'modifier_multiplier', 'modifier_type', 'modifier_slug'
         ]
         for key in keys_to_clear:
             if key in request.session:
@@ -162,7 +261,14 @@ def playthrough_api_view(request, topic_id):
         question = get_object_or_404(Question, id=active_q_id)
     else:
         matching_questions = Question.objects.filter(topic=topic, difficulty=current_tier).exclude(id__in=seen_ids)
+        
         if not matching_questions.exists():
+            # COMPREHENSIVE FALLBACK FIX: If we run out of unique questions for the frozen tier, 
+            # repeat seen questions from the SAME tier instead of jumping to other levels!
+            matching_questions = Question.objects.filter(topic=topic, difficulty=current_tier)
+
+        if not matching_questions.exists():
+            # Ultimate fail-safe if the selected tier has absolutely zero seeded items
             matching_questions = Question.objects.filter(topic=topic)
 
         if not matching_questions.exists():
@@ -175,7 +281,6 @@ def playthrough_api_view(request, topic_id):
         request.session['current_question_id'] = question.id
         request.session['seen_question_ids'].append(question.id) 
 
-    # --- Start the Timer for Gamification ---
     request.session['question_start_time'] = time.time()
     request.session.modified = True
     
@@ -196,9 +301,9 @@ def playthrough_api_view(request, topic_id):
             "D": question.choice_d,
         } if question.choice_a else None,
         
-        # Gamification State
         "gamified_score": request.session.get('gamified_score', 0),
         "current_streak": request.session.get('current_streak', 0),
+        "active_modifier_type": request.session.get('modifier_type'),
         
         "is_admin": is_admin_user,
     }
@@ -214,14 +319,16 @@ def quit_playthrough_api_view(request):
     """API endpoint to wipe cache if student confirms exit intention."""
     keys_to_clear = [
         'questions_served', 'score', 'current_question_id', 'active_topic_id', 
-        'seen_question_ids', 'gamified_score', 'current_streak', 'question_start_time'
+        'seen_question_ids', 'gamified_score', 'current_streak', 'question_start_time',
+        'active_modifier_id', 'modifier_multiplier', 'modifier_type'
     ]
     for key in keys_to_clear:
         if key in request.session:
             del request.session[key]
             
     request.session.modified = True 
-    return Response({"message": "Session terminated cleanly."}, status=status.HTTP_200_OK)
+    return Response({"message": "Session terminated cleanly. Equipped item was not spent."}, status=status.HTTP_200_OK)
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -236,3 +343,22 @@ def check_active_session_api(request):
         }, status=status.HTTP_200_OK)
         
     return Response({"has_active_session": False}, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_inventory_api_view(request):
+    """
+    Fetches available modifiers owned by the student.
+    Used by ChallengeConfig.jsx to populate the pre-quiz item selection dropdown.
+    """
+    inventory = UserInventory.objects.filter(user=request.user, quantity__gt=0)
+    data = [{
+        "slug": item.modifier.slug,
+        "name": item.modifier.name,
+        "type": item.modifier.modifier_type,
+        "value": item.modifier.multiplier_value,
+        "quantity": item.quantity,
+        "description": item.modifier.description
+    } for item in inventory]
+    
+    return Response({"available_modifiers": data}, status=status.HTTP_200_OK)

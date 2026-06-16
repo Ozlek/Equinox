@@ -24,7 +24,10 @@ export default function MathKeypad({ onSymbolSelect }) {
             key={index}
             type="button" 
             style={padStyles.keyButton}
-            onClick={() => onSymbolSelect(symbol.value)}
+            onClick={(e) => {
+              e.preventDefault();
+              onSymbolSelect(symbol.value);
+            }}
           >
             {symbol.label}
           </button>

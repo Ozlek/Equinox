@@ -45,7 +45,6 @@ export default function TopicDetail({ topicId, onBack, onStartChallenge }) {
         </div>
         
         <div style={styles.actionsPanel}>
-          {/* Intercepted: Opens modal instead of running backend handlers immediately */}
           <button style={styles.startBtn} onClick={() => setIsConfigModalOpen(true)}>
             Start Challenge Playthrough ➔
           </button>
@@ -69,14 +68,15 @@ export default function TopicDetail({ topicId, onBack, onStartChallenge }) {
         />
       )}
 
-      {/* Seeding Configuration Modal Overlay */}
+      {/* MATCHED: Intercepts multi-variable layout parameters from the configuration panel */}
       <ChallengeConfigModal 
         isOpen={isConfigModalOpen}
         topicTitle={topic.name}
         onClose={() => setIsConfigModalOpen(false)}
-        onLaunch={(selectedDifficulty) => {
+        onLaunch={(selectedDifficulty, activeMods, equippedModifier) => {
           setIsConfigModalOpen(false);
-          onStartChallenge(topic.id, selectedDifficulty);
+          // Pass all configuration tracks up to the App.jsx parent core
+          onStartChallenge(topic.id, selectedDifficulty, activeMods, equippedModifier);
         }}
       />
     </div>

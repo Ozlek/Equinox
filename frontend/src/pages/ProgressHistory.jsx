@@ -1,12 +1,20 @@
 import React, { useState, useEffect } from 'react';
 
+const MOD_LABELS = {
+  'timed': '⏱️ Timed',
+  'disable_adjuster': '🔒 Locked DDA',
+  'one_life': '❤️‍🔥 One Life',
+  'easy_going': '🍃 Easy'
+};
+
 const getTierColor = (tier) => {
   const colors = {
     'Novice': '#58ec84',
     'Intermediate': '#63b3ed',
-    'Advanced': '#b03cf8',
+    'Advanced': '#f6ad55',
     'Expert': '#f56565',    
   };
+
   return colors[tier] || '#a0aec0';
 };
 

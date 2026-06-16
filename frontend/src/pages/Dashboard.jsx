@@ -4,6 +4,13 @@ import AchievementsCard from './Achievements';
 export default function DashboardWorkspace({ onNavigate, onStartQuiz }) {
   const [activeSessionTopicId, setActiveSessionTopicId] = useState(null);
   const [showAchievements, setShowAchievements] = useState(false);
+  
+  // MATCHED: Object track to catch active session metadata parameters from Django cache
+  const [activeSessionMetadata, setActiveSessionMetadata] = useState({
+    difficulty: 'Intermediate',
+    modifiers: [],
+    equipped_item: ''
+  });
 
   useEffect(() => {
     fetch('http://127.0.0.1:8000/playthrough/check_active/', {
@@ -14,6 +21,12 @@ export default function DashboardWorkspace({ onNavigate, onStartQuiz }) {
       .then(data => {
         if (data.has_active_session) {
           setActiveSessionTopicId(data.topic_id);
+          // Safely seed ongoing structural configurations back down if provided by the endpoint
+          setActiveSessionMetadata({
+            difficulty: data.difficulty || 'Intermediate',
+            modifiers: data.modifiers || [],
+            equipped_item: data.equipped_item || ''
+          });
         }
       });
   }, []);
@@ -35,7 +48,12 @@ export default function DashboardWorkspace({ onNavigate, onStartQuiz }) {
           </div>
           <button 
             style={styles.resumeBtn} 
-            onClick={() => onStartQuiz(activeSessionTopicId)}
+            onClick={() => onStartQuiz(
+              activeSessionTopicId, 
+              activeSessionMetadata.difficulty, 
+              activeSessionMetadata.modifiers, 
+              activeSessionMetadata.equipped_item
+            )}
           >
             Resume Challenge ➔
           </button>

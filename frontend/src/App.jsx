@@ -17,6 +17,11 @@ export default function App() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [sessionDifficulty, setSessionDifficulty] = useState('Intermediate');
+  
+  // ─── NEW CONFIGURATION DATA STATES FOR EQUINOX PLAYTHROUGH ───
+  const [sessionMods, setSessionMods] = useState([]);
+  const [sessionItem, setSessionItem] = useState('');
+
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [hoveredLink, setHoveredLink] = useState(null);
@@ -221,12 +226,15 @@ export default function App() {
 
             {user && (
               <>
+                {/* MODIFIED: Receives structural configs directly from Modal elements inside Dashboard */}
                 {currentView === 'dashboard' && (
                   <DashboardWorkspace 
                     onNavigate={navigateTo} 
-                    onStartQuiz={(id) => { 
+                    onStartQuiz={(id, difficulty, mods, item) => { 
                       setSelectedTopicId(id); 
-                      setSessionDifficulty(null); 
+                      setSessionDifficulty(difficulty || 'Intermediate'); 
+                      setSessionMods(mods || []);
+                      setSessionItem(item || '');
                       setCurrentView('playthrough'); 
                     }} 
                   />
@@ -234,13 +242,16 @@ export default function App() {
                 
                 {currentView === 'catalogue' && <TopicCatalogue onSelectTopic={(id) => { setSelectedTopicId(id); setCurrentView('detail'); }} />}
                 
+                {/* MODIFIED: Receives structural configs directly from Modal elements inside TopicDetail */}
                 {currentView === 'detail' && (
                   <TopicDetail 
                     topicId={selectedTopicId} 
                     onBack={() => navigateTo('catalogue')} 
-                    onStartChallenge={(id, difficulty) => { 
+                    onStartChallenge={(id, difficulty, mods, item) => { 
                       setSelectedTopicId(id); 
-                      setSessionDifficulty(difficulty); 
+                      setSessionDifficulty(difficulty || 'Intermediate'); 
+                      setSessionMods(mods || []);
+                      setSessionItem(item || '');
                       setCurrentView('playthrough'); 
                     }} 
                   />
@@ -248,10 +259,13 @@ export default function App() {
                 
                 {currentView === 'progress' && <ProgressHistory />}
                 
+                {/* MODIFIED: Maps internal system configurations into Playthrough Engine */}
                 {currentView === 'playthrough' && (
                   <PlaythroughChallenge 
                     topicId={selectedTopicId} 
                     initialDifficulty={sessionDifficulty} 
+                    activeMods={sessionMods}
+                    equippedModifier={sessionItem}
                   />
                 )}
               </>
