@@ -19,6 +19,46 @@ MAX_QUESTIONS_PER_SESSION = 10
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def playthrough_api_view(request, topic_id):
+    """
+    Playthrough session endpoint for answering questions with DDA adjustment.
+    
+    GET: Fetch the next question for a topic session with dynamic difficulty adjustment.
+    POST: Submit an answer to the current question and get DDA-adjusted next question.
+    
+    Query Parameters:
+        - difficulty: str, one of ["Novice", "Intermediate", "Advanced", "Expert"] (GET only, for session start)
+        - equipped_modifier: str, optional modifier slug (e.g., "double-xp", "dda_adjuster")
+        - mods: str, alternative parameter name for equipped_modifier
+    
+    POST Body:
+        {
+            "answer": str  # The user's answer (A/B/C/D for MCQ, or text for text-box)
+        }
+    
+    Returns (GET):
+        {
+            "question_id": int,
+            "question_text": str,
+            "choices": ["A", "B", "C", "D"] or null for text-box,
+            "current_rating": float,
+            "current_tier": str,
+            "questions_served": int,
+            "score": int,
+            "gamified_score": int,
+            "current_streak": int
+        }
+    
+    Returns (POST):
+        {
+            "is_correct": bool,
+            "feedback": str,
+            "new_rating": float,
+            "new_tier": str,
+            "questions_served": int,
+            "score": int,
+            "next_question": {...}  # Same structure as GET response
+        }
+    """
     print(f"DEBUG: Current Session Key: {request.session.session_key} | Path: {request.path} | Method: {request.method}")
     topic = get_object_or_404(Topic, id=topic_id)
     dda = EquinoxDDAEngine()

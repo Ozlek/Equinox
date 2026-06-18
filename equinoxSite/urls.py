@@ -16,6 +16,12 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from drf_spectacular.views import SpectacularSwaggerView, SpectacularAPIView
+try:
+    from drf_spectacular.views import SpectacularReDocView
+    redoc_available = True
+except ImportError:
+    redoc_available = False
 
 urlpatterns = [
     path('', include("pages.urls")),
@@ -25,4 +31,13 @@ urlpatterns = [
     path('topics/', include('topics.urls')),
     path('playthrough/', include('playthrough.urls')),
     path('progress/', include('users_progress.urls')),
+    
+    # API Documentation
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
 ]
+
+if redoc_available:
+    urlpatterns.append(
+        path('api/redoc/', SpectacularReDocView.as_view(url_name='schema'), name='redoc'),
+    )
