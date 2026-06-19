@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import AchievementsCard from './Achievements';
 
+
+
 export default function DashboardWorkspace({ onNavigate, onStartQuiz }) {
   const [activeSessionTopicId, setActiveSessionTopicId] = useState(null);
 
@@ -21,7 +23,7 @@ export default function DashboardWorkspace({ onNavigate, onStartQuiz }) {
     <div>
       <div className="mb-4">
         <h1 className="fw-bold">Welcome to Equinox</h1>
-        <p className="lead text-muted">Ready to improve your mathematical expertise today?</p>
+        <p className="lead text-muted">Ready to improve your mathematical expertise?</p>
       </div>
 
       {/* NEW: Interceptor Banner - Only appears if they refreshed mid-quiz */}
