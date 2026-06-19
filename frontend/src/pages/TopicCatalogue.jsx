@@ -13,23 +13,34 @@ export default function TopicCatalogue({ onSelectTopic }) {
       });
   }, []);
 
-  if (loading) return <div className="text-center py-5">Loading Topic Catalogue Matrix...</div>;
+  if (loading) return <div style={styles.message}>Loading Topic Catalogue Matrix...</div>;
 
   return (
-    <div>
-      <h1 className="mb-4 fw-bold">Topic Catalogue</h1>
-      <div className="row">
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <h1 style={styles.mainTitle}>📚 Topic Catalogue</h1>
+        <p style={styles.subtitle}>Select a structural framework area to configure your study session.</p>
+      </div>
+
+      <div style={styles.grid}>
         {topics.map((topic) => (
-          <div key={topic.id} className="col-md-6 col-lg-4 mb-4">
-            <div className="card shadow-sm h-100 border-0 shadow-hover">
-              <div className="card-body d-flex flex-column">
-                <h4 className="card-title fw-bold">{topic.name}</h4>
-                <h6 className="badge bg-secondary align-self-start mb-3">{topic.grade_level}</h6>
-                <p className="card-text text-muted small flex-grow-1">{topic.description}</p>
-                <button className="btn btn-primary mt-3 w-100" onClick={() => onSelectTopic(topic.id)}>
-                  Review Topic Setup
-                </button>
+          <div key={topic.id} style={styles.topicCard}>
+            <div style={styles.cardContent}>
+              <div style={styles.cardHeaderRow}>
+                <h3 style={styles.cardTitle}>{topic.name}</h3>
+                <span style={styles.gradeBadge}>
+                  {topic.grade_level.toLowerCase().includes('grade') ? topic.grade_level : `${topic.grade_level}`}
+                </span>
               </div>
+              
+              <p style={styles.cardDescription}>{topic.description}</p>
+              
+              <button 
+                style={styles.actionBtn} 
+                onClick={() => onSelectTopic(topic.id)}
+              >
+                Review Topic ➔
+              </button>
             </div>
           </div>
         ))}
@@ -37,3 +48,19 @@ export default function TopicCatalogue({ onSelectTopic }) {
     </div>
   );
 }
+
+const styles = {
+  container: { padding: '2rem', maxWidth: '1200px', margin: '0 auto', color: '#f7fafc' },
+  header: { marginBottom: '2.5rem' },
+  mainTitle: { margin: '0 0 0.5rem 0', fontSize: '2.2rem', fontWeight: 'bold' },
+  subtitle: { margin: 0, color: '#a0aec0', fontSize: '1.1rem' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' },
+  topicCard: { backgroundColor: '#1a202c', border: '1px solid #2d3748', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', transition: 'transform 0.2s ease, border-color 0.2s ease' },
+  cardContent: { display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', flexGrow: 1 },
+  cardHeaderRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', marginBottom: '1rem' },
+  cardTitle: { margin: 0, fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', lineHeight: '1.3' },
+  gradeBadge: { backgroundColor: '#4a5568', color: '#e2e8f0', padding: '0.25rem 0.6rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', whiteSpace: 'nowrap' },
+  cardDescription: { margin: '0 0 1.5rem 0', color: '#a0aec0', fontSize: '0.9rem', lineHeight: '1.5', flexGrow: 1 },
+  actionBtn: { width: '100%', padding: '0.75rem', backgroundColor: '#63b3ed', color: '#1a202c', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.95rem', transition: 'background-color 0.15s ease' },
+  message: { textAlign: 'center', color: '#a0aec0', padding: '5rem', fontSize: '1.1rem' }
+};

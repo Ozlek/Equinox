@@ -1,6 +1,5 @@
 import React from 'react';
 
-// Developer Config: Add or remove symbols here instantly
 const MATH_SYMBOLS = [
   { label: 'π', value: 'π' },
   { label: 'θ', value: 'θ' },
@@ -12,28 +11,58 @@ const MATH_SYMBOLS = [
   { label: '≥', value: '≥' },
   { label: '÷', value: '÷' },
   { label: '×', value: '×' },
-  { label: '°', value: '°' }, // Degrees
-  { label: '1/x', value: '1/' } // Fractions
+  { label: '°', value: '°' }, 
+  { label: '1/x', value: '1/' } 
 ];
 
 export default function MathKeypad({ onSymbolSelect }) {
   return (
-    <div className="card shadow-sm border-secondary mt-2">
-      <div className="card-body p-2">
-        <div className="d-flex flex-wrap gap-2">
-          {MATH_SYMBOLS.map((symbol, index) => (
-            <button
-              key={index}
-              type="button" // Critical: 'button' prevents it from submitting your form!
-              className="btn btn-outline-secondary fw-bold"
-              style={{ minWidth: '45px' }}
-              onClick={() => onSymbolSelect(symbol.value)}
-            >
-              {symbol.label}
-            </button>
-          ))}
-        </div>
+    <div style={padStyles.keypadWrapper}>
+      <div style={padStyles.gridContainer}>
+        {MATH_SYMBOLS.map((symbol, index) => (
+          <button
+            key={index}
+            type="button" 
+            style={padStyles.keyButton}
+            onClick={(e) => {
+              e.preventDefault();
+              onSymbolSelect(symbol.value);
+            }}
+          >
+            {symbol.label}
+          </button>
+        ))}
       </div>
     </div>
   );
 }
+
+const padStyles = {
+  keypadWrapper: {
+    backgroundColor: '#2d3748',
+    borderRadius: '12px',
+    padding: '0.75rem',
+    marginTop: '0.75rem',
+    border: '1px solid #4a5568',
+  },
+  gridContainer: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, 1fr)', 
+    gap: '8px',
+  },
+  keyButton: {
+    backgroundColor: '#1a202c',
+    color: '#f7fafc',
+    border: '1px solid #4a5568',
+    borderRadius: '8px',
+    padding: '0.75rem 0',
+    fontSize: '1.1rem',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    minHeight: '48px', 
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'background-color 0.2s',
+  }
+};

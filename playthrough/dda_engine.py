@@ -22,6 +22,25 @@ class EquinoxDDAEngine:
         if numeric_rating < 3.8: return "Advanced"
         return "Expert"
 
+    # --- NEW METHOD FOR INITIAL SEEDING ---
+    @classmethod
+    def seed_initial_rating(cls, user, domain, difficulty_str):
+        """
+        Seeds the UserSkillProfile with the starting difficulty chosen by the user in the UI.
+        Converts frontend strings (e.g., 'novice') to backend engine values (e.g., 1.0).
+        """
+        # Ensure proper capitalization ('novice' -> 'Novice')
+        formatted_diff = str(difficulty_str).capitalize()
+        
+        # Get numeric value, fallback to Intermediate (2.0) if something goes wrong
+        initial_numeric = cls.DIFFICULTY_TIERS.get(formatted_diff, 2.0)
+        
+        # Fetch or instantiate profile, then forcefully save the seed value
+        profile, _ = UserSkillProfile.objects.get_or_create(user=user)
+        profile.update_rating(domain, initial_numeric)
+        
+        return initial_numeric
+
     def adjust_difficulty(self, user, domain, question_obj, is_correct):
         """
         Main pipeline executed on every quiz answer submission.
@@ -58,14 +77,11 @@ class EquinoxDDAEngine:
         ALGORITHM 1: RULE-BASED THRESHOLDING
         Evaluates the immediate streak of the current session.
         """
-        # Look back at the last 3 responses in this domain
         recent_logs = ResponseLog.objects.filter(user=user, domain=domain).order_by('-timestamp')[:3]
         
         if not is_correct:
-            # Rule: Immediate negative adjustment for a wrong answer to prevent frustration
             return -0.25
         
-        # Rule: Look for consecutive success streaks to step up challenge
         correct_streak = 0
         for log in recent_logs:
             if log.is_correct:
@@ -74,32 +90,23 @@ class EquinoxDDAEngine:
                 break
                 
         if correct_streak >= 3:
-            return 0.35  # Step up signficiantly on solid streaks
+            return 0.35  
         elif correct_streak == 2:
-            return 0.15  # Incremental bump
-        return 0.05      # Small baseline increase for a correct hit
+            return 0.15  
+        return 0.05      
 
     def _probabilistic_learning_factor(self, user, domain, question_difficulty, is_correct):
         """
         ALGORITHM 2: PROBABILISTIC LEARNING (Performance Expectation)
         Uses an Elo-based logistic function to model accuracy probability.
-        
-        Equation: P(Correct) = 1 / (1 + 10^((Difficulty - Rating) / 2))
         """
         profile = UserSkillProfile.objects.get(user=user)
         current_rating = profile.get_rating(domain)
 
-        # Expected probability that user gets this question right based on history
         exponent = (question_difficulty - current_rating) / 2.0
         expected_success = 1.0 / (1.0 + math.pow(10, exponent))
-
-        # Actual performance representation
         actual_success = 1.0 if is_correct else 0.0
 
-        # K-Factor defines maximum potential shift variance
         k_factor = 0.4
-        
-        # Adjust rating proportionally to how surprising the result was
-        # (e.g., if Expected was 90% but user got it wrong, variance penalty is high)
         probabilistic_shift = k_factor * (actual_success - expected_success)
         return probabilistic_shift

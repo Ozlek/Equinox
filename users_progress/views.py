@@ -10,16 +10,17 @@ from .achievements import AchievementRegistry
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def progress_history_api(request):
-    # Safely targets the logged-in student profile session
     progress_records = UserProgress.objects.filter(user=request.user).order_by('-completed_at')
     
     data = [{
         "id": record.id,
         "topic_name": record.topic.name,
+        "grade_level": record.topic.grade_level,
         "score": record.score,
+        "gamified_score": record.gamified_score,
         "total_questions": record.total_questions,
         "difficulty_achieved": record.difficulty,
-        "completed_at": record.completed_at.strftime("%Y-%m-%d %H:%M")
+        "completed_at": record.completed_at.isoformat()
     } for record in progress_records]
     
     return Response(data)

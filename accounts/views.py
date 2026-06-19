@@ -10,6 +10,27 @@ from .models import UserProfile
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_api(request):
+    """
+    Authenticate user and create session.
+    
+    POST Body:
+        {
+            "username": str,
+            "password": str
+        }
+    
+    Returns:
+        {
+            "authenticated": bool,
+            "username": str,
+            "message": str,
+            "errors": dict  # Only present if authentication fails
+        }
+    
+    Status Codes:
+        - 200: Login successful
+        - 400: Invalid credentials
+    """
     # Pass the JSON payload into Django's native authentication validator
     form = AuthenticationForm(data=request.data)
     if form.is_valid():
