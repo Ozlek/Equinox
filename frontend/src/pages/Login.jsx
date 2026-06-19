@@ -9,6 +9,7 @@ export default function Login({ onNavigate, onLoginSuccess }) {
   const handleLoginSubmit = (e) => {
     e.preventDefault();
     const csrfToken = getCookie('csrftoken');
+    console.log("Extracted CSRF Token on Frontend:", csrfToken);
 
     fetch('http://127.0.0.1:8000/accounts/login/', {
       method: 'POST',
@@ -19,15 +20,25 @@ export default function Login({ onNavigate, onLoginSuccess }) {
       },
       body: JSON.stringify({ username, password })
     })
-      .then(res => res.json())
-      .then(data => {
-        if (data.authenticated) {
-          onLoginSuccess(data.username);
-        } else {
-          setErrors(data.errors || { non_field_errors: ["Invalid credentials profile match."] });
-        }
-      })
-      .catch(() => setErrors({ network: ["Could not establish server authentication response link."] }));
+      .then(async (res) => {
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error(`Server Error Status ${res.status}:`, errorText);
+        throw new Error(`Server responded with status ${res.status}`);
+      }
+      return res.json();
+    })
+    .then(data => {
+      if (data.authenticated) {
+        onLoginSuccess(data.username);
+      } else {
+        setErrors(data.errors || { non_field_errors: ["Invalid credentials profile match."] });
+      }
+    })
+    .catch((err) => {
+      console.error("Actual Catch Error Object:", err); // Debug log 3
+      setErrors({ network: ["Could not establish server authentication response link."] });
+    });
   };
 
   return (

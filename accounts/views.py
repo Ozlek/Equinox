@@ -1,4 +1,4 @@
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
@@ -8,34 +8,16 @@ from .forms import RegisterForm
 from .models import UserProfile
 
 @api_view(['POST'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def login_api(request):
     """
     Authenticate user and create session.
-    
-    POST Body:
-        {
-            "username": str,
-            "password": str
-        }
-    
-    Returns:
-        {
-            "authenticated": bool,
-            "username": str,
-            "message": str,
-            "errors": dict  # Only present if authentication fails
-        }
-    
-    Status Codes:
-        - 200: Login successful
-        - 400: Invalid credentials
     """
-    # Pass the JSON payload into Django's native authentication validator
     form = AuthenticationForm(data=request.data)
     if form.is_valid():
         user = form.get_user()
-        login(request, user) # Sets the browser session cookie automatically!
+        login(request, user)
         return Response({
             "authenticated": True,
             "username": user.username,
@@ -48,12 +30,13 @@ def login_api(request):
     }, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def register_api(request):
     form = RegisterForm(request.data)
     if form.is_valid():
         user = form.save()
-        login(request, user) # Automatically log in the student post-registration
+        login(request, user) 
         return Response({
             "authenticated": True,
             "username": user.username,
