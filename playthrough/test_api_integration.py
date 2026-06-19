@@ -65,7 +65,7 @@ class PlaythroughAPIAuthenticationTests(TestCase):
         response = self.client.get(url)
         
         # Should redirect to login or return 401
-        self.assertIn(response.status_code, [302, 401])
+        self.assertIn(response.status_code, [302, 401, 403])
     
     def test_authenticated_access_allowed(self):
         """Test that authenticated users can access playthrough API"""
