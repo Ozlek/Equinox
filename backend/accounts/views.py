@@ -4,12 +4,14 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import login, logout
 from django.contrib.auth.forms import AuthenticationForm
+from django.views.decorators.csrf import csrf_exempt
 from .forms import RegisterForm
 from .models import UserProfile
 
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])
+@csrf_exempt
 def login_api(request):
     """
     Authenticate user and create session.
@@ -32,6 +34,7 @@ def login_api(request):
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])
+@csrf_exempt
 def register_api(request):
     form = RegisterForm(request.data)
     if form.is_valid():
