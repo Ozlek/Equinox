@@ -1,6 +1,7 @@
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import status
 from django.contrib.auth import login, logout
 from django.contrib.auth.forms import AuthenticationForm
@@ -20,9 +21,15 @@ def login_api(request):
     if form.is_valid():
         user = form.get_user()
         login(request, user)
+        refresh = RefreshToken.for_user(user)
+        profile = getattr(user, 'profile', None)
+        
         return Response({
             "authenticated": True,
             "username": user.username,
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "needs_onboarding": profile is None or not profile.has_completed_onboarding,
             "message": "Login successful"
         }, status=status.HTTP_200_OK)
         
