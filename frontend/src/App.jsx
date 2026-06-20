@@ -8,6 +8,7 @@ import ProgressHistory from './pages/ProgressHistory';
 import DashboardWorkspace from './pages/Dashboard';
 import PlaythroughChallenge from './pages/Playthrough';
 import Questionnaire from './pages/Questionnaire';
+import api from './api/axios';
 import { getCookie } from './utils';
 
 export default function App() {
@@ -27,19 +28,31 @@ export default function App() {
   const [hoveredLink, setHoveredLink] = useState(null);
 
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/accounts/check-auth/', { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => {
-        if (data.authenticated) {
-          setUser(data.username);
-          setNeedsOnboarding(data.needs_onboarding);
+    const token = localStorage.getItem('access_token');
+    
+    if (!token) {
+      setCheckingAuth(false);
+      return;
+    }
+
+    api.get('/accounts/check-auth/')
+      .then(res => {
+        // Axios wraps the response in a 'data' object
+        if (res.data.authenticated) {
+          setUser(res.data.username);
+          setNeedsOnboarding(res.data.needs_onboarding);
           setCurrentView('dashboard');
         } else {
           setCurrentView('home');
         }
-        setCheckingAuth(false);
       })
-      .catch(() => setCheckingAuth(false));
+      .catch(() => {
+        // If this fails (e.g., token is invalid and refresh failed), interceptor handles logout
+        setCurrentView('home');
+      })
+      .finally(() => {
+        setCheckingAuth(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -56,17 +69,21 @@ export default function App() {
   }, [mobileSidebarOpen]);
 
   const handleLogout = () => {
-    const csrfToken = getCookie('csrftoken');
-    fetch('http://127.0.0.1:8000/accounts/logout/', {
-      method: 'POST',
-      headers: { 'X-CSRFToken': csrfToken },
-      credentials: 'include'
-    }).then(() => {
-      setUser(null);
-      setNeedsOnboarding(false);
-      setCurrentView('home');
-      setMobileSidebarOpen(false);
-    });
+    const refreshToken = localStorage.getItem('refresh_token');
+    
+    api.post('/accounts/logout/', { refresh: refreshToken })
+      .then(() => {
+        // Clear local storage
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        
+        // Reset state
+        setUser(null);
+        setNeedsOnboarding(false);
+        setCurrentView('home');
+        setMobileSidebarOpen(false);
+      })
+      .catch(err => console.error("Logout failed", err));
   };
 
   const navigateTo = (view) => {

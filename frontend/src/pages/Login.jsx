@@ -1,44 +1,39 @@
 import React, { useState } from 'react';
-import { getCookie } from '../utils';
+import api from '../api/axios'; 
 
 export default function Login({ onNavigate, onLoginSuccess }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState(null);
 
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    const csrfToken = getCookie('csrftoken');
-    console.log("Extracted CSRF Token on Frontend:", csrfToken);
+    setErrors(null);
 
-    fetch('http://127.0.0.1:8000/accounts/login/', {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': csrfToken
-      },
-      body: JSON.stringify({ username, password })
-    })
-      .then(async (res) => {
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error(`Server Error Status ${res.status}:`, errorText);
-        throw new Error(`Server responded with status ${res.status}`);
-      }
-      return res.json();
-    })
-    .then(data => {
-      if (data.authenticated) {
-        onLoginSuccess(data.username);
+    try {
+      const response = await api.post('/accounts/login/', { username, password });
+      
+      const { access, refresh, needs_onboarding, username: returnedName } = response.data;
+      
+      localStorage.setItem('access_token', access);
+      localStorage.setItem('refresh_token', refresh);
+      
+      onLoginSuccess(returnedName || username, needs_onboarding || false);
+      
+    } catch (err) {
+      console.error("Axios Auth Error Object:", err);
+
+      if (err.response) {
+        const serverErrors = err.response.data;
+        if (serverErrors.detail) {
+          setErrors({ non_field_errors: [serverErrors.detail] });
+        } else {
+          setErrors(serverErrors);
+        }
       } else {
-        setErrors(data.errors || { non_field_errors: ["Invalid credentials profile match."] });
+        setErrors({ network: ["Could not establish server authentication response link."] });
       }
-    })
-    .catch((err) => {
-      console.error("Actual Catch Error Object:", err); // Debug log 3
-      setErrors({ network: ["Could not establish server authentication response link."] });
-    });
+    }
   };
 
   return (

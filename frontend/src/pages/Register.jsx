@@ -1,31 +1,46 @@
 import React, { useState } from 'react';
-import { getCookie } from '../utils';
+import api from '../api/axios';
 
 export default function Register({ onNavigate, onRegisterSuccess }) {
   const [formData, setFormData] = useState({ username: '', email: '', password1: '', password2: '' });
   const [fieldErrors, setFieldErrors] = useState(null);
 
-  const handleRegisterSubmit = (e) => {
+  const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-    const csrfToken = getCookie('csrftoken');
+    setFieldErrors(null);
 
-    fetch('http://127.0.0.1:8000/accounts/register/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': csrfToken
-      },
-      credentials: 'include',
-      body: JSON.stringify(formData)
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.authenticated) {
-          setTimeout(() => onRegisterSuccess(data.username), 100);
-        } else {
-          setFieldErrors(data.errors);
+    try {
+      const response = await api.post('/accounts/register/', formData);
+      
+      if (response.data.authenticated || response.status === 201) {
+        
+        try {
+          const tokenResponse = await api.post('/api/token/', {
+            username: formData.username,
+            password: formData.password1 
+          });
+
+          localStorage.setItem('access_token', tokenResponse.data.access);
+          localStorage.setItem('refresh_token', tokenResponse.data.refresh);
+
+          setTimeout(() => onRegisterSuccess(formData.username), 100);
+
+        } catch (tokenErr) {
+          console.error("Auto-login after registration failed", tokenErr);
+          onNavigate('login'); 
         }
-      });
+
+      } else {
+        setFieldErrors(response.data.errors);
+      }
+    } catch (err) {
+      console.error("Registration Error:", err);
+      if (err.response && err.response.data) {
+        setFieldErrors(err.response.data.errors || err.response.data);
+      } else {
+        setFieldErrors({ network: ["Could not establish server connection."] });
+      }
+    }
   };
 
   return (
