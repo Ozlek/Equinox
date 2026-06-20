@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h1 class="mb-4">
+    Topic Catalogue
+</h1>
+
+<div class="row">
+
+    {% for topic in topics %}
+
+    <div class="col-md-6 col-lg-4 mb-4">
+
+        <div class="card shadow-sm h-100">
+
+            <div class="card-body">
+
+                <h4 class="card-title">
+                    {{ topic.name }}
+                </h4>
+
+                <h6 class="text-muted">
+                    {{ topic.grade_level }}
+                </h6>
+
+                <p class="card-text">
+                    {{ topic.description }}
+                </p>
+
+                <a href="{% url 'topic_detail' topic.id %}" class="btn btn-primary">
+                    Review Topic
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+
+    {% endfor %}
+
+</div>
+
+{% endblock %}

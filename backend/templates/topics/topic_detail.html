@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="card shadow-sm">
+
+    <div class="card-body">
+
+        <h1 class="mb-3">
+            {{ topic.name }}
+        </h1>
+
+        <h5 class="text-muted mb-4">
+            Grade Level:
+            {{ topic.grade_level }}
+        </h5>
+
+        <p class="lead">
+            {{ topic.description }}
+        </p>
+
+        <hr>
+
+        <h4>
+            Review Section
+        </h4>
+
+        <p>
+            Learning materials for this topic will appear here soon.
+        </p>
+
+        <a href="/playthrough/{{ topic.id }}/" class="btn btn-success mt-3">
+            Start Challenge Playthrough
+        </a>
+
+        <a href="/topics/" class="btn btn-secondary mt-3">
+            Back to Topics
+        </a>
+
+    </div>
+
+</div>
+
+{% endblock %}
