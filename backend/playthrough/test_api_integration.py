@@ -35,7 +35,7 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
 from topics.models import Topic
-from .models import Question, UserSkillProfile, GamifiedModifier, UserInventory
+from .models import Question, UserSkillProfile, GamifiedModifier, UserInventory, PlaythroughSession
 from .dda_engine import EquinoxDDAEngine
 import json
 
@@ -100,14 +100,14 @@ class PlaythroughAPISessionTests(TestCase):
         """Test that session is properly initialized on first request"""
         url = reverse('playthrough', kwargs={'topic_id': self.topic.id})
         response = self.client.get(url, {'difficulty': 'Intermediate'})
-        
+
         self.assertEqual(response.status_code, 200)
-        data = response.json()
-        
-        # Check session was initialized
-        self.assertEqual(response.wsgi_request.session.get('questions_served'), 0)
-        self.assertEqual(response.wsgi_request.session.get('score'), 0)
-        self.assertIsNotNone(response.wsgi_request.session.get('current_question_id'))
+
+        # Check PlaythroughSession was created in the database
+        db_session = PlaythroughSession.objects.get(user=self.user, topic=self.topic)
+        self.assertEqual(db_session.questions_served, 0)
+        self.assertEqual(db_session.score, 0)
+        self.assertIsNotNone(db_session.current_question_id)
     
     def test_difficulty_parameter_seeds_rating(self):
         """Test that difficulty parameter correctly seeds user rating"""
@@ -127,18 +127,19 @@ class PlaythroughAPISessionTests(TestCase):
     def test_session_persists_across_requests(self):
         """Test that session data persists across multiple requests"""
         url = reverse('playthrough', kwargs={'topic_id': self.topic.id})
-        
+
         # First request - initialize session
-        response1 = self.client.get(url)
-        session1 = self.client.session
-        first_question_id = session1.get('current_question_id')
-        
-        # Second request - check session persisted
-        response2 = self.client.get(url)
-        session2 = self.client.session
-        
-        self.assertEqual(session1.get('questions_served'), session2.get('questions_served'))
-        self.assertEqual(first_question_id, session2.get('current_question_id'))
+        self.client.get(url)
+        db_session_1 = PlaythroughSession.objects.get(user=self.user, topic=self.topic)
+        first_question_id = db_session_1.current_question_id
+        first_questions_served = db_session_1.questions_served
+
+        # Second request - check session persisted (same question, no answer submitted)
+        self.client.get(url)
+        db_session_2 = PlaythroughSession.objects.get(user=self.user, topic=self.topic)
+
+        self.assertEqual(first_questions_served, db_session_2.questions_served)
+        self.assertEqual(first_question_id, db_session_2.current_question_id)
 
 
 class PlaythroughAPIQuestionTests(TestCase):
@@ -348,7 +349,7 @@ class PlaythroughAPIModifierTests(TestCase):
         score_without_modifier = data1.get('gamified_score', 0)
         
         # Reset and test with modifier
-        self.client.session.flush()
+        PlaythroughSession.objects.filter(user=self.user).delete()
         self.client.get(url, {'equipped_modifier': 'double-xp'})
         self.client.post(url, json.dumps({'answer': 'A'}), content_type='application/json')
         response2 = self.client.get(url)
@@ -391,11 +392,11 @@ class PlaythroughAPIEndToEndTests(TestCase):
         # 1. Initialize session
         response = self.client.get(url, {'difficulty': 'Intermediate'})
         self.assertEqual(response.status_code, 200)
-        
-        initial_session = dict(self.client.session)
-        self.assertEqual(initial_session['questions_served'], 0)
-        self.assertEqual(initial_session['score'], 0)
-        
+
+        db_session = PlaythroughSession.objects.get(user=self.user, topic=self.topic)
+        self.assertEqual(db_session.questions_served, 0)
+        self.assertEqual(db_session.score, 0)
+
         # 2. Answer 3 questions correctly
         for i in range(3):
             response = self.client.post(
@@ -406,12 +407,12 @@ class PlaythroughAPIEndToEndTests(TestCase):
             self.assertEqual(response.status_code, 200)
             data = response.json()
             self.assertTrue(data.get('is_correct'))
-        
-        # 3. Verify session state
-        final_session = dict(self.client.session)
-        self.assertEqual(final_session['questions_served'], 3)
-        self.assertGreater(final_session['score'], 0)
-        
+
+        # 3. Verify session state via DB
+        db_session.refresh_from_db()
+        self.assertEqual(db_session.questions_served, 3)
+        self.assertGreater(db_session.score, 0)
+
         # 4. Verify user rating improved
         profile = UserSkillProfile.objects.get(user=self.user)
         self.assertGreater(profile.algebra_rating, 1.0)  # Started at novice (1.0)
