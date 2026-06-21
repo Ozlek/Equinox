@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 from topics.models import Topic
 
 class Question(models.Model):
@@ -118,3 +119,78 @@ class UserInventory(models.Model):
 
     def __str__(self):
         return f"{self.user.username} owns {self.quantity}x {self.modifier.name}"
+
+
+# ==========================================
+# PLAYTHROUGH SESSION MODEL
+# ==========================================
+
+class PlaythroughSession(models.Model):
+    """
+    Database-backed playthrough session replacing fragile request.session state.
+
+    Stores all in-progress quiz state for a single user's active session on a
+    given topic. Using a DB model eliminates race conditions and session expiry
+    issues that arise from cookie-based session storage.
+
+    A session is considered expired if it has not been updated in more than one
+    hour (see ``is_expired``). Only one active session per user/topic pair is
+    expected at a time; callers should call ``end_session`` before starting a
+    new one.
+    """
+
+    SESSION_EXPIRY_SECONDS = 3600  # 1 hour
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='playthrough_sessions')
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='playthrough_sessions')
+
+    # Progress counters
+    questions_served = models.IntegerField(default=0)
+    score = models.IntegerField(default=0)
+    gamified_score = models.IntegerField(default=0)
+    current_streak = models.IntegerField(default=0)
+
+    # Current question tracking
+    current_question_id = models.IntegerField(null=True, blank=True)
+    seen_question_ids = models.JSONField(default=list)
+
+    # Modifier state
+    active_modifier_id = models.IntegerField(null=True, blank=True)
+    modifier_multiplier = models.FloatField(default=1.0)
+    modifier_type = models.CharField(max_length=50, null=True, blank=True)
+    modifier_slug = models.CharField(max_length=100, null=True, blank=True)
+
+    # Timing
+    question_start_time = models.FloatField(null=True, blank=True)
+
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'topic']),
+        ]
+
+    def is_expired(self):
+        """
+        Return True if the session has been idle for longer than SESSION_EXPIRY_SECONDS.
+
+        Uses ``updated_at`` (auto-updated on every save) as the activity timestamp
+        so any state mutation resets the expiry clock.
+        """
+        age = (timezone.now() - self.updated_at).total_seconds()
+        return age > self.SESSION_EXPIRY_SECONDS
+
+    def end_session(self):
+        """
+        Permanently delete this session record from the database.
+
+        Call this after a session completes normally, after a one-life game-over,
+        or when the user explicitly quits. The caller is responsible for persisting
+        any final ``UserProgress`` record before calling this method.
+        """
+        self.delete()
+
+    def __str__(self):
+        return f"PlaythroughSession({self.user.username}, {self.topic.name}, q={self.questions_served})"
