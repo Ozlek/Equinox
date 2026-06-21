@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import include, path
 from . import views
 
 urlpatterns = [
@@ -7,4 +7,5 @@ urlpatterns = [
     path('logout/', views.logout_api, name='logout'),
     path('check-auth/', views.check_auth_status, name='check_auth'),
     path('onboarding/', views.onboarding_api, name='onboarding'),
+    path('accounts/password/reset/', include('dj_rest_auth.urls')),
 ]

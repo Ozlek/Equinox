@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+// ─── NEW PASSWORD RECOVERY IMPORTS ───
+import ForgotPassword from './pages/ForgotPassword';
+import PasswordResetConfirm from './pages/PasswordResetConfirm';
+
 import TopicCatalogue from './pages/TopicCatalogue';
 import TopicDetail from './pages/TopicDetail';
 import ProgressHistory from './pages/ProgressHistory';
@@ -19,13 +23,28 @@ export default function App() {
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [sessionDifficulty, setSessionDifficulty] = useState('Intermediate');
   
-  // ─── NEW CONFIGURATION DATA STATES FOR EQUINOX PLAYTHROUGH ───
+  // ─── NEW PASSWORD RESET ARGUMENT STATES ───
+  const [resetParams, setResetParams] = useState({ uid: null, token: null });
+  
+  // Configuration data states for Equinox Playthrough
   const [sessionMods, setSessionMods] = useState([]);
   const [sessionItem, setSessionItem] = useState('');
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [hoveredLink, setHoveredLink] = useState(null);
+
+  // ─── NEW EFFECT: INTERCEPT EMAIL DEEP-LINKS ON APP START ───
+  useEffect(() => {
+    const path = window.location.pathname; // e.g., /reset-password/Mg/abc-123/
+    const match = path.match(/\/reset-password\/([^/]+)\/([^/]+)/);
+
+    if (match) {
+      const [_, uid, token] = match;
+      setResetParams({ uid, token });
+      setCurrentView('reset-password-confirm');
+    }
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -37,7 +56,6 @@ export default function App() {
 
     api.get('/accounts/check-auth/')
       .then(res => {
-        // Axios wraps the response in a 'data' object
         if (res.data.authenticated) {
           setUser(res.data.username);
           setNeedsOnboarding(res.data.needs_onboarding);
@@ -47,7 +65,6 @@ export default function App() {
         }
       })
       .catch(() => {
-        // If this fails (e.g., token is invalid and refresh failed), interceptor handles logout
         setCurrentView('home');
       })
       .finally(() => {
@@ -73,11 +90,9 @@ export default function App() {
     
     api.post('/accounts/logout/', { refresh: refreshToken })
       .then(() => {
-        // Clear local storage
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         
-        // Reset state
         setUser(null);
         setNeedsOnboarding(false);
         setCurrentView('home');
@@ -87,6 +102,10 @@ export default function App() {
   };
 
   const navigateTo = (view) => {
+    // MODIFIED: Clear out unique deep link paths from url string bar when bouncing back safely
+    if (view === 'login' || view === 'home') {
+      window.history.pushState({}, document.title, "/");
+    }
     setCurrentView(view);
     setMobileSidebarOpen(false); 
   };
@@ -237,13 +256,18 @@ export default function App() {
         {/* WORKSPACE CONTENT PANEL */}
         <div style={appLayoutStyles.contentContainer}>
           <div className="container-fluid py-4 px-md-4 px-2" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+            
+            {/* UNAUTHENTICATED ROUTER CORE SWITCHES */}
             {!user && currentView === 'home' && <Home onNavigate={navigateTo} />}
             {!user && currentView === 'login' && <Login onNavigate={navigateTo} onLoginSuccess={(name, needsOnboard) => { setUser(name); setNeedsOnboarding(needsOnboard); setCurrentView('dashboard'); }} />}
             {!user && currentView === 'register' && <Register onNavigate={navigateTo} onRegisterSuccess={(name) => { setUser(name); setNeedsOnboarding(true); setCurrentView('dashboard'); }} />}
+            
+            {/* ─── ADDED RECOVERY COMPONENTS HERE ─── */}
+            {!user && currentView === 'forgot-password' && <ForgotPassword onNavigate={navigateTo} />}
+            {!user && currentView === 'reset-password-confirm' && <PasswordResetConfirm uid={resetParams.uid} token={resetParams.token} onNavigate={navigateTo} />}
 
             {user && (
               <>
-                {/* MODIFIED: Receives structural configs directly from Modal elements inside Dashboard */}
                 {currentView === 'dashboard' && (
                   <DashboardWorkspace 
                     onNavigate={navigateTo} 
@@ -259,7 +283,6 @@ export default function App() {
                 
                 {currentView === 'catalogue' && <TopicCatalogue onSelectTopic={(id) => { setSelectedTopicId(id); setCurrentView('detail'); }} />}
                 
-                {/* MODIFIED: Receives structural configs directly from Modal elements inside TopicDetail */}
                 {currentView === 'detail' && (
                   <TopicDetail 
                     topicId={selectedTopicId} 
@@ -276,7 +299,6 @@ export default function App() {
                 
                 {currentView === 'progress' && <ProgressHistory />}
                 
-                {/* MODIFIED: Maps internal system configurations into Playthrough Engine */}
                 {currentView === 'playthrough' && (
                   <PlaythroughChallenge 
                     topicId={selectedTopicId} 

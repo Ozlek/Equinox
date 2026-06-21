@@ -6,7 +6,7 @@ export default function Login({ onNavigate, onLoginSuccess }) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState([]); // Initialized as a safe, clean array
+  const [errors, setErrors] = useState([]); 
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
@@ -27,32 +27,34 @@ export default function Login({ onNavigate, onLoginSuccess }) {
 
       let extractedErrors = [];
 
-      if (err.response && err.response.data) {
+      if (err.response) {
+        const statusCode = err.response.status;
         const serverErrors = err.response.data;
 
-        // 1. Handle explicit global detail messages (like 401 Unauthorized)
-        if (serverErrors.detail) {
+        // Overrides explicit 401 Unauthorized or 400 Bad Request validations with user-friendly text
+        if (statusCode === 401 || statusCode === 400) {
+          extractedErrors.push("The username or password you entered is incorrect. Please check your spelling and try again.");
+        } 
+        else if (serverErrors.detail) {
           extractedErrors.push(serverErrors.detail);
         } 
-        // 2. Handle non-field generic validation errors
-        elif (serverErrors.non_field_errors); {
+        else if (serverErrors.non_field_errors) {
           if (Array.isArray(serverErrors.non_field_errors)) {
             extractedErrors.push(...serverErrors.non_field_errors);
           } else {
             extractedErrors.push(serverErrors.non_field_errors);
           }
         } 
-        // 3. Fallback to flattening field-specific parsing errors safely
-        elif (typeof serverErrors === 'object'); {
+        else if (typeof serverErrors === 'object') {
           extractedErrors.push(...Object.values(serverErrors).flat());
         }
       } else {
         extractedErrors.push("Could not establish server authentication response link.");
       }
 
-      // If the backend returned generic failure keys, normalize to a user-friendly alert
+      // Safety fallback guarantee
       if (extractedErrors.length === 0 || extractedErrors.includes("undefined")) {
-        extractedErrors = ["Invalid username or password. Please try again."];
+        extractedErrors = ["The username or password you entered is incorrect."];
       }
 
       setErrors(extractedErrors);
@@ -70,7 +72,7 @@ export default function Login({ onNavigate, onLoginSuccess }) {
           <p style={styles.subtitle}>Access your Equinox dashboard</p>
         </div>
 
-        {/* Bulletproofed Error Banner Container */}
+        {/* Dynamic Error Banner Block */}
         {errors.length > 0 && (
           <div style={styles.errorBanner}>
             <div style={styles.bannerTextContainer}>
@@ -120,7 +122,6 @@ export default function Login({ onNavigate, onLoginSuccess }) {
             </div>
           </div>
 
-          {/* New: Contextual Link for Password Recovery */}
           <div style={styles.recoveryRow}>
             <button 
               type="button" 
@@ -137,7 +138,7 @@ export default function Login({ onNavigate, onLoginSuccess }) {
             style={{ 
               ...styles.submitBtn, 
               backgroundColor: isSubmitting ? '#4a5568' : '#63b3ed', 
-              color: isSubmitting ? '#a0aec0' : '#1a202c',
+              color: isSubmitting ? '#1a202c': '#1a202c',
               cursor: isSubmitting ? 'not-allowed' : 'pointer'
             }}
           >
@@ -172,9 +173,9 @@ const styles = {
   toggleBtn: { position: 'absolute', right: '12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' },
   
   recoveryRow: { display: 'flex', justifyContent: 'flex-end', marginTop: '-4px' },
-  inlineLinkBtn: { background: 'none', border: 'none', color: '#a0aec0', padding: 0, cursor: 'pointer', fontSize: '0.85rem', textDecoration: 'none', transition: 'color 0.15s ease' },
+  inlineLinkBtn: { background: 'none', border: 'none', color: '#a0aec0', padding: 0, cursor: 'pointer', fontSize: '0.85rem', textDecoration: 'none' },
   
-  inputField: { width: '100%', padding: '0.75rem 1rem', backgroundColor: '#111827', border: '1px solid #2d3748', borderRadius: '8px', color: '#fff', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s ease' },
+  inputField: { width: '100%', padding: '0.75rem 1rem', backgroundColor: '#111827', border: '1px solid #2d3748', borderRadius: '8px', color: '#fff', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' },
   submitBtn: { width: '100%', padding: '0.85rem', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '1rem', marginTop: '0.25rem', transition: 'transform 0.1s ease' },
   
   errorBanner: { display: 'flex', backgroundColor: 'rgba(245, 101, 101, 0.12)', border: '1px solid #f56565', borderRadius: '12px', padding: '1rem', marginBottom: '1.5rem' },
