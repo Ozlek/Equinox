@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AchievementsCard from './Achievements';
+import api from '../api/axios'; // Integrated your environment-aware Axios client
 
 export default function DashboardWorkspace({ onNavigate, onStartQuiz }) {
   const [activeSessionTopicId, setActiveSessionTopicId] = useState(null);
@@ -13,12 +14,10 @@ export default function DashboardWorkspace({ onNavigate, onStartQuiz }) {
   });
 
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/playthrough/check_active/', {
-      method: 'GET',
-      credentials: 'include'
-    })
-      .then(res => res.json())
-      .then(data => {
+    // Axios handles base routing adjustments natively across local and production runtimes
+    api.get('/playthrough/check_active/')
+      .then(res => {
+        const data = res.data; // Data packet is parsed automatically by the instance client
         if (data.has_active_session) {
           setActiveSessionTopicId(data.topic_id);
           // Safely seed ongoing structural configurations back down if provided by the endpoint
@@ -28,6 +27,9 @@ export default function DashboardWorkspace({ onNavigate, onStartQuiz }) {
             equipped_item: data.equipped_item || ''
           });
         }
+      })
+      .catch(err => {
+        console.error("Error identifying active adaptive playthrough sessions:", err);
       });
   }, []);
 

@@ -28,7 +28,9 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
     const modQuery = activeMods.length > 0 ? `&mods=${activeMods.join(',')}` : '';
     const itemQuery = equippedModifier ? `&equipped_modifier=${equippedModifier}` : '';
     const diffQuery = (isFirstLoad && initialDifficulty) ? `&difficulty=${initialDifficulty}` : '';
-    return `?${diffQuery}${modQuery}${itemQuery}`.replace('?&', '?');
+    const queryString = `${diffQuery}${modQuery}${itemQuery}`;
+
+    return queryString ? `?${queryString}`.replace('?&', '?') : '';
   };
 
   const fetchNextQuestion = async (isFirstLoad = false) => {

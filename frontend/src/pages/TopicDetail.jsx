@@ -1,17 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import Leaderboard from './Leaderboard';
 import ChallengeConfigModal from './ChallengeConfig';
+import api from '../api/axios';
 
 export default function TopicDetail({ topicId, onBack, onStartChallenge }) {
   const [topic, setTopic] = useState(null);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch(`http://127.0.0.1:8000/topics/${topicId}/`, { method: 'GET' })
-      .then((res) => res.json())
-      .then((data) => setTopic(data));
+    // Axios resolves relative routing paths using your centralized base domain rules
+    api.get(`/topics/${topicId}/`)
+      .then((res) => {
+        setTopic(res.data); // Content payload unpacked automatically
+      })
+      .catch((err) => {
+        console.error(`Error compiling learning module metadata for ID ${topicId}:`, err);
+        setError("Unable to recover properties for this educational framework node.");
+      });
   }, [topicId]);
+
+  if (error) return <div style={{ ...styles.message, color: '#f56565' }}>⚠️ {error}</div>;
 
   if (!topic) return <div style={styles.message}>Compiling Learning Module Properties...</div>;
 

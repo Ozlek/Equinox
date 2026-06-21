@@ -1,19 +1,27 @@
 import React, { useState, useEffect } from 'react';
+import api from '../api/axios';
 
 export default function TopicCatalogue({ onSelectTopic }) {
   const [topics, setTopics] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/topics/', { method: 'GET' })
-      .then((res) => res.json())
-      .then((data) => {
-        setTopics(data);
+    // Axios targets your base URL and handles slash resolution safely
+    api.get('/topics/')
+      .then((res) => {
+        setTopics(res.data); // Axios automatically unwraps JSON into response.data
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Error retrieving topic catalogue structural framework:", err);
+        setError("Unable to load the topic structural framework matrix. Please try again.");
         setLoading(false);
       });
   }, []);
 
   if (loading) return <div style={styles.message}>Loading Topic Catalogue Matrix...</div>;
+  if (error) return <div style={{ ...styles.message, color: '#f56565' }}>⚠️ {error}</div>;
 
   return (
     <div style={styles.container}>

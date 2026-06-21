@@ -1,16 +1,25 @@
 import { useEffect, useState } from "react";
-
-const LEADERBOARD_URL = (topicId) => `http://127.0.0.1:8000/progress/leaderboard/${topicId}/`;
+import api from "../api/axios"; // Integrated your environment-aware Axios client
 
 export default function Leaderboard({ topicId, topicName, onClose }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null); // Added tracking for failed data network streams
 
   useEffect(() => {
     if (!topicId) return;
-    fetch(LEADERBOARD_URL(topicId), { credentials: "include" })
-      .then((res) => res.json())
-      .then((json) => { setData(json); setLoading(false); });
+    
+    // Custom instance automatically routes to production or local address paths
+    api.get(`/progress/leaderboard/${topicId}/`)
+      .then((res) => {
+        setData(res.data); // Payload unwrapped safely
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error(`Error loading standings for topic ID ${topicId}:`, err);
+        setError("Failed to load framework standings matrix.");
+        setLoading(false);
+      });
   }, [topicId]);
 
   return (
@@ -26,11 +35,13 @@ export default function Leaderboard({ topicId, topicName, onClose }) {
 
         {loading ? (
           <p style={styles.message}>Loading standings...</p>
+        ) : error ? (
+          <p style={{ ...styles.message, color: "#f56565" }}>⚠️ {error}</p>
         ) : (
           <>
             {/* The user's own status */}
             <div style={styles.myRankBadge}>
-              Your current rank: <strong>#{data.current_user_rank || 'N/A'}</strong>
+              Your current rank: <strong>#{data?.current_user_rank || 'N/A'}</strong>
             </div>
 
             <div style={styles.tableWrapper}>
@@ -44,7 +55,7 @@ export default function Leaderboard({ topicId, topicName, onClose }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.leaderboard.map((entry, idx) => {
+                  {data?.leaderboard?.map((entry, idx) => {
                     const isMe = entry.is_current_user;
                     return (
                       <tr key={idx} style={{ ...styles.tr, backgroundColor: isMe ? "rgba(99, 179, 237, 0.1)" : "transparent" }}>
@@ -84,5 +95,6 @@ const styles = {
   th: { color: "#718096", fontSize: "0.75rem", textTransform: "uppercase", padding: "0.5rem" },
   tr: { borderRadius: "8px" },
   td: { padding: "1rem 0.5rem", textAlign: "center", borderTop: "1px solid #2d3748", borderBottom: "1px solid #2d3748" },
-  youBadge: { marginLeft: "8px", fontSize: "0.65rem", backgroundColor: "#63b3ed", padding: "2px 6px", borderRadius: "4px", color: "white" }
+  youBadge: { marginLeft: "8px", fontSize: "0.65rem", backgroundColor: "#63b3ed", padding: "2px 6px", borderRadius: "4px", color: "white" },
+  message: { textAlign: "center", color: "#a0aec0", padding: "2rem", fontSize: "1rem" }
 };
