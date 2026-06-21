@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../api/axios';
 
 const MOD_LABELS = {
   'timed': '⏱️ Timed',
@@ -21,20 +22,25 @@ const getTierColor = (tier) => {
 export default function ProgressHistory() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null); // Tracks network or parsing errors safely
 
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/progress/', {
-      method: 'GET',
-      credentials: 'include',
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setRecords(data);
+    // Shared Axios instance inherently preserves credentials and toggles host environments
+    api.get('/progress/')
+      .then((res) => {
+        setRecords(res.data || []); // Payloads automatically unwrapped to response.data
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to load historical progress logs:", err);
+        setError("Could not retrieve your mastery records from the Equinox server.");
         setLoading(false);
       });
   }, []);
 
   if (loading) return <div style={styles.message}>Analyzing Student Mastery Profile Records...</div>;
+
+  if (error) return <div style={{ ...styles.message, color: '#f56565' }}>⚠️ {error}</div>;
 
   return (
     <div style={styles.container}>
