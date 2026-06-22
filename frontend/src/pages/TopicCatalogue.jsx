@@ -44,18 +44,17 @@ export default function TopicCatalogue({ onSelectTopic }) {
                
               <p style={styles.cardDescription}>{topic.description}</p>
               
-              <div style={styles.gradeSelector}>
-                <label style={styles.gradeLabel}>Grade Level:</label>
-                <select 
-                  style={styles.gradeSelect}
-                  value={selectedGrade}
-                  onChange={(e) => setSelectedGrade(e.target.value)}
-                >
-                  <option value="Elementary">Elementary (Grades 1-3)</option>
-                  <option value="Junior High">Junior High (Grades 4-6)</option>
-                  <option value="Senior High">Senior High (Grades 7-10)</option>
-                </select>
-              </div>
+                <div style={styles.gradeSelector}>
+                  <label style={styles.gradeLabel}>Grade Level:</label>
+                  <select 
+                    style={styles.gradeSelect}
+                    value={selectedGrade}
+                    onChange={(e) => setSelectedGrade(e.target.value)}
+                  >
+                    <option value="Elementary">Elementary (Grades 1-6)</option>
+                    <option value="Junior High">Junior High (Grades 7-10)</option>
+                  </select>
+                </div>
                
               <button 
                 style={styles.actionBtn} 

@@ -10,11 +10,15 @@ from topics.models import Topic
 
 
 class Command(BaseCommand):
-    help = "Seed learning resources (PhET simulations + Khan Academy links)"
+    help = "Seed learning resources (PhET simulations + Khan Academy links) for Philippine education system"
 
     def handle(self, *args, **options):
         self.stdout.write("Seeding learning resources...")
 
+        # Philippine education system:
+        # Elementary: Grades 1-6
+        # Junior High: Grades 7-10
+        # Senior High: Not included yet
         resources_data = [
             # ==================== ARITHMETIC ====================
             {
@@ -53,15 +57,6 @@ class Command(BaseCommand):
                 'description': 'Master fractions, decimals, and their relationships. (Opens in new tab)',
                 'order': 2
             },
-            {
-                'topic_name': 'Arithmetic',
-                'grade_level': 'Senior High',
-                'resource_type': 'KHAN_ACADEMY',
-                'title': 'Arithmetic Properties and Operations',
-                'embed_url': 'https://www.khanacademy.org/math/arithmetic',
-                'description': 'Advanced arithmetic including order of operations and properties. (Opens in new tab)',
-                'order': 1
-            },
 
             # ==================== ALGEBRA ====================
             {
@@ -84,12 +79,12 @@ class Command(BaseCommand):
             },
             {
                 'topic_name': 'Algebra',
-                'grade_level': 'Senior High',
+                'grade_level': 'Junior High',
                 'resource_type': 'KHAN_ACADEMY',
                 'title': 'Quadratic Functions and Equations',
                 'embed_url': 'https://www.khanacademy.org/math/algebra/quadratics',
                 'description': 'Deep dive into quadratic equations, factoring, and the quadratic formula. (Opens in new tab)',
-                'order': 1
+                'order': 2
             },
 
             # ==================== GEOMETRY ====================
@@ -122,12 +117,12 @@ class Command(BaseCommand):
             },
             {
                 'topic_name': 'Geometry',
-                'grade_level': 'Senior High',
+                'grade_level': 'Junior High',
                 'resource_type': 'KHAN_ACADEMY',
                 'title': 'Triangle Properties and Proofs',
                 'embed_url': 'https://www.khanacademy.org/math/geometry/triangle-properties',
                 'description': 'Study triangle congruence, similarity, and geometric proofs. (Opens in new tab)',
-                'order': 1
+                'order': 2
             },
 
             # ==================== STATISTICS ====================
@@ -151,7 +146,7 @@ class Command(BaseCommand):
             },
             {
                 'topic_name': 'Statistics',
-                'grade_level': 'Senior High',
+                'grade_level': 'Junior High',
                 'resource_type': 'PHET',
                 'title': 'Normal Distribution',
                 'embed_url': 'https://phet.colorado.edu/sims/html/normal-distribution/latest/normal-distribution_en.html',
@@ -162,7 +157,7 @@ class Command(BaseCommand):
             # ==================== TRIGONOMETRY ====================
             {
                 'topic_name': 'Trigonometry',
-                'grade_level': 'Senior High',
+                'grade_level': 'Junior High',
                 'resource_type': 'KHAN_ACADEMY',
                 'title': 'Trigonometric Ratios and Functions',
                 'embed_url': 'https://www.khanacademy.org/math/trigonometry',
