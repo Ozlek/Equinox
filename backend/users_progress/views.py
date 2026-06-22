@@ -6,6 +6,9 @@ from .models import UserProgress
 from .models import UnlockedAchievement
 from .achievements import AchievementRegistry
 
+# Pagination limit for leaderboard to prevent unbounded responses
+LEADERBOARD_PAGE_SIZE = 100
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -107,6 +110,7 @@ def leaderboard_api(request, topic_id):
             attempts=Count('id'),
         )
         .order_by('-best_gamified', '-best_academic')
+        [:LEADERBOARD_PAGE_SIZE]  # Limit response size for performance
     )
 
     result = []

@@ -239,6 +239,7 @@ class PlaythroughSession(models.Model):
             models.Index(fields=['user', 'topic']),
             models.Index(fields=['updated_at']),
         ]
+        unique_together = ('user', 'topic')
 
     def is_expired(self):
         """

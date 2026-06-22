@@ -147,8 +147,13 @@ if not DEBUG:
             'MAX_OVERFLOW': 20,
             'RECYCLE': 3600,
         }
-    except ImportError:
-        pass
+    except ImportError as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(
+            "Connection pooling not enabled: %s. Install django-db-connection-pool for production.",
+            str(e)
+        )
 
 
 # Password validation

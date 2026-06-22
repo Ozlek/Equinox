@@ -3,8 +3,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import status
-from django.contrib.auth import login, logout
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth import login, logout, authenticate
 from django.views.decorators.csrf import csrf_exempt
 from .forms import RegisterForm
 from .models import UserProfile
@@ -12,14 +11,22 @@ from .models import UserProfile
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])
-@csrf_exempt
 def login_api(request):
     """
     Authenticate user and create session.
     """
-    form = AuthenticationForm(data=request.data)
-    if form.is_valid():
-        user = form.get_user()
+    username = request.data.get('username')
+    password = request.data.get('password')
+    
+    if not username or not password:
+        return Response({
+            "authenticated": False,
+            "errors": {"non_field_errors": ["Username and password are required."]}
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    user = authenticate(request, username=username, password=password)
+    
+    if user is not None:
         login(request, user)
         refresh = RefreshToken.for_user(user)
         profile = getattr(user, 'profile', None)
@@ -32,16 +39,15 @@ def login_api(request):
             "needs_onboarding": profile is None or not profile.has_completed_onboarding,
             "message": "Login successful"
         }, status=status.HTTP_200_OK)
-        
+    
     return Response({
         "authenticated": False,
-        "errors": form.errors
+        "errors": {"non_field_errors": ["Invalid username or password."]}
     }, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])
-@csrf_exempt
 def register_api(request):
     form = RegisterForm(request.data)
     if form.is_valid():
@@ -80,11 +86,17 @@ def check_auth_status(request):
 @permission_classes([IsAuthenticated])
 def onboarding_api(request):
     grade_level = request.data.get('grade_level')
-    if not grade_level or not (1 <= int(grade_level) <= 10):
-        return Response({"error": "Invalid grade level."}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Validate grade_level is a valid integer in range 1-10
+    try:
+        grade_level_int = int(grade_level)
+        if not (1 <= grade_level_int <= 10):
+            raise ValueError("Grade level must be between 1 and 10")
+    except (ValueError, TypeError):
+        return Response({"error": "Invalid grade level. Must be a number between 1 and 10."}, status=status.HTTP_400_BAD_REQUEST)
  
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
-    profile.grade_level = int(grade_level)
+    profile.grade_level = grade_level_int
     profile.has_completed_onboarding = True
     profile.save()
  

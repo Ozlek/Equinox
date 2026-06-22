@@ -2,6 +2,7 @@ import time
 import math
 import sys
 import logging
+import random
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -9,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
 from django.shortcuts import get_object_or_404
-from django.db.models import F
+from django.db.models import F, Min, Max
 
 from topics.models import Topic
 from .models import Question, DomainRating, GamifiedModifier, UserInventory, PlaythroughSession
@@ -223,6 +224,14 @@ def submit_answer(request, topic, session, question):
     dda = EquinoxDDAEngine()
 
     raw_answer = request.data.get('answer', '')
+    
+    # Input validation: prevent excessively long answers
+    if len(raw_answer) > 500:
+        return Response(
+            {"error": "Answer too long. Maximum length is 500 characters."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
     selected_answer = normalize_answer(raw_answer)
     is_correct = (selected_answer == normalize_answer(question.correct_answer))
 
@@ -348,7 +357,21 @@ def get_next_question(topic, session):
     # Use deterministic ordering in test runs to keep assertions stable
     if 'test' in sys.argv:
         return qs.order_by('id').first()
-    return qs.order_by('?').first()
+    
+    # Optimize random selection: avoid expensive order_by('?') on large tables
+    # by selecting a random ID within the range instead
+    try:
+        min_id = qs.aggregate(min_id=Min('id'))['min_id']
+        max_id = qs.aggregate(max_id=Max('id'))['max_id']
+        if min_id and max_id:
+            random_id = random.randint(min_id, max_id)
+            question = qs.filter(id__gte=random_id).first()
+            if question:
+                return question
+    except Exception:
+        pass  # Fallback to simple first() if random selection fails
+    
+    return qs.order_by('id').first()
 
 
 # ---------------------------------------------------------------------------

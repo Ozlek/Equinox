@@ -17,6 +17,11 @@ class UserProgress(models.Model):
 
         return f"{self.user.username} - {self.topic.name}"
     
+    class Meta:
+        indexes = [
+            models.Index(fields=['topic', 'gamified_score']),
+        ]
+
 class UnlockedAchievement(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='achievements')
     achievement_id = models.CharField(max_length=100) # e.g., "algebra_master_1"
