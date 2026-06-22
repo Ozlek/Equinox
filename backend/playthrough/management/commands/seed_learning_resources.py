@@ -10,23 +10,13 @@ from topics.models import Topic
 
 
 class Command(BaseCommand):
-    help = "Seed learning resources from free online sources (Khan Academy, PhET, Desmos, etc.)"
+    help = "Seed learning resources (PhET simulations + YouTube videos + external links)"
 
     def handle(self, *args, **options):
         self.stdout.write("Seeding learning resources...")
 
-        # Define resources for each topic and grade level
         resources_data = [
             # ==================== ARITHMETIC ====================
-            {
-                'topic_name': 'Arithmetic',
-                'grade_level': 'Elementary',
-                'resource_type': 'KHAN_ACADEMY',
-                'title': 'Basic Addition and Subtraction',
-                'embed_url': 'https://www.khanacademy.org/math/arithmetic/addition-subtraction',
-                'description': 'Learn the fundamentals of addition and subtraction with visual aids and practice exercises. (Click link if embed doesn\'t load)',
-                'order': 1
-            },
             {
                 'topic_name': 'Arithmetic',
                 'grade_level': 'Elementary',
@@ -34,16 +24,16 @@ class Command(BaseCommand):
                 'title': 'Number Line',
                 'embed_url': 'https://phet.colorado.edu/sims/html/number-line/latest/number-line_en.html',
                 'description': 'Interactive number line for learning integers, addition, and subtraction.',
-                'order': 2
+                'order': 1
             },
             {
                 'topic_name': 'Arithmetic',
-                'grade_level': 'Junior High',
-                'resource_type': 'KHAN_ACADEMY',
-                'title': 'Fractions and Decimals',
-                'embed_url': 'https://www.khanacademy.org/math/arithmetic/fraction-arithmetic',
-                'description': 'Master fractions, decimals, and their relationships with interactive lessons.',
-                'order': 1
+                'grade_level': 'Elementary',
+                'resource_type': 'YOUTUBE',
+                'title': 'Basic Addition and Subtraction (Khan Academy)',
+                'embed_url': 'https://www.youtube.com/embed/1xKQcGmYG6E',
+                'description': 'Learn the fundamentals of addition and subtraction with visual aids.',
+                'order': 2
             },
             {
                 'topic_name': 'Arithmetic',
@@ -52,15 +42,24 @@ class Command(BaseCommand):
                 'title': 'Fraction Matcher',
                 'embed_url': 'https://phet.colorado.edu/sims/html/fraction-matcher/latest/fraction-matcher_en.html',
                 'description': 'Match fractions using visual models and number lines.',
+                'order': 1
+            },
+            {
+                'topic_name': 'Arithmetic',
+                'grade_level': 'Junior High',
+                'resource_type': 'YOUTUBE',
+                'title': 'Fractions and Decimals (Khan Academy)',
+                'embed_url': 'https://www.youtube.com/embed/6oo3H-t-mxM',
+                'description': 'Master fractions, decimals, and their relationships.',
                 'order': 2
             },
             {
                 'topic_name': 'Arithmetic',
                 'grade_level': 'Senior High',
-                'resource_type': 'KHAN_ACADEMY',
-                'title': 'Arithmetic Properties and Operations',
-                'embed_url': 'https://www.khanacademy.org/math/arithmetic',
-                'description': 'Advanced arithmetic including order of operations, properties, and real-world applications.',
+                'resource_type': 'YOUTUBE',
+                'title': 'Arithmetic Properties (Khan Academy)',
+                'embed_url': 'https://www.youtube.com/embed/7WOmP5cN6-U',
+                'description': 'Advanced arithmetic including order of operations and properties.',
                 'order': 1
             },
 
@@ -68,47 +67,29 @@ class Command(BaseCommand):
             {
                 'topic_name': 'Algebra',
                 'grade_level': 'Elementary',
-                'resource_type': 'KHAN_ACADEMY',
-                'title': 'Introduction to Variables',
-                'embed_url': 'https://www.khanacademy.org/math/algebra/x2f8bb11595b61c86:variables-expressions',
+                'resource_type': 'YOUTUBE',
+                'title': 'Introduction to Variables (Khan Academy)',
+                'embed_url': 'https://www.youtube.com/embed/vDq0JNJF5hM',
                 'description': 'Learn what variables are and how to use them in simple expressions.',
                 'order': 1
             },
             {
                 'topic_name': 'Algebra',
                 'grade_level': 'Junior High',
-                'resource_type': 'KHAN_ACADEMY',
-                'title': 'Linear Equations and Inequalities',
-                'embed_url': 'https://www.khanacademy.org/math/algebra/linear-equations',
+                'resource_type': 'YOUTUBE',
+                'title': 'Linear Equations and Inequalities (Khan Academy)',
+                'embed_url': 'https://www.youtube.com/embed/5TqIJWXhM6Y',
                 'description': 'Solve one-step and two-step linear equations and inequalities.',
                 'order': 1
             },
             {
                 'topic_name': 'Algebra',
-                'grade_level': 'Junior High',
-                'resource_type': 'DESMOS',
-                'title': 'Desmos Graphing Calculator',
-                'embed_url': 'https://www.desmos.com/calculator',
-                'description': 'Interactive graphing calculator to visualize linear equations and functions. (Click link if embed doesn\'t load)',
-                'order': 2
-            },
-            {
-                'topic_name': 'Algebra',
                 'grade_level': 'Senior High',
-                'resource_type': 'KHAN_ACADEMY',
-                'title': 'Quadratic Functions and Equations',
-                'embed_url': 'https://www.khanacademy.org/math/algebra/quadratics',
+                'resource_type': 'YOUTUBE',
+                'title': 'Quadratic Functions and Equations (Khan Academy)',
+                'embed_url': 'https://www.youtube.com/embed/i7tbzF7VHQs',
                 'description': 'Deep dive into quadratic equations, factoring, and the quadratic formula.',
                 'order': 1
-            },
-            {
-                'topic_name': 'Algebra',
-                'grade_level': 'Senior High',
-                'resource_type': 'DESMOS',
-                'title': 'Quadratic Function Explorer',
-                'embed_url': 'https://www.desmos.com/calculator',
-                'description': 'Explore how changing coefficients affects the graph of a quadratic function. (Click link if embed doesn\'t load)',
-                'order': 2
             },
 
             # ==================== GEOMETRY ====================
@@ -124,20 +105,11 @@ class Command(BaseCommand):
             {
                 'topic_name': 'Geometry',
                 'grade_level': 'Elementary',
-                'resource_type': 'KHAN_ACADEMY',
-                'title': 'Basic Shapes and Angles',
-                'embed_url': 'https://www.khanacademy.org/math/geometry/basic-geometry',
+                'resource_type': 'YOUTUBE',
+                'title': 'Basic Shapes and Angles (Khan Academy)',
+                'embed_url': 'https://www.youtube.com/embed/1yGJwO-fNQY',
                 'description': 'Learn about points, lines, angles, and basic geometric shapes.',
                 'order': 2
-            },
-            {
-                'topic_name': 'Geometry',
-                'grade_level': 'Junior High',
-                'resource_type': 'KHAN_ACADEMY',
-                'title': 'Area and Perimeter',
-                'embed_url': 'https://www.khanacademy.org/math/geometry/area',
-                'description': 'Calculate area and perimeter of rectangles, triangles, and composite shapes.',
-                'order': 1
             },
             {
                 'topic_name': 'Geometry',
@@ -146,44 +118,26 @@ class Command(BaseCommand):
                 'title': 'Polygon Builder',
                 'embed_url': 'https://phet.colorado.edu/sims/html/polygon/latest/polygon_en.html',
                 'description': 'Build and explore properties of polygons.',
-                'order': 2
-            },
-            {
-                'topic_name': 'Geometry',
-                'grade_level': 'Senior High',
-                'resource_type': 'KHAN_ACADEMY',
-                'title': 'Triangle Properties and Proofs',
-                'embed_url': 'https://www.khanacademy.org/math/geometry/triangle-properties',
-                'description': 'Study triangle congruence, similarity, and geometric proofs.',
                 'order': 1
             },
             {
                 'topic_name': 'Geometry',
                 'grade_level': 'Senior High',
-                'resource_type': 'GEOGEBRA',
-                'title': 'Interactive Geometry Proofs',
-                'embed_url': 'https://www.geogebra.org/m',
-                'description': 'Use GeoGebra to construct and explore geometric proofs interactively. (Click link if embed doesn\'t load)',
-                'order': 2
+                'resource_type': 'YOUTUBE',
+                'title': 'Triangle Properties and Proofs (Khan Academy)',
+                'embed_url': 'https://www.youtube.com/embed/1yGJwO-fNQY',
+                'description': 'Study triangle congruence, similarity, and geometric proofs.',
+                'order': 1
             },
 
             # ==================== STATISTICS ====================
             {
                 'topic_name': 'Statistics',
                 'grade_level': 'Elementary',
-                'resource_type': 'KHAN_ACADEMY',
-                'title': 'Data and Graphing Basics',
-                'embed_url': 'https://www.khanacademy.org/math/statistics-probability/data',
+                'resource_type': 'YOUTUBE',
+                'title': 'Data and Graphing Basics (Khan Academy)',
+                'embed_url': 'https://www.youtube.com/embed/9uu8gG9hW3M',
                 'description': 'Learn to collect, organize, and display data using bar graphs and pictographs.',
-                'order': 1
-            },
-            {
-                'topic_name': 'Statistics',
-                'grade_level': 'Junior High',
-                'resource_type': 'KHAN_ACADEMY',
-                'title': 'Mean, Median, and Mode',
-                'embed_url': 'https://www.khanacademy.org/math/statistics-probability/summarizing-quantitative-data',
-                'description': 'Understand measures of central tendency and variability.',
                 'order': 1
             },
             {
@@ -193,15 +147,6 @@ class Command(BaseCommand):
                 'title': 'Plinko Probability',
                 'embed_url': 'https://phet.colorado.edu/sims/html/plinko-probability/latest/plinko-probability_en.html',
                 'description': 'Explore probability distributions through the Plinko board simulation.',
-                'order': 2
-            },
-            {
-                'topic_name': 'Statistics',
-                'grade_level': 'Senior High',
-                'resource_type': 'KHAN_ACADEMY',
-                'title': 'Probability and Distributions',
-                'embed_url': 'https://www.khanacademy.org/math/statistics-probability/probability-library',
-                'description': 'Study probability theory, normal distributions, and statistical inference.',
                 'order': 1
             },
             {
@@ -218,29 +163,11 @@ class Command(BaseCommand):
             {
                 'topic_name': 'Trigonometry',
                 'grade_level': 'Senior High',
-                'resource_type': 'KHAN_ACADEMY',
-                'title': 'Trigonometric Ratios and Functions',
-                'embed_url': 'https://www.khanacademy.org/math/trigonometry',
+                'resource_type': 'YOUTUBE',
+                'title': 'Trigonometric Ratios and Functions (Khan Academy)',
+                'embed_url': 'https://www.youtube.com/embed/7qzcPGjEf4A',
                 'description': 'Learn sine, cosine, tangent, and their applications in right triangles.',
                 'order': 1
-            },
-            {
-                'topic_name': 'Trigonometry',
-                'grade_level': 'Senior High',
-                'resource_type': 'DESMOS',
-                'title': 'Unit Circle Explorer',
-                'embed_url': 'https://www.desmos.com/calculator',
-                'description': 'Visualize the unit circle and explore trigonometric functions graphically. (Click link if embed doesn\'t load)',
-                'order': 2
-            },
-            {
-                'topic_name': 'Trigonometry',
-                'grade_level': 'Senior High',
-                'resource_type': 'GEOGEBRA',
-                'title': 'Interactive Trigonometry',
-                'embed_url': 'https://www.geogebra.org/m',
-                'description': 'Interactive demonstrations of trigonometric identities and graphs. (Click link if embed doesn\'t load)',
-                'order': 3
             },
         ]
 

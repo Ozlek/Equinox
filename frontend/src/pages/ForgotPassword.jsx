@@ -120,14 +120,14 @@ export default function ForgotPassword({ onNavigate }) {
               cursor: isSubmitting ? 'not-allowed' : 'pointer'
             }}
           >
-            {isSubmitting ? "Generating Token..." : "Send Recovery Link ➔"}
+            {isSubmitting ? "Generating Token..." : "Send PasswordRecovery Link ➔"}
           </button>
         </form>
 
         <p style={styles.footerText}>
-          Remembered your security profile?{' '}
+          Remembered your profile?{' '}
           <button style={styles.switchBtn} onClick={() => onNavigate('login')}>
-            Back to Sign In
+            Back to Log In
           </button>
         </p>
 
