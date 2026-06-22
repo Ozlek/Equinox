@@ -19,6 +19,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [currentView, setCurrentView] = useState('home'); 
   const [selectedTopicId, setSelectedTopicId] = useState(null);
+  const [selectedGrade, setSelectedGrade] = useState('Elementary');
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [sessionDifficulty, setSessionDifficulty] = useState('Intermediate');
@@ -281,11 +282,12 @@ export default function App() {
                   />
                 )}
                 
-                {currentView === 'catalogue' && <TopicCatalogue onSelectTopic={(id) => { setSelectedTopicId(id); setCurrentView('detail'); }} />}
+                {currentView === 'catalogue' && <TopicCatalogue onSelectTopic={(id, grade) => { setSelectedTopicId(id); setSelectedGrade(grade || 'Elementary'); setCurrentView('detail'); }} />}
                 
                 {currentView === 'detail' && (
                   <TopicDetail 
-                    topicId={selectedTopicId} 
+                    topicId={selectedTopicId}
+                    selectedGrade={selectedGrade}
                     onBack={() => navigateTo('catalogue')} 
                     onStartChallenge={(id, difficulty, mods, item) => { 
                       setSelectedTopicId(id); 

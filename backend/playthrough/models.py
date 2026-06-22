@@ -62,6 +62,34 @@ class DomainRating(models.Model):
         return f"{self.user.username} - {self.domain_name}: {self.rating:.2f}"
 
 
+class LearningResource(models.Model):
+    """Embeddable learning resources for topics"""
+    RESOURCE_TYPES = [
+        ('KHAN_ACADEMY', 'Khan Academy'),
+        ('PHET', 'PhET Simulation'),
+        ('DESMOS', 'Desmos Activity'),
+        ('YOUTUBE', 'YouTube Video'),
+        ('CK12', 'CK-12 Lesson'),
+    ]
+    
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='learning_resources')
+    grade_level = models.CharField(max_length=50)
+    resource_type = models.CharField(max_length=20, choices=RESOURCE_TYPES)
+    title = models.CharField(max_length=200)
+    embed_url = models.URLField()
+    description = models.TextField(blank=True)
+    order = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
+        indexes = [
+            models.Index(fields=['topic', 'grade_level', 'order']),
+        ]
+
+    def __str__(self):
+        return f"{self.topic.name} - {self.grade_level} - {self.title}"
+
+
 class UserSkillProfile(models.Model):
     """
     Legacy wrapper around DomainRating for backward compatibility.

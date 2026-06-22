@@ -5,7 +5,7 @@ import logging
 import random
 
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
@@ -13,7 +13,7 @@ from django.shortcuts import get_object_or_404
 from django.db.models import F, Min, Max
 
 from topics.models import Topic
-from .models import Question, DomainRating, GamifiedModifier, UserInventory, PlaythroughSession
+from .models import Question, DomainRating, GamifiedModifier, UserInventory, PlaythroughSession, LearningResource
 from .dda_engine import EquinoxDDAEngine
 from users_progress.models import UserProgress
 from users_progress.achievements import AchievementRegistry
@@ -648,6 +648,40 @@ def check_active_session_api(request):
         session.delete()
 
     return Response({"has_active_session": False}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])  # Public access for learning resources
+def learning_resources_api(request, topic_id):
+    """
+    Return learning resources for a specific topic and grade level.
+    
+    Args:
+        request: DRF Request
+        topic_id (int): PK of the Topic
+    
+    Query Parameters:
+        grade_level (str): Grade level filter (Elementary, Junior High, Senior High)
+    
+    Returns:
+        Response: {"resources": list[dict]}
+    """
+    grade_level = request.query_params.get('grade_level', 'Elementary')
+    
+    resources = LearningResource.objects.filter(
+        topic_id=topic_id,
+        grade_level=grade_level
+    ).order_by('order')
+    
+    data = [{
+        'id': r.id,
+        'type': r.resource_type,
+        'title': r.title,
+        'embed_url': r.embed_url,
+        'description': r.description,
+    } for r in resources]
+    
+    return Response({'resources': data})
 
 
 @api_view(['GET'])

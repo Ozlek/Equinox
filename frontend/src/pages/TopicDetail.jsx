@@ -3,11 +3,13 @@ import Leaderboard from './Leaderboard';
 import ChallengeConfigModal from './ChallengeConfig';
 import api from '../api/axios';
 
-export default function TopicDetail({ topicId, onBack, onStartChallenge }) {
+export default function TopicDetail({ topicId, selectedGrade, onBack, onStartChallenge }) {
   const [topic, setTopic] = useState(null);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [error, setError] = useState(null);
+  const [resources, setResources] = useState([]);
+  const [loadingResources, setLoadingResources] = useState(false);
 
   useEffect(() => {
     // Axios resolves relative routing paths using your centralized base domain rules
@@ -20,6 +22,23 @@ export default function TopicDetail({ topicId, onBack, onStartChallenge }) {
         setError("Unable to recover properties for this educational framework node.");
       });
   }, [topicId]);
+
+  // Fetch learning resources when grade changes
+  useEffect(() => {
+    if (topicId && selectedGrade) {
+      setLoadingResources(true);
+      api.get(`/playthrough/topics/${topicId}/resources/?grade_level=${selectedGrade}`)
+        .then((res) => {
+          setResources(res.data.resources);
+          setLoadingResources(false);
+        })
+        .catch((err) => {
+          console.error("Error loading learning resources:", err);
+          setResources([]);
+          setLoadingResources(false);
+        });
+    }
+  }, [topicId, selectedGrade]);
 
   if (error) return <div style={{ ...styles.message, color: '#f56565' }}>⚠️ {error}</div>;
 
@@ -45,13 +64,54 @@ export default function TopicDetail({ topicId, onBack, onStartChallenge }) {
           </button>
         </div>
 
-        <p style={styles.description}>{topic.description}</p>
+        <div style={styles.headerRow}>
+          <p style={styles.description}>{topic.description}</p>
+          <span style={styles.gradeBadge}>{selectedGrade}</span>
+        </div>
         
         <div style={styles.reviewSection}>
           <h3 style={styles.sectionTitle}>📋 Review Section</h3>
           <p style={styles.reviewPlaceholder}>
             Learning materials and instructional walkthrough structural points for this topic will appear here soon.
           </p>
+        </div>
+
+        {/* Learning Resources Section */}
+        <div style={styles.resourcesSection}>
+          <h3 style={styles.resourcesTitle}>📚 Learning Resources ({selectedGrade})</h3>
+          
+          {loadingResources ? (
+            <div style={styles.loadingText}>Loading learning resources...</div>
+          ) : resources.length > 0 ? (
+            <div style={styles.resourcesList}>
+              {resources.map((resource) => (
+                <div key={resource.id} style={styles.resourceCard}>
+                  <div style={styles.resourceHeader}>
+                    <h4 style={styles.resourceTitle}>{resource.title}</h4>
+                    <span style={styles.resourceTypeBadge}>{resource.type}</span>
+                  </div>
+                  {resource.description && (
+                    <p style={styles.resourceDescription}>{resource.description}</p>
+                  )}
+                  <div style={styles.iframeContainer}>
+                    <iframe
+                      src={resource.embed_url}
+                      width="100%"
+                      height="500"
+                      frameBorder="0"
+                      allowFullScreen
+                      title={resource.title}
+                      style={styles.iframe}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={styles.noResources}>
+              <p>No learning resources available for this grade level yet.</p>
+            </div>
+          )}
         </div>
         
         <div style={styles.actionsPanel}>
@@ -100,8 +160,22 @@ const styles = {
   gradeMeta: { color: '#63b3ed', fontWeight: 'bold', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.05em' },
   mainTitle: { margin: '4px 0 0 0', fontSize: '2rem', fontWeight: 'bold', color: '#fff' },
   closeBtn: { backgroundColor: 'rgba(245, 101, 101, 0.1)', color: '#fc8181', border: '1px solid rgba(245, 101, 101, 0.2)', width: '36px', height: '36px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold' },
-  description: { fontSize: '1.1rem', color: '#e2e8f0', lineHeight: '1.6', margin: '0 0 2rem 0' },
-  reviewSection: { backgroundColor: 'rgba(45, 55, 72, 0.3)', border: '1px solid #2d3748', borderRadius: '12px', padding: '1.5rem', marginBottom: '2.5rem' },
+  headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' },
+  description: { fontSize: '1.1rem', color: '#e2e8f0', lineHeight: '1.6', margin: '0 0 1rem 0', flex: 1 },
+  gradeBadge: { backgroundColor: '#4a5568', color: '#e2e8f0', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 'bold', whiteSpace: 'nowrap' },
+  reviewSection: { backgroundColor: 'rgba(45, 55, 72, 0.3)', border: '1px solid #2d3748', borderRadius: '12px', padding: '1.5rem', marginBottom: '2rem' },
+  resourcesSection: { marginTop: '2rem', marginBottom: '2rem' },
+  resourcesTitle: { margin: '0 0 1rem 0', fontSize: '1.3rem', fontWeight: 'bold', color: '#fff' },
+  loadingText: { textAlign: 'center', color: '#a0aec0', padding: '2rem' },
+  resourcesList: { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
+  resourceCard: { backgroundColor: '#111827', border: '1px solid #2d3748', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' },
+  resourceHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' },
+  resourceTitle: { margin: 0, fontSize: '1.1rem', fontWeight: 'bold', color: '#fff', flex: 1 },
+  resourceTypeBadge: { backgroundColor: '#4a5568', color: '#e2e8f0', padding: '0.3rem 0.7rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', whiteSpace: 'nowrap' },
+  resourceDescription: { color: '#a0aec0', fontSize: '0.9rem', lineHeight: '1.5', marginBottom: '1rem' },
+  iframeContainer: { marginBottom: '1rem', borderRadius: '8px', overflow: 'hidden', border: '1px solid #2d3748' },
+  iframe: { display: 'block' },
+  noResources: { textAlign: 'center', padding: '2rem', color: '#a0aec0', backgroundColor: 'rgba(45, 55, 72, 0.3)', borderRadius: '12px', border: '1px solid #2d3748' },
   sectionTitle: { margin: '0 0 0.75rem 0', fontSize: '1.2rem', fontWeight: 'bold', color: '#fff' },
   reviewPlaceholder: { margin: 0, color: '#a0aec0', fontSize: '0.95rem', lineHeight: '1.5' },
   actionsPanel: { display: 'flex', gap: '12px', flexWrap: 'wrap', width: '100%' },
