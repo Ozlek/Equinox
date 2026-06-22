@@ -1,15 +1,4 @@
-from django.shortcuts import render
-
-# Create your views here.
-
-def home_page(request):
-    return render(request, 'pages/home.html')
-
-def about_page(request):
-    return render(request, 'pages/about.html')
-
-def help_page(request):
-    return render(request, 'pages/help.html')
-
-def contact_page(request):
-    return render(request, 'pages/contact.html')
+# Django template-based views are no longer used.
+# The React SPA handles all frontend routing.
+# This file exists to maintain the app's structure.
+# Remove this app entirely once confirmed nothing depends on it.

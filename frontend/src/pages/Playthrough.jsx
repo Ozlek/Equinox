@@ -12,7 +12,7 @@ const getTimerLimit = (tier) => {
   return limits[tier] || 120;
 };
 
-export default function PlaythroughChallenge({ topicId, initialDifficulty, activeMods = [], equippedModifier = '' }) {
+export default function PlaythroughChallenge({ topicId, initialDifficulty, activeMods = [], equippedModifier = '', onNavigate }) {
   const [gameState, setGameState] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState('');
   const [feedback, setFeedback] = useState(null);
@@ -89,7 +89,7 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
     if (window.confirm("Are you sure? Progress will be lost if you quit now.")) {
       try {
         await api.post('/playthrough/quit/');
-        window.location.href = '/dashboard';
+        window.location.href = '/';
       } catch (error) {
         console.error("Failed to quit challenge:", error);
       }
@@ -139,7 +139,7 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
             <span style={styles.label}>Final Score</span>
             <h1 style={{ color: '#68d391', margin: '0.5rem 0' }}>{gameState.final_score.toLocaleString()} PTS</h1>
           </div>
-          <button style={styles.primaryBtn} onClick={() => window.location.href = '/dashboard'}>Return to Dashboard</button>
+          <button style={styles.primaryBtn} onClick={() => onNavigate ? onNavigate('dashboard') : window.location.href = '/'}>Return to Dashboard</button>
         </div>
       </div>
     );

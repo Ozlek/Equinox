@@ -19,7 +19,7 @@ const getTierColor = (tier) => {
   return colors[tier] || '#a0aec0';
 };
 
-export default function ProgressHistory() {
+export default function ProgressHistory({ onNavigate }) {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null); // Tracks network or parsing errors safely
@@ -50,7 +50,7 @@ export default function ProgressHistory() {
           <button 
             style={styles.closeBtn} 
             title="Return to Dashboard" 
-            onClick={() => window.location.href = '/dashboard'}
+            onClick={() => onNavigate ? onNavigate('dashboard') : window.location.href = '/'}
           >
             ✕
           </button>

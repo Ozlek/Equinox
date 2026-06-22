@@ -297,7 +297,7 @@ export default function App() {
                   />
                 )}
                 
-                {currentView === 'progress' && <ProgressHistory />}
+                {currentView === 'progress' && <ProgressHistory onNavigate={navigateTo} />}
                 
                 {currentView === 'playthrough' && (
                   <PlaythroughChallenge 
@@ -305,6 +305,7 @@ export default function App() {
                     initialDifficulty={sessionDifficulty} 
                     activeMods={sessionMods}
                     equippedModifier={sessionItem}
+                    onNavigate={navigateTo}
                   />
                 )}
               </>
