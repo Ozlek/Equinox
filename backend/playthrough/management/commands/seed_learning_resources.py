@@ -24,7 +24,7 @@ class Command(BaseCommand):
                 'resource_type': 'KHAN_ACADEMY',
                 'title': 'Basic Addition and Subtraction',
                 'embed_url': 'https://www.khanacademy.org/math/arithmetic/addition-subtraction',
-                'description': 'Learn the fundamentals of addition and subtraction with visual aids and practice exercises.',
+                'description': 'Learn the fundamentals of addition and subtraction with visual aids and practice exercises. (Click link if embed doesn\'t load)',
                 'order': 1
             },
             {
@@ -89,7 +89,7 @@ class Command(BaseCommand):
                 'resource_type': 'DESMOS',
                 'title': 'Desmos Graphing Calculator',
                 'embed_url': 'https://www.desmos.com/calculator',
-                'description': 'Interactive graphing calculator to visualize linear equations and functions.',
+                'description': 'Interactive graphing calculator to visualize linear equations and functions. (Click link if embed doesn\'t load)',
                 'order': 2
             },
             {
@@ -107,7 +107,7 @@ class Command(BaseCommand):
                 'resource_type': 'DESMOS',
                 'title': 'Quadratic Function Explorer',
                 'embed_url': 'https://www.desmos.com/calculator',
-                'description': 'Explore how changing coefficients affects the graph of a quadratic function.',
+                'description': 'Explore how changing coefficients affects the graph of a quadratic function. (Click link if embed doesn\'t load)',
                 'order': 2
             },
 
@@ -163,7 +163,7 @@ class Command(BaseCommand):
                 'resource_type': 'GEOGEBRA',
                 'title': 'Interactive Geometry Proofs',
                 'embed_url': 'https://www.geogebra.org/m',
-                'description': 'Use GeoGebra to construct and explore geometric proofs interactively.',
+                'description': 'Use GeoGebra to construct and explore geometric proofs interactively. (Click link if embed doesn\'t load)',
                 'order': 2
             },
 
@@ -230,7 +230,7 @@ class Command(BaseCommand):
                 'resource_type': 'DESMOS',
                 'title': 'Unit Circle Explorer',
                 'embed_url': 'https://www.desmos.com/calculator',
-                'description': 'Visualize the unit circle and explore trigonometric functions graphically.',
+                'description': 'Visualize the unit circle and explore trigonometric functions graphically. (Click link if embed doesn\'t load)',
                 'order': 2
             },
             {
@@ -239,7 +239,7 @@ class Command(BaseCommand):
                 'resource_type': 'GEOGEBRA',
                 'title': 'Interactive Trigonometry',
                 'embed_url': 'https://www.geogebra.org/m',
-                'description': 'Interactive demonstrations of trigonometric identities and graphs.',
+                'description': 'Interactive demonstrations of trigonometric identities and graphs. (Click link if embed doesn\'t load)',
                 'order': 3
             },
         ]

@@ -10,6 +10,7 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
   const [error, setError] = useState(null);
   const [resources, setResources] = useState([]);
   const [loadingResources, setLoadingResources] = useState(false);
+  const [failedEmbeds, setFailedEmbeds] = useState({});
 
   useEffect(() => {
     // Axios resolves relative routing paths using your centralized base domain rules
@@ -27,6 +28,7 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
   useEffect(() => {
     if (topicId && selectedGrade) {
       setLoadingResources(true);
+      setFailedEmbeds({});
       api.get(`/playthrough/topics/${topicId}/resources/?grade_level=${selectedGrade}`)
         .then((res) => {
           setResources(res.data.resources);
@@ -39,6 +41,10 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
         });
     }
   }, [topicId, selectedGrade]);
+
+  const handleIframeError = (resourceId) => {
+    setFailedEmbeds(prev => ({ ...prev, [resourceId]: true }));
+  };
 
   if (error) return <div style={{ ...styles.message, color: '#f56565' }}>⚠️ {error}</div>;
 
@@ -94,15 +100,30 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
                     <p style={styles.resourceDescription}>{resource.description}</p>
                   )}
                   <div style={styles.iframeContainer}>
-                    <iframe
-                      src={resource.embed_url}
-                      width="100%"
-                      height="500"
-                      frameBorder="0"
-                      allowFullScreen
-                      title={resource.title}
-                      style={styles.iframe}
-                    />
+                    {failedEmbeds[resource.id] ? (
+                      <div style={styles.fallbackLink}>
+                        <p style={styles.fallbackText}>This embed cannot be displayed directly.</p>
+                        <a 
+                          href={resource.embed_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          style={styles.fallbackButton}
+                        >
+                          Open Resource in New Tab →
+                        </a>
+                      </div>
+                    ) : (
+                      <iframe
+                        src={resource.embed_url}
+                        width="100%"
+                        height="500"
+                        frameBorder="0"
+                        allowFullScreen
+                        title={resource.title}
+                        style={styles.iframe}
+                        onError={() => handleIframeError(resource.id)}
+                      />
+                    )}
                   </div>
                 </div>
               ))}
@@ -175,6 +196,9 @@ const styles = {
   resourceDescription: { color: '#a0aec0', fontSize: '0.9rem', lineHeight: '1.5', marginBottom: '1rem' },
   iframeContainer: { marginBottom: '1rem', borderRadius: '8px', overflow: 'hidden', border: '1px solid #2d3748' },
   iframe: { display: 'block' },
+  fallbackLink: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3rem', backgroundColor: '#111827', border: '2px dashed #4a5568', borderRadius: '8px', textAlign: 'center' },
+  fallbackText: { color: '#a0aec0', fontSize: '1rem', marginBottom: '1rem' },
+  fallbackButton: { padding: '0.75rem 1.5rem', backgroundColor: '#63b3ed', color: '#1a202c', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem', textDecoration: 'none', display: 'inline-block' },
   noResources: { textAlign: 'center', padding: '2rem', color: '#a0aec0', backgroundColor: 'rgba(45, 55, 72, 0.3)', borderRadius: '12px', border: '1px solid #2d3748' },
   sectionTitle: { margin: '0 0 0.75rem 0', fontSize: '1.2rem', fontWeight: 'bold', color: '#fff' },
   reviewPlaceholder: { margin: 0, color: '#a0aec0', fontSize: '0.95rem', lineHeight: '1.5' },
