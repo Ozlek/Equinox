@@ -100,7 +100,21 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
                     <p style={styles.resourceDescription}>{resource.description}</p>
                   )}
                   <div style={styles.iframeContainer}>
-                    {failedEmbeds[resource.id] ? (
+                    {resource.type === 'KHAN_ACADEMY' ? (
+                      <div style={styles.externalLink}>
+                        <p style={styles.externalLinkText}>
+                          📚 This resource is hosted on Khan Academy
+                        </p>
+                        <a 
+                          href={resource.embed_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          style={styles.externalLinkButton}
+                        >
+                          Open Khan Academy Lesson →
+                        </a>
+                      </div>
+                    ) : failedEmbeds[resource.id] ? (
                       <div style={styles.fallbackLink}>
                         <p style={styles.fallbackText}>This embed cannot be displayed directly.</p>
                         <a 
@@ -196,6 +210,9 @@ const styles = {
   resourceDescription: { color: '#a0aec0', fontSize: '0.9rem', lineHeight: '1.5', marginBottom: '1rem' },
   iframeContainer: { marginBottom: '1rem', borderRadius: '8px', overflow: 'hidden', border: '1px solid #2d3748' },
   iframe: { display: 'block' },
+  externalLink: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3rem', backgroundColor: '#1a202c', border: '2px solid #4a5568', borderRadius: '8px', textAlign: 'center' },
+  externalLinkText: { color: '#a0aec0', fontSize: '1rem', marginBottom: '1rem' },
+  externalLinkButton: { padding: '0.75rem 1.5rem', backgroundColor: '#63b3ed', color: '#1a202c', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem', textDecoration: 'none', display: 'inline-block' },
   fallbackLink: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3rem', backgroundColor: '#111827', border: '2px dashed #4a5568', borderRadius: '8px', textAlign: 'center' },
   fallbackText: { color: '#a0aec0', fontSize: '1rem', marginBottom: '1rem' },
   fallbackButton: { padding: '0.75rem 1.5rem', backgroundColor: '#63b3ed', color: '#1a202c', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem', textDecoration: 'none', display: 'inline-block' },
