@@ -22,7 +22,7 @@ export default function PasswordResetConfirm({ uid, token, onNavigate }) {
 
     try {
       // Endpoint provided natively by dj-rest-auth configuration
-      await api.post('/accounts/password/reset/confirm/', {
+      await api.post('/password/reset/confirm/', {
         uid: uid,
         token: token,
         new_password1: newPassword,
