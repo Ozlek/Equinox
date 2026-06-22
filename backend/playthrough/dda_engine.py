@@ -1,5 +1,5 @@
 import math
-from .models import ResponseLog, UserSkillProfile
+from .models import ResponseLog, DomainRating
 
 
 class EquinoxDDAEngine:
@@ -22,8 +22,8 @@ class EquinoxDDAEngine:
     The two adjustments are blended 60 / 40 (rule / probabilistic) to balance
     short-term responsiveness with long-term accuracy.
 
-    Ratings are stored as continuous floats in ``UserSkillProfile`` and are
-    bounded to ``[1.0, 4.5]`` by ``UserSkillProfile.update_rating``.  The
+    Ratings are stored as continuous floats in ``DomainRating`` and are
+    bounded to ``[1.0, 4.5]`` by ``DomainRating``'s save logic.  The
     discrete tier labels (Novice → Expert) are derived from these floats via
     ``get_closest_tier``.
     """
@@ -64,7 +64,7 @@ class EquinoxDDAEngine:
     @classmethod
     def seed_initial_rating(cls, user, domain, difficulty_str):
         """
-        Seed the ``UserSkillProfile`` with the starting difficulty chosen by
+        Seed the ``DomainRating`` with the starting difficulty chosen by
         the player in the UI before a session begins.
 
         Converts frontend strings (e.g. ``'novice'``) to the corresponding
@@ -84,10 +84,54 @@ class EquinoxDDAEngine:
         formatted_diff = str(difficulty_str).capitalize()
         initial_numeric = cls.DIFFICULTY_TIERS.get(formatted_diff, 2.0)
 
-        profile, _ = UserSkillProfile.objects.get_or_create(user=user)
-        profile.update_rating(domain, initial_numeric)
+        domain_rating, _ = DomainRating.objects.get_or_create(
+            user=user,
+            domain_name=domain,
+            defaults={'rating': initial_numeric}
+        )
+        # If it already existed, update it to the new starting value
+        if domain_rating.rating != initial_numeric:
+            domain_rating.rating = initial_numeric
+            domain_rating.save()
 
         return initial_numeric
+
+    def get_rating(self, user, domain):
+        """
+        Fetch the current rating for a user/domain pair, creating a default
+        entry if none exists.
+
+        Args:
+            user (User): The player.
+            domain (str): The topic domain (e.g. ``"Algebra"``).
+
+        Returns:
+            float: The current skill rating (defaults to 1.0).
+        """
+        domain_rating, _ = DomainRating.objects.get_or_create(
+            user=user,
+            domain_name=domain,
+            defaults={'rating': 1.0}
+        )
+        return domain_rating.rating
+
+    def update_rating(self, user, domain, new_rating):
+        """
+        Update the rating for a user/domain pair, bounding it to [1.0, 4.5].
+
+        Args:
+            user (User): The player.
+            domain (str): The topic domain.
+            new_rating (float): The new rating value to set.
+        """
+        bounded_rating = max(1.0, min(new_rating, 4.5))
+        domain_rating, _ = DomainRating.objects.get_or_create(
+            user=user,
+            domain_name=domain,
+            defaults={'rating': bounded_rating}
+        )
+        domain_rating.rating = bounded_rating
+        domain_rating.save()
 
     def adjust_difficulty(self, user, domain, question_obj, is_correct):
         """
@@ -105,9 +149,8 @@ class EquinoxDDAEngine:
         Returns:
             float: The new (post-adjustment) skill rating for this domain.
         """
-        # 1. Fetch current profile
-        profile, _ = UserSkillProfile.objects.get_or_create(user=user)
-        current_rating = profile.get_rating(domain)
+        # 1. Fetch current rating
+        current_rating = self.get_rating(user, domain)
         target_difficulty = self.DIFFICULTY_TIERS.get(question_obj.difficulty, 1.0)
 
         # 2. Log response for historical probability tracking
@@ -119,11 +162,10 @@ class EquinoxDDAEngine:
             is_correct=is_correct,
         )
 
-        # 3. Calculate adjustment via both frameworks, passing the already-fetched
-        #    profile to avoid redundant DB queries.
+        # 3. Calculate adjustment via both frameworks
         rule_adjustment = self._rule_based_thresholding(user, domain, is_correct)
         prob_adjustment = self._probabilistic_learning_factor(
-            profile, domain, target_difficulty, is_correct
+            user, domain, target_difficulty, is_correct
         )
 
         # 4. Blend: 60% rule stability + 40% empirical historical probability
@@ -131,7 +173,7 @@ class EquinoxDDAEngine:
         new_rating = current_rating + net_change
 
         # 5. Commit bounded rating to profile
-        profile.update_rating(domain, new_rating)
+        self.update_rating(user, domain, new_rating)
         return new_rating
 
     def _rule_based_thresholding(self, user, domain, is_correct):
@@ -179,7 +221,7 @@ class EquinoxDDAEngine:
             return 0.15
         return 0.05
 
-    def _probabilistic_learning_factor(self, profile, domain, question_difficulty, is_correct):
+    def _probabilistic_learning_factor(self, user, domain, question_difficulty, is_correct):
         """
         Algorithm 2: Probabilistic Learning Factor (Elo-based).
 
@@ -198,9 +240,7 @@ class EquinoxDDAEngine:
         fails a hard one.
 
         Args:
-            profile (UserSkillProfile): The player's already-fetched skill
-                profile.  Accepting the profile as a parameter avoids an
-                extra ``SELECT`` query on every answer submission.
+            user (User): The player.
             domain (str): The topic domain.
             question_difficulty (float): The numeric difficulty value of the
                 question (from ``DIFFICULTY_TIERS``).
@@ -209,7 +249,7 @@ class EquinoxDDAEngine:
         Returns:
             float: The probabilistic rating adjustment.
         """
-        current_rating = profile.get_rating(domain)
+        current_rating = self.get_rating(user, domain)
 
         exponent = (question_difficulty - current_rating) / 2.0
         expected_success = 1.0 / (1.0 + math.pow(10, exponent))

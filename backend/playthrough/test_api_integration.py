@@ -10,23 +10,6 @@ Tests the complete flow of:
 4. Answer submission
 5. DDA adjustment
 
-IMPORTANT NOTES:
-- Tests are structurally sound and well-documented
-- Some test assertions need adjustment to match actual API response format
-- This serves as a blueprint for API contract validation
-- When actual API responses are confirmed, update assertions to match
-
-Test Failures Identified:
-- API returns 403 for unauthenticated requests (not 302)
-- Response fields differ from documented contract in docstrings
-- Some query parameter handling differs from test expectations
-
-REFINEMENT NEEDED:
-1. Verify actual API response fields against test assertions
-2. Update test expectations to match real API behavior
-3. Add assertions for all documented response fields
-4. Validate error handling and edge cases
-
 To run: python manage.py test playthrough.test_api_integration --verbosity=2
 """
 
@@ -35,7 +18,7 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
 from topics.models import Topic
-from .models import Question, UserSkillProfile, GamifiedModifier, UserInventory, PlaythroughSession
+from .models import Question, DomainRating, GamifiedModifier, UserInventory, PlaythroughSession
 from .dda_engine import EquinoxDDAEngine
 import json
 
@@ -115,14 +98,15 @@ class PlaythroughAPISessionTests(TestCase):
         
         # Test with Novice difficulty
         self.client.get(url, {'difficulty': 'Novice'})
-        profile = UserSkillProfile.objects.get(user=self.user)
-        self.assertEqual(profile.arithmetic_rating, 1.0)
+        domain_rating = DomainRating.objects.get(user=self.user, domain_name='Arithmetic')
+        self.assertEqual(domain_rating.rating, 1.0)
         
-        # Clear and test with Expert
-        profile.delete()
+        # Test with Expert difficulty using a fresh user to avoid state issues
+        expert_user = User.objects.create_user(username='expertuser', password='pass123')
+        self.client.login(username='expertuser', password='pass123')
         self.client.get(url, {'difficulty': 'Expert'})
-        profile = UserSkillProfile.objects.get(user=self.user)
-        self.assertEqual(profile.arithmetic_rating, 4.0)
+        domain_rating = DomainRating.objects.get(user=expert_user, domain_name='Arithmetic')
+        self.assertEqual(domain_rating.rating, 4.0)
     
     def test_session_persists_across_requests(self):
         """Test that session data persists across multiple requests"""
@@ -262,8 +246,8 @@ class PlaythroughAPIAnswerSubmissionTests(TestCase):
         
         # Initialize with known difficulty
         self.client.get(url, {'difficulty': 'Intermediate'})
-        profile = UserSkillProfile.objects.get(user=self.user)
-        initial_rating = profile.statistics_rating
+        domain_rating = DomainRating.objects.get(user=self.user, domain_name='Statistics')
+        initial_rating = domain_rating.rating
         
         # Submit wrong answer
         self.client.post(
@@ -272,8 +256,8 @@ class PlaythroughAPIAnswerSubmissionTests(TestCase):
             content_type='application/json'
         )
         
-        profile.refresh_from_db()
-        self.assertLess(profile.statistics_rating, initial_rating)
+        domain_rating.refresh_from_db()
+        self.assertLess(domain_rating.rating, initial_rating)
     
     def test_answer_case_insensitivity(self):
         """Test that answers are case-insensitive"""
@@ -291,6 +275,7 @@ class PlaythroughAPIAnswerSubmissionTests(TestCase):
         self.assertTrue(data.get('is_correct'))
         
         # Reset session
+        PlaythroughSession.objects.filter(user=self.user).delete()
         self.client.get(url)
         
         # Test uppercase
@@ -397,8 +382,13 @@ class PlaythroughAPIEndToEndTests(TestCase):
         self.assertEqual(db_session.questions_served, 0)
         self.assertEqual(db_session.score, 0)
 
-        # 2. Answer 3 questions correctly
+        # 2. Answer 3 questions correctly (GET then POST for each)
         for i in range(3):
+            # Get next question
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
+            
+            # Submit answer
             response = self.client.post(
                 url,
                 json.dumps({'answer': 'B'}),
@@ -414,21 +404,22 @@ class PlaythroughAPIEndToEndTests(TestCase):
         self.assertGreater(db_session.score, 0)
 
         # 4. Verify user rating improved
-        profile = UserSkillProfile.objects.get(user=self.user)
-        self.assertGreater(profile.algebra_rating, 1.0)  # Started at novice (1.0)
+        domain_rating = DomainRating.objects.get(user=self.user, domain_name='Algebra')
+        self.assertGreater(domain_rating.rating, 1.0)  # Started at novice (1.0)
     
     def test_difficulty_progression(self):
         """Test that difficulty increases after correct answers"""
         url = reverse('playthrough', kwargs={'topic_id': self.topic.id})
         
         self.client.get(url, {'difficulty': 'Novice'})
-        profile = UserSkillProfile.objects.get(user=self.user)
-        initial_rating = profile.algebra_rating
+        domain_rating = DomainRating.objects.get(user=self.user, domain_name='Algebra')
+        initial_rating = domain_rating.rating
         self.assertEqual(initial_rating, 1.0)
         
         # Answer correctly multiple times
         for _ in range(5):
+            self.client.get(url)  # Get next question
             self.client.post(url, json.dumps({'answer': 'B'}), content_type='application/json')
         
-        profile.refresh_from_db()
-        self.assertGreater(profile.algebra_rating, initial_rating)
+        domain_rating.refresh_from_db()
+        self.assertGreater(domain_rating.rating, initial_rating)

@@ -131,9 +131,24 @@ WSGI_APPLICATION = 'equinoxSite.wsgi.application'
 DATABASES = {
     'default': dj_database_url.config(
         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600
+        conn_max_age=600,
+        conn_health_checks=True,
     )
 }
+
+# Connection pooling for production (PostgreSQL)
+# Requires: pip install django-db-connection-pool
+if not DEBUG:
+    try:
+        import db_connection_pool
+        DATABASES['default']['ENGINE'] = 'db_connection_pool.backends.postgresql'
+        DATABASES['default']['POOL_OPTIONS'] = {
+            'POOL_SIZE': 10,
+            'MAX_OVERFLOW': 20,
+            'RECYCLE': 3600,
+        }
+    except ImportError:
+        pass
 
 
 # Password validation

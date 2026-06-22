@@ -12,7 +12,7 @@ from django.shortcuts import get_object_or_404
 from django.db.models import F
 
 from topics.models import Topic
-from .models import Question, UserSkillProfile, GamifiedModifier, UserInventory, PlaythroughSession
+from .models import Question, DomainRating, GamifiedModifier, UserInventory, PlaythroughSession
 from .dda_engine import EquinoxDDAEngine
 from users_progress.models import UserProgress
 from users_progress.achievements import AchievementRegistry
@@ -229,8 +229,8 @@ def submit_answer(request, topic, session, question):
     start_time = session.question_start_time or time.time()
     time_taken = time.time() - start_time
 
-    profile, _ = UserSkillProfile.objects.get_or_create(user=request.user)
-    current_tier = dda.get_closest_tier(profile.get_rating(topic.name))
+    current_rating = dda.get_rating(request.user, topic.name)
+    current_tier = dda.get_closest_tier(current_rating)
 
     shield_consumed = False
     points_earned = 0
@@ -327,8 +327,7 @@ def get_next_question(topic, session):
         exist for this topic.
     """
     dda = EquinoxDDAEngine()
-    profile = UserSkillProfile.objects.filter(user=session.user).first()
-    current_rating = profile.get_rating(topic.name) if profile else 1.0
+    current_rating = dda.get_rating(session.user, topic.name)
     current_tier = dda.get_closest_tier(current_rating)
 
     seen_ids = session.seen_question_ids or []
@@ -371,8 +370,8 @@ def end_session(session, topic, current_tier, new_badges=None):
 
     Returns:
         dict: A summary dict suitable for inclusion in the API response, with
-            keys ``final_score``, ``final_gamified_score``, and
-            ``new_achievements``.
+        keys ``final_score``, ``final_gamified_score``, and
+        ``new_achievements``.
     """
     final_score = session.score
     final_gamified_score = session.gamified_score
@@ -451,8 +450,7 @@ def playthrough_api_view(request, topic_id):
 
     session, is_new = _get_or_create_session(request, topic)
 
-    profile, _ = UserSkillProfile.objects.get_or_create(user=request.user)
-    current_rating = profile.get_rating(topic.name)
+    current_rating = dda.get_rating(request.user, topic.name)
     current_tier = dda.get_closest_tier(current_rating)
 
     # -------------------------------------------------------------------------
@@ -475,8 +473,8 @@ def playthrough_api_view(request, topic_id):
         session.refresh_from_db()  # Reflect saves made inside submit_answer
 
         # Re-read tier after DDA may have adjusted the rating
-        profile.refresh_from_db()
-        current_tier = dda.get_closest_tier(profile.get_rating(topic.name))
+        current_rating = dda.get_rating(request.user, topic.name)
+        current_tier = dda.get_closest_tier(current_rating)
 
         if result['one_life_triggered']:
             summary = end_session(session, topic, current_tier, new_badges=None)

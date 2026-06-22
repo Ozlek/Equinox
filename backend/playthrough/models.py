@@ -27,6 +27,11 @@ class Question(models.Model):
         choices=[('Novice', 'Novice'), ('Intermediate', 'Intermediate'), ('Advanced', 'Advanced'), ('Expert', 'Expert')]
     )
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['topic', 'difficulty']),
+        ]
+
     def __str__(self):
         return self.question_text
 
@@ -35,8 +40,37 @@ class Question(models.Model):
 # DDA SUBSYSTEM MODELS
 # ==========================================
 
+class DomainRating(models.Model):
+    """
+    Scalable per-user, per-domain skill rating.
+    
+    Replaces the hardcoded column approach (algebra_rating, arithmetic_rating, etc.)
+    with a proper normalized model. Adding a new math domain requires no migration —
+    just insert a new row.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='domain_ratings')
+    domain_name = models.CharField(max_length=50)
+    rating = models.FloatField(default=1.0)
+
+    class Meta:
+        unique_together = ('user', 'domain_name')
+        indexes = [
+            models.Index(fields=['user', 'domain_name']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.domain_name}: {self.rating:.2f}"
+
+
 class UserSkillProfile(models.Model):
-    """Tracks the continuous DDA performance tier of a user across domains."""
+    """
+    Legacy wrapper around DomainRating for backward compatibility.
+    
+    DEPRECATED: All new code should use DomainRating directly.
+    This model is kept temporarily to support the data migration from the old
+    hardcoded column approach. The columns (algebra_rating, etc.) will be removed
+    after the migration is verified.
+    """
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     
     # 1.0 = Novice, 2.0 = Intermediate, 3.0 = Advanced, 4.0 = Expert
@@ -82,9 +116,39 @@ class ResponseLog(models.Model):
     is_correct = models.BooleanField()
     timestamp = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'timestamp']),
+            models.Index(fields=['domain', 'timestamp']),
+        ]
+
     def __str__(self):
         status = "Correct" if self.is_correct else "Incorrect"
         return f"{self.user.username} - QID {self.question.id} ({status})"
+
+
+class ResponseLogArchive(models.Model):
+    """
+    Aggregated daily statistics for archived ResponseLog entries.
+    
+    Created by the cleanup_old_responses management command to preserve
+    historical analytics data while keeping the ResponseLog table lean.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='response_archives')
+    domain = models.CharField(max_length=50)
+    date = models.DateField()
+    total_attempts = models.IntegerField(default=0)
+    correct_attempts = models.IntegerField(default=0)
+    avg_difficulty = models.FloatField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ('user', 'domain', 'date')
+        indexes = [
+            models.Index(fields=['user', 'date']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.domain} - {self.date}: {self.correct_attempts}/{self.total_attempts}"
 
 
 # ==========================================
@@ -116,6 +180,9 @@ class UserInventory(models.Model):
     class Meta:
         unique_together = ('user', 'modifier')
         verbose_name_plural = "User Inventories"
+        indexes = [
+            models.Index(fields=['user', 'quantity']),
+        ]
 
     def __str__(self):
         return f"{self.user.username} owns {self.quantity}x {self.modifier.name}"
@@ -170,6 +237,7 @@ class PlaythroughSession(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=['user', 'topic']),
+            models.Index(fields=['updated_at']),
         ]
 
     def is_expired(self):
