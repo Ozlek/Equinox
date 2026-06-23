@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../api/axios';
 
 export default function ChallengeConfigModal({ isOpen, onClose, onLaunch, topicTitle = "Selected Topic" }) {
   const [selectedDifficulty, setSelectedDifficulty] = useState('Intermediate'); // Match backend default capitalization
@@ -23,22 +24,10 @@ export default function ChallengeConfigModal({ isOpen, onClose, onLaunch, topicT
   useEffect(() => {
     if (isOpen) {
       setIsLoadingInventory(true);
-      // Retrieve JWT or alternative Auth token from storage depending on your auth setup
-      const token = localStorage.getItem('token'); 
 
-      fetch('/api/playthrough/inventory/', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : '' // Update format to match your auth structure
-        }
-      })
+      api.get('/playthrough/inventory/')
         .then(res => {
-          if (!res.ok) throw new Error("Failed to load inventory");
-          return res.json();
-        })
-        .then(data => {
-          setAvailableModifiers(data.available_modifiers || []);
+          setAvailableModifiers(res.data.available_modifiers || []);
           setIsLoadingInventory(false);
         })
         .catch(err => {

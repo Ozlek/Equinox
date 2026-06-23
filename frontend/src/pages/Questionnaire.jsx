@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { getCookie } from '../utils';
+import api from '../api/axios';
 
 const GRADE_MAP = {
   elementary: [1, 2, 3, 4, 5, 6],
@@ -43,22 +43,18 @@ export default function Questionnaire({ onComplete }) {
     goToPage(1);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedGrade || !acknowledged) return;
+    
     setSubmitting(true);
-    const csrfToken = getCookie('csrftoken');
 
-    fetch('http://127.0.0.1:8000/accounts/onboarding/', {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': csrfToken,
-      },
-      body: JSON.stringify({ grade_level: selectedGrade }),
-    })
-      .then(res => res.json())
-      .then(() => onComplete());
+    try {
+      await api.post('/accounts/onboarding/', { grade_level: selectedGrade });
+      onComplete(); // Advance the user after a successful 2xx response
+    } catch (error) {
+      console.error("Onboarding submission failed:", error);
+      setSubmitting(false); // Reset button state if it fails so they can retry
+    }
   };
 
   return (

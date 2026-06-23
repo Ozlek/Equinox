@@ -2,23 +2,34 @@ import React, { useState, useEffect } from 'react';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+// ─── NEW PASSWORD RECOVERY IMPORTS ───
+import ForgotPassword from './pages/ForgotPassword';
+import PasswordResetConfirm from './pages/PasswordResetConfirm';
+
 import TopicCatalogue from './pages/TopicCatalogue';
 import TopicDetail from './pages/TopicDetail';
 import ProgressHistory from './pages/ProgressHistory';
 import DashboardWorkspace from './pages/Dashboard';
 import PlaythroughChallenge from './pages/Playthrough';
 import Questionnaire from './pages/Questionnaire';
+import Settings from './pages/Settings';
+import Help from './pages/Help';
+import api from './api/axios';
 import { getCookie } from './utils';
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [currentView, setCurrentView] = useState('home'); 
   const [selectedTopicId, setSelectedTopicId] = useState(null);
+  const [selectedGrade, setSelectedGrade] = useState('Elementary');
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [sessionDifficulty, setSessionDifficulty] = useState('Intermediate');
   
-  // ─── NEW CONFIGURATION DATA STATES FOR EQUINOX PLAYTHROUGH ───
+  // ─── NEW PASSWORD RESET ARGUMENT STATES ───
+  const [resetParams, setResetParams] = useState({ uid: null, token: null });
+  
+  // Configuration data states for Equinox Playthrough
   const [sessionMods, setSessionMods] = useState([]);
   const [sessionItem, setSessionItem] = useState('');
 
@@ -26,20 +37,42 @@ export default function App() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [hoveredLink, setHoveredLink] = useState(null);
 
+  // ─── NEW EFFECT: INTERCEPT EMAIL DEEP-LINKS ON APP START ───
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/accounts/check-auth/', { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => {
-        if (data.authenticated) {
-          setUser(data.username);
-          setNeedsOnboarding(data.needs_onboarding);
+    const path = window.location.pathname; // e.g., /reset-password/Mg/abc-123/
+    const match = path.match(/\/reset-password\/([^/]+)\/([^/]+)/);
+
+    if (match) {
+      const [_, uid, token] = match;
+      setResetParams({ uid, token });
+      setCurrentView('reset-password-confirm');
+    }
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    
+    if (!token) {
+      setCheckingAuth(false);
+      return;
+    }
+
+    api.get('/accounts/check-auth/')
+      .then(res => {
+        if (res.data.authenticated) {
+          setUser(res.data.username);
+          setNeedsOnboarding(res.data.needs_onboarding);
           setCurrentView('dashboard');
         } else {
           setCurrentView('home');
         }
-        setCheckingAuth(false);
       })
-      .catch(() => setCheckingAuth(false));
+      .catch(() => {
+        setCurrentView('home');
+      })
+      .finally(() => {
+        setCheckingAuth(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -56,20 +89,26 @@ export default function App() {
   }, [mobileSidebarOpen]);
 
   const handleLogout = () => {
-    const csrfToken = getCookie('csrftoken');
-    fetch('http://127.0.0.1:8000/accounts/logout/', {
-      method: 'POST',
-      headers: { 'X-CSRFToken': csrfToken },
-      credentials: 'include'
-    }).then(() => {
-      setUser(null);
-      setNeedsOnboarding(false);
-      setCurrentView('home');
-      setMobileSidebarOpen(false);
-    });
+    const refreshToken = localStorage.getItem('refresh_token');
+    
+    api.post('/accounts/logout/', { refresh: refreshToken })
+      .then(() => {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        
+        setUser(null);
+        setNeedsOnboarding(false);
+        setCurrentView('home');
+        setMobileSidebarOpen(false);
+      })
+      .catch(err => console.error("Logout failed", err));
   };
 
   const navigateTo = (view) => {
+    // MODIFIED: Clear out unique deep link paths from url string bar when bouncing back safely
+    if (view === 'login' || view === 'home') {
+      window.history.pushState({}, document.title, "/");
+    }
     setCurrentView(view);
     setMobileSidebarOpen(false); 
   };
@@ -208,6 +247,8 @@ export default function App() {
                 <SidebarLink view="dashboard" icon="grid-1x2-fill" label="Dashboard" />
                 <SidebarLink view="catalogue" icon="book-half" label="Topic Catalogue" />
                 <SidebarLink view="progress" icon="graph-up-arrow" label="Progress History" />
+                <SidebarLink view="help" icon="question-circle-fill" label="Help" />
+                <SidebarLink view="settings" icon="gear-fill" label="Settings" />
               </div>
             </div>
 
@@ -220,13 +261,18 @@ export default function App() {
         {/* WORKSPACE CONTENT PANEL */}
         <div style={appLayoutStyles.contentContainer}>
           <div className="container-fluid py-4 px-md-4 px-2" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+            
+            {/* UNAUTHENTICATED ROUTER CORE SWITCHES */}
             {!user && currentView === 'home' && <Home onNavigate={navigateTo} />}
             {!user && currentView === 'login' && <Login onNavigate={navigateTo} onLoginSuccess={(name, needsOnboard) => { setUser(name); setNeedsOnboarding(needsOnboard); setCurrentView('dashboard'); }} />}
             {!user && currentView === 'register' && <Register onNavigate={navigateTo} onRegisterSuccess={(name) => { setUser(name); setNeedsOnboarding(true); setCurrentView('dashboard'); }} />}
+            
+            {/* ─── ADDED RECOVERY COMPONENTS HERE ─── */}
+            {!user && currentView === 'forgot-password' && <ForgotPassword onNavigate={navigateTo} />}
+            {!user && currentView === 'reset-password-confirm' && <PasswordResetConfirm uid={resetParams.uid} token={resetParams.token} onNavigate={navigateTo} />}
 
             {user && (
               <>
-                {/* MODIFIED: Receives structural configs directly from Modal elements inside Dashboard */}
                 {currentView === 'dashboard' && (
                   <DashboardWorkspace 
                     onNavigate={navigateTo} 
@@ -240,12 +286,12 @@ export default function App() {
                   />
                 )}
                 
-                {currentView === 'catalogue' && <TopicCatalogue onSelectTopic={(id) => { setSelectedTopicId(id); setCurrentView('detail'); }} />}
+                {currentView === 'catalogue' && <TopicCatalogue onSelectTopic={(id, grade) => { setSelectedTopicId(id); setSelectedGrade(grade || 'Elementary'); setCurrentView('detail'); }} />}
                 
-                {/* MODIFIED: Receives structural configs directly from Modal elements inside TopicDetail */}
                 {currentView === 'detail' && (
                   <TopicDetail 
-                    topicId={selectedTopicId} 
+                    topicId={selectedTopicId}
+                    selectedGrade={selectedGrade}
                     onBack={() => navigateTo('catalogue')} 
                     onStartChallenge={(id, difficulty, mods, item) => { 
                       setSelectedTopicId(id); 
@@ -257,15 +303,19 @@ export default function App() {
                   />
                 )}
                 
-                {currentView === 'progress' && <ProgressHistory />}
+                {currentView === 'progress' && <ProgressHistory onNavigate={navigateTo} />}
+
+                {currentView === 'settings' && <Settings onNavigate={navigateTo} />}
+
+                {currentView === 'help' && <Help onNavigate={navigateTo} />}
                 
-                {/* MODIFIED: Maps internal system configurations into Playthrough Engine */}
                 {currentView === 'playthrough' && (
                   <PlaythroughChallenge 
                     topicId={selectedTopicId} 
                     initialDifficulty={sessionDifficulty} 
                     activeMods={sessionMods}
                     equippedModifier={sessionItem}
+                    onNavigate={navigateTo}
                   />
                 )}
               </>

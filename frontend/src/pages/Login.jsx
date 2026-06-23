@@ -1,44 +1,66 @@
 import React, { useState } from 'react';
-import { getCookie } from '../utils';
+import api from '../api/axios'; 
 
 export default function Login({ onNavigate, onLoginSuccess }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState([]); 
 
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    const csrfToken = getCookie('csrftoken');
-    console.log("Extracted CSRF Token on Frontend:", csrfToken);
+    setErrors([]);
+    setIsSubmitting(true);
 
-    fetch('http://127.0.0.1:8000/accounts/login/', {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': csrfToken
-      },
-      body: JSON.stringify({ username, password })
-    })
-      .then(async (res) => {
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error(`Server Error Status ${res.status}:`, errorText);
-        throw new Error(`Server responded with status ${res.status}`);
-      }
-      return res.json();
-    })
-    .then(data => {
-      if (data.authenticated) {
-        onLoginSuccess(data.username);
+    try {
+      const response = await api.post('/accounts/login/', { username, password });
+      const { access, refresh, needs_onboarding, username: returnedName } = response.data;
+      
+      localStorage.setItem('access_token', access);
+      localStorage.setItem('refresh_token', refresh);
+      
+      onLoginSuccess(returnedName || username, needs_onboarding || false);
+      
+    } catch (err) {
+      console.error("Axios Auth Error Object:", err);
+
+      let extractedErrors = [];
+
+      if (err.response) {
+        const statusCode = err.response.status;
+        const serverErrors = err.response.data;
+
+        // Overrides explicit 401 Unauthorized or 400 Bad Request validations with user-friendly text
+        if (statusCode === 401 || statusCode === 400) {
+          extractedErrors.push("The username or password you entered is incorrect. Please check your spelling and try again.");
+        } 
+        else if (serverErrors.detail) {
+          extractedErrors.push(serverErrors.detail);
+        } 
+        else if (serverErrors.non_field_errors) {
+          if (Array.isArray(serverErrors.non_field_errors)) {
+            extractedErrors.push(...serverErrors.non_field_errors);
+          } else {
+            extractedErrors.push(serverErrors.non_field_errors);
+          }
+        } 
+        else if (typeof serverErrors === 'object') {
+          extractedErrors.push(...Object.values(serverErrors).flat());
+        }
       } else {
-        setErrors(data.errors || { non_field_errors: ["Invalid credentials profile match."] });
+        extractedErrors.push("Could not establish server authentication response link.");
       }
-    })
-    .catch((err) => {
-      console.error("Actual Catch Error Object:", err); // Debug log 3
-      setErrors({ network: ["Could not establish server authentication response link."] });
-    });
+
+      // Safety fallback guarantee
+      if (extractedErrors.length === 0 || extractedErrors.includes("undefined")) {
+        extractedErrors = ["The username or password you entered is incorrect."];
+      }
+
+      setErrors(extractedErrors);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -50,15 +72,16 @@ export default function Login({ onNavigate, onLoginSuccess }) {
           <p style={styles.subtitle}>Access your Equinox dashboard</p>
         </div>
 
-        {errors && (
+        {/* Dynamic Error Banner Block */}
+        {errors.length > 0 && (
           <div style={styles.errorBanner}>
             <div style={styles.bannerTextContainer}>
               <h5 style={styles.bannerTitle}>⚠️ Authentication Blocked</h5>
-              <span style={styles.bannerDescription}>
-                {Object.keys(errors).map((key) => 
-                  errors[key].map((msg, idx) => <div key={`${key}-${idx}`}>{msg}</div>)
-                )}
-              </span>
+              <div style={styles.bannerDescription}>
+                {errors.map((msg, idx) => (
+                  <div key={`err-${idx}`} style={styles.errorItem}>{msg}</div>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -68,26 +91,58 @@ export default function Login({ onNavigate, onLoginSuccess }) {
             <label style={styles.label}>Username</label>
             <input 
               type="text" 
+              autoComplete="username"
               style={styles.inputField} 
               value={username} 
               onChange={e => setUsername(e.target.value)} 
               required 
+              disabled={isSubmitting}
             />
           </div>
 
           <div style={styles.formGroup}>
             <label style={styles.label}>Password</label>
-            <input 
-              type="password" 
-              style={styles.inputField} 
-              value={password} 
-              onChange={e => setPassword(e.target.value)} 
-              required 
-            />
+            <div style={styles.passwordWrapper}>
+              <input 
+                type={showPassword ? "text" : "password"} 
+                autoComplete="current-password"
+                style={styles.inputField} 
+                value={password} 
+                onChange={e => setPassword(e.target.value)} 
+                required 
+                disabled={isSubmitting}
+              />
+              <button
+                type="button"
+                style={styles.toggleBtn}
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? "👁️" : "🙈"}
+              </button>
+            </div>
           </div>
 
-          <button type="submit" style={{ ...styles.submitBtn, backgroundColor: '#63b3ed', color: '#1a202c' }}>
-            Authenticate Profile ➔
+          <div style={styles.recoveryRow}>
+            <button 
+              type="button" 
+              style={styles.inlineLinkBtn} 
+              onClick={() => onNavigate('forgot-password')}
+            >
+              Forgot Password?
+            </button>
+          </div>
+
+          <button 
+            type="submit" 
+            disabled={isSubmitting}
+            style={{ 
+              ...styles.submitBtn, 
+              backgroundColor: isSubmitting ? '#4a5568' : '#63b3ed', 
+              color: isSubmitting ? '#1a202c': '#1a202c',
+              cursor: isSubmitting ? 'not-allowed' : 'pointer'
+            }}
+          >
+            {isSubmitting ? "Verifying Credentials..." : "Authenticate Profile ➔"}
           </button>
         </form>
 
@@ -114,13 +169,20 @@ const styles = {
   formGroup: { display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' },
   label: { color: '#a0aec0', fontSize: '0.85rem', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase' },
   
-  inputField: { width: '100%', padding: '0.75rem 1rem', backgroundColor: '#111827', border: '1px solid #2d3748', borderRadius: '8px', color: '#fff', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s ease' },
-  submitBtn: { width: '100%', padding: '0.85rem', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem', marginTop: '0.5rem', transition: 'transform 0.1s ease' },
+  passwordWrapper: { position: 'relative', display: 'flex', alignItems: 'center' },
+  toggleBtn: { position: 'absolute', right: '12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  
+  recoveryRow: { display: 'flex', justifyContent: 'flex-end', marginTop: '-4px' },
+  inlineLinkBtn: { background: 'none', border: 'none', color: '#a0aec0', padding: 0, cursor: 'pointer', fontSize: '0.85rem', textDecoration: 'none' },
+  
+  inputField: { width: '100%', padding: '0.75rem 1rem', backgroundColor: '#111827', border: '1px solid #2d3748', borderRadius: '8px', color: '#fff', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' },
+  submitBtn: { width: '100%', padding: '0.85rem', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '1rem', marginTop: '0.25rem', transition: 'transform 0.1s ease' },
   
   errorBanner: { display: 'flex', backgroundColor: 'rgba(245, 101, 101, 0.12)', border: '1px solid #f56565', borderRadius: '12px', padding: '1rem', marginBottom: '1.5rem' },
-  bannerTextContainer: { display: 'flex', flexDirection: 'column', gap: '4px' },
+  bannerTextContainer: { display: 'flex', flexDirection: 'column', gap: '4px', width: '100%' },
   bannerTitle: { margin: 0, color: '#f56565', fontSize: '1rem', fontWeight: 'bold' },
   bannerDescription: { color: '#e2e8f0', fontSize: '0.875rem', lineHeight: '1.4' },
+  errorItem: { marginTop: '2px' },
   
   footerText: { marginTop: '2rem', textAlign: 'center', color: '#a0aec0', fontSize: '0.9rem', margin: '2rem 0 0 0' },
   switchBtn: { background: 'none', border: 'none', color: '#63b3ed', padding: 0, cursor: 'pointer', fontWeight: 'bold', textDecoration: 'underline' }

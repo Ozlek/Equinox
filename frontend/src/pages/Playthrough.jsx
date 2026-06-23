@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import MathKeypad from './MathKeypad';
-import { getCookie } from '../utils';
+import api from '../api/axios';
 
 const getTierColor = (tier) => {
   const colors = { 'Novice': '#58ec84', 'Intermediate': '#63b3ed', 'Advanced': '#f6ad55', 'Expert': '#f56565' };
@@ -12,10 +12,11 @@ const getTimerLimit = (tier) => {
   return limits[tier] || 120;
 };
 
-export default function PlaythroughChallenge({ topicId, initialDifficulty, activeMods = [], equippedModifier = '' }) {
+export default function PlaythroughChallenge({ topicId, initialDifficulty, activeMods = [], equippedModifier = '', onNavigate }) {
   const [gameState, setGameState] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState('');
   const [feedback, setFeedback] = useState(null);
+  const [submissionError, setSubmissionError] = useState(null);
   const [showKeypad, setShowKeypad] = useState(false);
   const [showAdminAnswer, setShowAdminAnswer] = useState(false);
   const [showStreakPopup, setShowStreakPopup] = useState(false);
@@ -27,27 +28,45 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
     const modQuery = activeMods.length > 0 ? `&mods=${activeMods.join(',')}` : '';
     const itemQuery = equippedModifier ? `&equipped_modifier=${equippedModifier}` : '';
     const diffQuery = (isFirstLoad && initialDifficulty) ? `&difficulty=${initialDifficulty}` : '';
-    return `?${diffQuery}${modQuery}${itemQuery}`.replace('?&', '?');
+    const queryString = `${diffQuery}${modQuery}${itemQuery}`;
+
+    return queryString ? `?${queryString}`.replace('?&', '?') : '';
   };
 
-  const fetchNextQuestion = (isFirstLoad = false) => {
-    const url = `http://127.0.0.1:8000/playthrough/${topicId}/${getRequestParams(isFirstLoad)}`;
+  const fetchNextQuestion = async (isFirstLoad = false) => {
+    try {
+      const response = await api.get(`/playthrough/${topicId}/${getRequestParams(isFirstLoad)}`);
+      const data = response.data;
 
-    fetch(url, { method: 'GET', credentials: 'include' })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.session_complete || data.status === 'completed' || data.is_finished) {
-          setGameState({ is_completed: true, final_score: data.final_gamified_score || 0 });
+      if (data.session_complete || data.status === 'completed' || data.is_finished) {
+        setGameState({ is_completed: true, final_score: data.final_gamified_score || 0 });
+      } else {
+        setGameState(data);
+        if (isTimed) setTimeLeft(getTimerLimit(data.current_tier));
+      }
+      setFeedback(null);
+      setSelectedAnswer('');
+      setShowKeypad(false);
+      setShowAdminAnswer(false);
+      setShowStreakPopup(false);
+    } catch (error) {
+      console.error("Failed to submit answer:", error);
+      
+      if (error.response && error.response.data) {
+        const serverData = error.response.data;
+        
+        if (typeof serverData === 'object') {
+          const parsedErrors = Object.keys(serverData)
+            .map(key => `${key}: ${Array.isArray(serverData[key]) ? serverData[key].join(', ') : serverData[key]}`)
+            .join(' | ');
+          setSubmissionError(parsedErrors);
         } else {
-          setGameState(data);
-          if (isTimed) setTimeLeft(getTimerLimit(data.current_tier));
+          setSubmissionError(serverData.toString());
         }
-        setFeedback(null);
-        setSelectedAnswer('');
-        setShowKeypad(false);
-        setShowAdminAnswer(false);
-        setShowStreakPopup(false);
-      });
+      } else {
+        setSubmissionError(`Network error status ${error.response?.status || 'unknown'}`);
+      }
+    }
   };
 
   useEffect(() => { fetchNextQuestion(true); }, [topicId]);
@@ -66,33 +85,40 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
 
   const handleInsertSymbol = (symbol) => setSelectedAnswer(prev => prev + symbol);
 
-  const handleQuitChallenge = () => {
+  const handleQuitChallenge = async () => {
     if (window.confirm("Are you sure? Progress will be lost if you quit now.")) {
-      fetch('http://127.0.0.1:8000/playthrough/quit/', {
-        method: 'POST', credentials: 'include', headers: { 'X-CSRFToken': getCookie('csrftoken') }
-      }).then(res => { if (res.ok) window.location.href = '/dashboard'; });
+      try {
+        await api.post('/playthrough/quit/');
+        window.location.href = '/';
+      } catch (error) {
+        console.error("Failed to quit challenge:", error);
+      }
     }
   };
 
-  const submitAnswer = (overrideAnswer = null, isTimeout = false) => {
+  const submitAnswer = async (overrideAnswer = null, isTimeout = false) => {
     const finalAnswer = isTimeout ? 'TIMEOUT_NO_ANSWER' : (overrideAnswer || selectedAnswer);
-    
-    fetch(`http://127.0.0.1:8000/playthrough/${topicId}/`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-      body: JSON.stringify({ 
+    setSubmissionError(null);
+
+    try {
+      const response = await api.post(`/playthrough/${topicId}/`, {
         answer: finalAnswer, 
         timeout: isTimeout,
         active_mods: activeMods,
         equipped_modifier: equippedModifier
-      }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setFeedback(data);
-        if (data.is_correct && data.current_streak > 4) setShowStreakPopup(true);
       });
+      
+      const data = response.data;
+      setFeedback(data);
+      if (data.is_correct && data.current_streak > 4) setShowStreakPopup(true);
+    } catch (error) {
+      console.error("Failed to submit answer:", error);
+
+      setSubmissionError(
+      error.response?.data?.detail || 
+      `Network error status ${error.response?.status}: Check token validation.`
+    );
+    }
   };
 
   const handleSubmit = (e) => { e.preventDefault(); if (!selectedAnswer || !selectedAnswer.trim()) return; submitAnswer(); };
@@ -113,7 +139,7 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
             <span style={styles.label}>Final Score</span>
             <h1 style={{ color: '#68d391', margin: '0.5rem 0' }}>{gameState.final_score.toLocaleString()} PTS</h1>
           </div>
-          <button style={styles.primaryBtn} onClick={() => window.location.href = '/dashboard'}>Return to Dashboard</button>
+          <button style={styles.primaryBtn} onClick={() => onNavigate ? onNavigate('dashboard') : window.location.href = '/'}>Return to Dashboard</button>
         </div>
       </div>
     );
@@ -158,7 +184,6 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
             )}
             {activeMods.includes('one_life') && <div style={styles.oneLifeBadge}>❤️‍🔥 One Life</div>}
             
-            {/* MATCHED: Visual confirmation that DDA Adjuster is active in the UI */}
             {activeMods.includes('dda_adjuster') && (
               <div style={{ ...styles.itemBadge, borderColor: '#9f7aea', color: '#9f7aea' }}>
                 ⚖️ DDA Locked
@@ -182,6 +207,12 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
             {gameState.current_tier}
           </div>
         </div>
+
+        {submissionError && (
+          <div style={{ color: '#f56565', backgroundColor: 'rgba(245,101,101,0.1)', padding: '0.75rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem', textAlign: 'center', border: '1px solid #f56565' }}>
+            ⚠️ {submissionError}
+          </div>
+        )}
 
         {!feedback ? (
           <form onSubmit={handleSubmit}>

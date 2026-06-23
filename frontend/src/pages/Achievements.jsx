@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../api/axios'; // Integrated your environment-aware Axios client
 
 export default function AchievementsCard() {
   const [achievements, setAchievements] = useState([]);
@@ -6,22 +7,15 @@ export default function AchievementsCard() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/progress/achievements/', { 
-      method: 'GET',
-      credentials: 'include',
-    })
+    // Axios automatically uses your hostname-switching logic and applies active JWTs
+    api.get('/progress/achievements/')
       .then(res => {
-        if (!res.ok) {
-          throw new Error(`Server returned status ${res.status}`);
-        }
-        return res.json();
-      })
-      .then(data => {
-        setAchievements(data.achievements || []);
+        // Response payloads are automatically unwrapped into res.data
+        setAchievements(res.data.achievements || []);
         setLoading(false);
       })
       .catch(err => {
-        console.error("Failed to load achievements:", err);
+        console.error("Failed to load achievements milestone dataset:", err);
         setError("Could not sync milestones with the Equinox server.");
         setLoading(false);
       });
@@ -85,20 +79,15 @@ const styles = {
   title: { margin: 0, fontSize: '1.5rem', color: '#f7fafc' },
   closeBtn: { backgroundColor: 'rgba(245, 101, 101, 0.1)', color: '#fc8181', border: '1px solid rgba(245, 101, 101, 0.2)', width: '36px', height: '36px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold' },
   emptyState: { backgroundColor: 'rgba(99, 179, 237, 0.1)', color: '#63b3ed', padding: '1.5rem', borderRadius: '8px', textAlign: 'center', border: '1px dashed #4a5568' },
-  
-  // Clean auto-scaling layout without media queries
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' },
-  
   badgeCard: { display: 'flex', alignItems: 'center', padding: '1rem', borderRadius: '12px', border: '1px solid', transition: 'all 0.2s ease' },
   unlockedCard: { backgroundColor: '#2d3748', borderColor: '#63b3ed', opacity: 1, boxShadow: '0 4px 12px rgba(99, 179, 237, 0.15)' },
   lockedCard: { backgroundColor: 'rgba(45, 55, 72, 0.25)', borderColor: '#2d3748', opacity: 0.4 },
-  
   iconWrapper: { fontSize: '2.5rem', marginRight: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   textContainer: { display: 'flex', flexDirection: 'column', gap: '2px' },
   unlockedTitle: { margin: 0, fontSize: '1rem', fontWeight: 'bold', color: '#fff' },
   lockedTitle: { margin: 0, fontSize: '1rem', fontWeight: 'bold', color: '#718096' },
   description: { margin: 0, fontSize: '0.8rem', color: '#a0aec0', lineHeight: '1.4' },
-  
   message: { textAlign: 'center', color: '#a0aec0', padding: '3rem' },
   errorBox: { backgroundColor: 'rgba(245, 101, 101, 0.1)', color: '#fc8181', border: '1px solid rgba(245, 101, 101, 0.2)', padding: '1.2rem', borderRadius: '8px', textAlign: 'center', margin: '2rem auto', maxWidth: '500px' }
 };
