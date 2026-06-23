@@ -11,7 +11,8 @@ def topic_list_api(request):
     data = [{
         "id": t.id,
         "name": t.name,
-        "grade_level": t.grade_level,
+        "grade_level_min": t.grade_level_min,
+        "grade_level_max": t.grade_level_max,
         "description": t.description
     } for t in topics]
     return Response(data)
@@ -23,7 +24,8 @@ def topic_detail_api(request, topic_id):
     data = {
         "id": topic.id,
         "name": topic.name,
-        "grade_level": topic.grade_level,
+        "grade_level_min": topic.grade_level_min,
+        "grade_level_max": topic.grade_level_max,
         "description": topic.description
     }
     return Response(data)

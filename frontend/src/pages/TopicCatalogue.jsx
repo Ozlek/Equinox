@@ -35,10 +35,10 @@ export default function TopicCatalogue({ onSelectTopic }) {
         {topics.map((topic) => (
           <div key={topic.id} style={styles.topicCard}>
             <div style={styles.cardContent}>
-              <div style={styles.cardHeaderRow}>
+                <div style={styles.cardHeaderRow}>
                 <h3 style={styles.cardTitle}>{topic.name}</h3>
                 <span style={styles.gradeBadge}>
-                  {topic.grade_level}
+                  Grades {topic.grade_level_min}-{topic.grade_level_max}
                 </span>
               </div>
                

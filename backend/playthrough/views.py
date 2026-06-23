@@ -354,16 +354,54 @@ def get_next_question(topic, session):
     dda = EquinoxDDAEngine()
     current_rating = dda.get_rating(session.user, topic.name)
     current_tier = dda.get_closest_tier(current_rating)
+    
+    # Map tier names to numeric difficulty values
+    tier_to_difficulty = {
+        'Novice': 1.0,
+        'Intermediate': 2.0,
+        'Advanced': 3.0,
+        'Expert': 4.0
+    }
+    current_difficulty = tier_to_difficulty.get(current_tier, 2.0)
 
     seen_ids = session.seen_question_ids or []
 
-    qs = Question.objects.filter(topic=topic, difficulty=current_tier).exclude(id__in=seen_ids)
+    # Mix question types: 50% word problems, 50% direct math problems
+    # This ensures variety in quiz sessions
+    use_word_problem = random.choice([True, False])
+    
+    # Try to get a question of the preferred type first
+    qs = Question.objects.filter(
+        topic=topic, 
+        difficulty=current_difficulty,
+        is_word_problem=use_word_problem
+    ).exclude(id__in=seen_ids)
 
-    # Fallback 1: allow repeats within the current tier
+    # Fallback 1: allow repeats within the current tier and preferred type
     if not qs.exists():
-        qs = Question.objects.filter(topic=topic, difficulty=current_tier)
+        qs = Question.objects.filter(
+            topic=topic, 
+            difficulty=current_difficulty,
+            is_word_problem=use_word_problem
+        )
 
-    # Fallback 2: any question in the topic
+    # Fallback 2: try the other question type (ensure we always have variety)
+    if not qs.exists():
+        qs = Question.objects.filter(
+            topic=topic, 
+            difficulty=current_difficulty,
+            is_word_problem=not use_word_problem
+        ).exclude(id__in=seen_ids)
+
+    # Fallback 3: allow repeats with other type
+    if not qs.exists():
+        qs = Question.objects.filter(
+            topic=topic, 
+            difficulty=current_difficulty,
+            is_word_problem=not use_word_problem
+        )
+
+    # Fallback 4: any question in the topic (last resort)
     if not qs.exists():
         qs = Question.objects.filter(topic=topic)
 

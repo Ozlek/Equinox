@@ -77,26 +77,32 @@ class Command(BaseCommand):
                         Question.objects.create(
                             topic=topic_instance,
                             question_text=raw_data['question'],
+                            question_solution=f"Step-by-step solution:\n1. Identify the given values\n2. Apply the relevant formula\n3. Calculate the result\n4. Verify the answer\n\nAnswer: {raw_data['answer']}",
                             choice_a=ch_a,
                             choice_b=ch_b,
                             choice_c=ch_c,
                             choice_d=ch_d,
                             correct_answer=correct_letter, # Stores 'A', 'B', 'C', or 'D'
                             difficulty=raw_data['base_difficulty'],
-                            grade_level='Junior High'
+                            grade_level=7,  # Junior High = grade 7
+                            source='seed',
+                            is_word_problem=False  # Procedurally generated questions are not word problems
                         )
                     else:
                         # ODD iterations: Build Clean Text-Box Input structures
                         Question.objects.create(
                             topic=topic_instance,
                             question_text=raw_data['question'],
+                            question_solution=f"Step-by-step solution:\n1. Identify the given values\n2. Apply the relevant formula\n3. Calculate the result\n4. Verify the answer\n\nAnswer: {raw_data['answer']}",
                             choice_a=None, # Leave choice values null!
                             choice_b=None,
                             choice_c=None,
                             choice_d=None,
                             correct_answer=raw_data['answer'], # Stores the raw exact text answer value (e.g., "5", "x^3")
                             difficulty=raw_data['base_difficulty'],
-                            grade_level='Junior High'
+                            grade_level=7,  # Junior High = grade 7
+                            source='seed',
+                            is_word_problem=False  # Procedurally generated questions are not word problems
                         )
                     total_created += 1
         self.stdout.write(self.style.SUCCESS(f"Successfully seeded {total_created} questions into the Equinox database!"))

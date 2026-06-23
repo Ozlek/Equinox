@@ -13,6 +13,12 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
   const [failedEmbeds, setFailedEmbeds] = useState({});
 
   useEffect(() => {
+    // Guard against invalid topicId
+    if (!topicId) {
+      setError("No topic selected.");
+      return;
+    }
+
     // Axios resolves relative routing paths using your centralized base domain rules
     api.get(`/topics/${topicId}/`)
       .then((res) => {
@@ -57,7 +63,7 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
         <div style={styles.header}>
           <div>
             <span style={styles.gradeMeta}>
-              {topic.grade_level.toLowerCase().includes('grade') ? topic.grade_level : `${topic.grade_level}`}
+              Grades {topic.grade_level_min}-{topic.grade_level_max}
             </span>
             <h1 style={styles.mainTitle}>{topic.name}</h1>
           </div>
