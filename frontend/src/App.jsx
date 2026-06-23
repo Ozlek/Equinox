@@ -12,6 +12,8 @@ import ProgressHistory from './pages/ProgressHistory';
 import DashboardWorkspace from './pages/Dashboard';
 import PlaythroughChallenge from './pages/Playthrough';
 import Questionnaire from './pages/Questionnaire';
+import Settings from './pages/Settings';
+import Help from './pages/Help';
 import api from './api/axios';
 import { getCookie } from './utils';
 
@@ -245,6 +247,8 @@ export default function App() {
                 <SidebarLink view="dashboard" icon="grid-1x2-fill" label="Dashboard" />
                 <SidebarLink view="catalogue" icon="book-half" label="Topic Catalogue" />
                 <SidebarLink view="progress" icon="graph-up-arrow" label="Progress History" />
+                <SidebarLink view="settings" icon="gear-fill" label="Settings" />
+                <SidebarLink view="help" icon="question-circle-fill" label="Help" />
               </div>
             </div>
 
@@ -300,6 +304,10 @@ export default function App() {
                 )}
                 
                 {currentView === 'progress' && <ProgressHistory onNavigate={navigateTo} />}
+
+                {currentView === 'settings' && <Settings onNavigate={navigateTo} />}
+
+                {currentView === 'help' && <Help onNavigate={navigateTo} />}
                 
                 {currentView === 'playthrough' && (
                   <PlaythroughChallenge 
