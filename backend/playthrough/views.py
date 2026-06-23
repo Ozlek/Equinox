@@ -11,6 +11,7 @@ from rest_framework import status
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.db.models import F, Min, Max
+from django.db import IntegrityError
 
 from topics.models import Topic
 from .models import Question, DomainRating, GamifiedModifier, UserInventory, PlaythroughSession, LearningResource
@@ -175,6 +176,10 @@ def _get_or_create_session(request, topic):
     Return the active ``PlaythroughSession`` for this user/topic, creating one
     if none exists or if the existing session has expired.
 
+    Uses ``get_or_create`` internally to safely handle concurrent requests that
+    could otherwise trigger a UNIQUE constraint violation on
+    ``(user_id, topic_id)``.
+
     Args:
         request: The DRF ``Request`` object.
         topic (Topic): The topic being played.
@@ -183,18 +188,31 @@ def _get_or_create_session(request, topic):
         tuple[PlaythroughSession, bool]: The session and a boolean indicating
         whether it was newly created (``True``) or resumed (``False``).
     """
-    try:
-        session = PlaythroughSession.objects.get(user=request.user, topic=topic)
+    session = PlaythroughSession.objects.filter(user=request.user, topic=topic).first()
+
+    if session:
         if session.is_expired():
             logger.info(
                 "Expired session found for user=%s topic=%s — replacing.",
                 request.user.username, topic.name
             )
             session.delete()
-            raise PlaythroughSession.DoesNotExist
+        else:
+            return session, False
+
+    # Create the session — use get_or_create to guard against concurrent
+    # duplicate-key races (StrictMode double-mount, rapid navigation, etc.)
+    try:
+        new_session = _init_session(request, topic)
+        return new_session, True
+    except IntegrityError:
+        # Another request beat us to creating the session; fetch it instead.
+        session = PlaythroughSession.objects.get(user=request.user, topic=topic)
+        if session.is_expired():
+            # Race lost but session is stale — safe to delete and retry once
+            session.delete()
+            return _init_session(request, topic), True
         return session, False
-    except PlaythroughSession.DoesNotExist:
-        return _init_session(request, topic), True
 
 
 # ---------------------------------------------------------------------------
@@ -227,10 +245,8 @@ def submit_answer(request, topic, session, question):
     
     # Input validation: prevent excessively long answers
     if len(raw_answer) > 500:
-        return Response(
-            {"error": "Answer too long. Maximum length is 500 characters."},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        from rest_framework.exceptions import ValidationError
+        raise ValidationError("Answer too long. Maximum length is 500 characters.")
     
     selected_answer = normalize_answer(raw_answer)
     is_correct = (selected_answer == normalize_answer(question.correct_answer))
@@ -628,7 +644,8 @@ def check_active_session_api(request):
         request: DRF ``Request``.
 
     Returns:
-        Response: ``{"has_active_session": bool, "topic_id": int|null}``
+        Response: ``{"has_active_session": bool, "topic_id": int|null,
+        "difficulty": str, "modifiers": list, "equipped_item": str}``
     """
     session = (
         PlaythroughSession.objects
@@ -638,16 +655,32 @@ def check_active_session_api(request):
     )
 
     if session and not session.is_expired():
+        # Derive the current difficulty tier from the DDA rating
+        dda = EquinoxDDAEngine()
+        current_rating = dda.get_rating(session.user, session.topic.name)
+        current_tier = dda.get_closest_tier(current_rating)
+        
+        # Construct modifiers list from the active modifier slug
+        modifiers = [session.modifier_slug] if session.modifier_slug else []
+        
         return Response({
             "has_active_session": True,
             "topic_id": session.topic.id,
+            "difficulty": current_tier,
+            "modifiers": modifiers,
+            "equipped_item": session.modifier_slug or '',
         }, status=status.HTTP_200_OK)
 
     # Clean up any stale expired session found
     if session:
         session.delete()
 
-    return Response({"has_active_session": False}, status=status.HTTP_200_OK)
+    return Response({
+        "has_active_session": False,
+        "difficulty": 'Intermediate',
+        "modifiers": [],
+        "equipped_item": '',
+    }, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])

@@ -15,7 +15,7 @@ export default function DashboardWorkspace({ onNavigate, onStartQuiz }) {
 
   useEffect(() => {
     // Axios handles base routing adjustments natively across local and production runtimes
-    api.get('/playthrough/check_active/')
+      api.get('/playthrough/check-session/')
       .then(res => {
         const data = res.data; // Data packet is parsed automatically by the instance client
         if (data.has_active_session) {

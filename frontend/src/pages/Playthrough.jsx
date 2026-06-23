@@ -35,7 +35,7 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
 
   const fetchNextQuestion = async (isFirstLoad = false) => {
     try {
-      const response = await api.get(`/playthrough/${topicId}/${getRequestParams(isFirstLoad)}`);
+      const response = await api.get(`/playthrough/sessions/${topicId}/${getRequestParams(isFirstLoad)}`);
       const data = response.data;
 
       if (data.session_complete || data.status === 'completed' || data.is_finished) {
@@ -101,7 +101,7 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
     setSubmissionError(null);
 
     try {
-      const response = await api.post(`/playthrough/${topicId}/`, {
+      const response = await api.post(`/playthrough/sessions/${topicId}/`, {
         answer: finalAnswer, 
         timeout: isTimeout,
         active_mods: activeMods,
