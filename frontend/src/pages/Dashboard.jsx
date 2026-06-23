@@ -32,7 +32,7 @@ export default function DashboardWorkspace({ onNavigate, onStartQuiz }) {
   }, []);
 
   return (
-    <div style={styles.container}>
+    <div className="graphing-paper" style={styles.container}>
       <div style={styles.welcomeSection}>
         <h1 style={styles.mainTitle}>Welcome to Equinox</h1>
         <p style={styles.subtitle}>Ready to improve your math skills today?</p>
@@ -129,27 +129,27 @@ export default function DashboardWorkspace({ onNavigate, onStartQuiz }) {
 }
 
 const styles = {
-  container: { padding: '2rem', maxWidth: '1200px', margin: '0 auto', color: '#f7fafc' },
+  container: { padding: '2rem', maxWidth: '1200px', margin: '0 auto', color: '#2d3748', position: 'relative', zIndex: 1 },
   welcomeSection: { marginBottom: '2rem' },
-  mainTitle: { margin: '0 0 0.5rem 0', fontSize: '2.2rem', fontWeight: 'bold' },
-  subtitle: { margin: 0, color: '#a0aec0', fontSize: '1.1rem' },
+  mainTitle: { margin: '0 0 0.5rem 0', fontSize: '2.2rem', fontWeight: 'bold', color: '#1a202c' },
+  subtitle: { margin: 0, color: '#4a5568', fontSize: '1.1rem' },
 
-  interceptorBanner: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(236, 201, 75, 0.15)', border: '1px solid #ecc94b', borderRadius: '12px', padding: '1.25rem', marginBottom: '2.5rem', gap: '1.5rem', flexWrap: 'wrap' },
+  interceptorBanner: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(217, 119, 6, 0.12)', border: '2px solid #d97706', borderRadius: '12px', padding: '1.25rem', marginBottom: '2.5rem', gap: '1.5rem', flexWrap: 'wrap' },
   bannerTextContainer: { display: 'flex', flexDirection: 'column', gap: '4px', flex: '1 1 300px' },
-  bannerTitle: { margin: 0, color: '#ecc94b', fontSize: '1.1rem', fontWeight: 'bold' },
-  bannerDescription: { color: '#e2e8f0', fontSize: '0.95rem', lineHeight: '1.4' },
-  resumeBtn: { backgroundColor: '#ecc94b', color: '#744210', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'transform 0.1s ease' },
+  bannerTitle: { margin: 0, color: '#92400e', fontSize: '1.1rem', fontWeight: 'bold' },
+  bannerDescription: { color: '#451a03', fontSize: '0.95rem', lineHeight: '1.4' },
+  resumeBtn: { backgroundColor: '#d97706', color: '#fff', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'transform 0.1s ease' },
 
   actionGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '3rem' },
-  actionCard: { backgroundColor: '#1a202c', border: '1px solid #2d3748', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column' },
+  actionCard: { backgroundColor: '#ffffff', border: '2px solid #d4af37', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 8px 24px rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column' },
   cardContent: { display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', flexGrow: 1 },
-  cardTitle: { margin: '0 0 0.75rem 0', fontSize: '1.25rem', fontWeight: 'bold', color: '#fff' },
-  cardDescription: { margin: '0 0 1.5rem 0', color: '#a0aec0', fontSize: '0.9rem', lineHeight: '1.5', flexGrow: 1 },
+  cardTitle: { margin: '0 0 0.75rem 0', fontSize: '1.25rem', fontWeight: 'bold', color: '#1a202c' },
+  cardDescription: { margin: '0 0 1.5rem 0', color: '#4a5568', fontSize: '0.9rem', lineHeight: '1.5', flexGrow: 1 },
   cardBtn: { width: '100%', padding: '0.75rem', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.95rem' },
 
   toggleSection: { marginTop: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center' },
-  achievementsToggleBtn: { backgroundColor: '#2d3748', color: '#63b3ed', border: '1px solid #4a5568', padding: '1rem 2rem', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem', transition: 'all 0.2s ease', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' },
+  achievementsToggleBtn: { backgroundColor: '#ffffff', color: '#1a202c', border: '2px solid #d4af37', padding: '1rem 2rem', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem', transition: 'all 0.2s ease', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' },
   achievementsContainer: { width: '100%' },
   toggleHeader: { display: 'flex', justifyContent: 'center', marginBottom: '1rem' },
-  hideAchievementsBtn: { background: 'none', border: '1px solid #4a5568', color: '#a0aec0', padding: '0.5rem 1.2rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem' }
+  hideAchievementsBtn: { background: '#f9f7f4', border: '2px solid #d4af37', color: '#2d3748', padding: '0.5rem 1.2rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '500' }
 };
