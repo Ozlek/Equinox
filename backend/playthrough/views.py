@@ -8,6 +8,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.db.models import F, Min, Max
@@ -41,11 +42,14 @@ def normalize_answer(answer):
     answer of ``"B"``.
 
     Args:
-        answer (str): The raw answer string from the request or database.
+        answer (str | None): The raw answer string from the request or database.
+            Non-string types are safely converted to empty string.
 
     Returns:
         str: The normalised answer string.
     """
+    if answer is None or not isinstance(answer, str):
+        return ''
     return answer.strip().upper()
 
 
@@ -245,7 +249,6 @@ def submit_answer(request, topic, session, question):
     
     # Input validation: prevent excessively long answers
     if len(raw_answer) > 500:
-        from rest_framework.exceptions import ValidationError
         raise ValidationError("Answer too long. Maximum length is 500 characters.")
     
     selected_answer = normalize_answer(raw_answer)
@@ -369,37 +372,30 @@ def get_next_question(topic, session):
     # Mix question types: 50% word problems, 50% direct math problems
     # This ensures variety in quiz sessions
     use_word_problem = random.choice([True, False])
-    
-    # Try to get a question of the preferred type first
-    qs = Question.objects.filter(
-        topic=topic, 
-        difficulty=current_difficulty,
-        is_word_problem=use_word_problem
-    ).exclude(id__in=seen_ids)
+
+    def _build_qs(prefer_wp, exclude_seen):
+        """Build a queryset with the given parameters, optionally excluding seen IDs."""
+        base = Question.objects.filter(
+            topic=topic,
+            difficulty=current_difficulty,
+            is_word_problem=prefer_wp
+        )
+        return base.exclude(id__in=seen_ids) if exclude_seen else base
+
+    # Try to get a question of the preferred type first (unseen)
+    qs = _build_qs(use_word_problem, exclude_seen=True)
 
     # Fallback 1: allow repeats within the current tier and preferred type
     if not qs.exists():
-        qs = Question.objects.filter(
-            topic=topic, 
-            difficulty=current_difficulty,
-            is_word_problem=use_word_problem
-        )
+        qs = _build_qs(use_word_problem, exclude_seen=False)
 
-    # Fallback 2: try the other question type (ensure we always have variety)
+    # Fallback 2: try the other question type (unseen)
     if not qs.exists():
-        qs = Question.objects.filter(
-            topic=topic, 
-            difficulty=current_difficulty,
-            is_word_problem=not use_word_problem
-        ).exclude(id__in=seen_ids)
+        qs = _build_qs(not use_word_problem, exclude_seen=True)
 
     # Fallback 3: allow repeats with other type
     if not qs.exists():
-        qs = Question.objects.filter(
-            topic=topic, 
-            difficulty=current_difficulty,
-            is_word_problem=not use_word_problem
-        )
+        qs = _build_qs(not use_word_problem, exclude_seen=False)
 
     # Fallback 4: any question in the topic (last resort)
     if not qs.exists():
@@ -412,19 +408,14 @@ def get_next_question(topic, session):
     if 'test' in sys.argv:
         return qs.order_by('id').first()
     
-    # Optimize random selection: avoid expensive order_by('?') on large tables
-    # by selecting a random ID within the range instead
+    # Random selection: collect PKs from the filtered queryset and pick one uniformly
     try:
-        min_id = qs.aggregate(min_id=Min('id'))['min_id']
-        max_id = qs.aggregate(max_id=Max('id'))['max_id']
-        if min_id and max_id:
-            random_id = random.randint(min_id, max_id)
-            question = qs.filter(id__gte=random_id).first()
-            if question:
-                return question
+        pk_list = list(qs.values_list('id', flat=True))
+        if pk_list:
+            return qs.get(id=random.choice(pk_list))
     except Exception:
-        pass  # Fallback to simple first() if random selection fails
-    
+        pass  # Fallback to first() below if random selection fails
+
     return qs.order_by('id').first()
 
 
@@ -458,7 +449,7 @@ def end_session(session, topic, current_tier, new_badges=None):
         topic=topic,
         score=final_score,
         gamified_score=final_gamified_score,
-        total_questions=MAX_QUESTIONS_PER_SESSION,
+        total_questions=session.questions_served,
         difficulty=current_tier,
     )
     logger.info(
