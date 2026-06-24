@@ -32,7 +32,8 @@ def progress_history_api(request):
     data = [{
         "id": record.id,
         "topic_name": record.topic.name,
-        "grade_level": record.topic.grade_level,
+        "grade_level_min": record.topic.grade_level_min,
+        "grade_level_max": record.topic.grade_level_max,
         "score": record.score,
         "gamified_score": record.gamified_score,
         "total_questions": record.total_questions,

@@ -6,6 +6,10 @@ from topics.models import Topic
 class Question(models.Model):
     topic = models.ForeignKey(Topic, on_delete=models.CASCADE)
     question_text = models.TextField()
+    question_solution = models.TextField(
+        help_text="Step-by-step solution for the question",
+        default="No solution provided"
+    )
 
     # Change these to allow blank values for open-ended text box questions
     choice_a = models.CharField(max_length=255, blank=True, null=True)
@@ -17,14 +21,27 @@ class Question(models.Model):
     # For Text-Box, correct_answer stores the actual exact answer text string (e.g., "12" or "5/3")
     correct_answer = models.CharField(max_length=255) 
 
-    grade_level = models.CharField(
-        max_length=50,
-        choices=[('Elementary', 'Elementary'), ('Junior High', 'Junior High'), ('Senior High', 'Senior High')],
-        default='Elementary'
+    grade_level = models.IntegerField(
+        help_text="Grade level (1-10, where 1-6 is Elementary and 7-10 is Junior High)"
     )
-    difficulty = models.CharField(
+    difficulty = models.FloatField(
+        help_text="Difficulty rating: 1.0=Novice, 2.0=Intermediate, 3.0=Advanced"
+    )
+    
+    source = models.CharField(
         max_length=20,
-        choices=[('Novice', 'Novice'), ('Intermediate', 'Intermediate'), ('Advanced', 'Advanced'), ('Expert', 'Expert')]
+        choices=[
+            ('train', 'Training Data'),
+            ('test', 'Test Data'),
+            ('seed', 'Procedurally Generated')
+        ],
+        default='seed',
+        help_text="Source of the question: train (JSONL import), test (JSONL import), or seed (generated)"
+    )
+    
+    is_word_problem = models.BooleanField(
+        default=True,
+        help_text="Whether this is a word problem (story-based) or direct math problem"
     )
 
     class Meta:

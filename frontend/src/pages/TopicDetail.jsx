@@ -13,9 +13,16 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
   const [failedEmbeds, setFailedEmbeds] = useState({});
 
   useEffect(() => {
+    // Guard against invalid topicId
+    if (!topicId) {
+      setError("No topic selected.");
+      return;
+    }
+
+    // Axios resolves relative routing paths using your centralized base domain rules
     api.get(`/topics/${topicId}/`)
       .then((res) => {
-        setTopic(res.data);
+        setTopic(res.data); // Content payload unpacked automatically
       })
       .catch((err) => {
         console.error(`Error compiling learning module metadata for ID ${topicId}:`, err);
@@ -23,6 +30,7 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
       });
   }, [topicId]);
 
+  // Fetch learning resources when grade changes
   useEffect(() => {
     if (topicId && selectedGrade) {
       setLoadingResources(true);
@@ -87,7 +95,7 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
                   <button style={styles.backIconBtn} onClick={onBack}>←</button>
                   <div style={styles.titleLabelInner}>
                     <h1 style={styles.coverTitle}>{topic.name}</h1>
-                    <p style={styles.coverSubtitle}>{topic.grade_level}</p>
+                    <p style={styles.coverSubtitle}>Grades {topic.grade_level_min}-{topic.grade_level_max}</p>
                   </div>
                 </div>
               </div>
@@ -97,7 +105,10 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
                 <div style={styles.redMargin} />
                 <div style={styles.pageInner}>
                   {/* Description */}
-                  <p style={styles.description}>{topic.description}</p>
+                  <div style={styles.descriptionRow}>
+                    <p style={styles.description}>{topic.description}</p>
+                    <span style={styles.gradeBadge}>{selectedGrade}</span>
+                  </div>
 
                   {/* Learning Resources Section */}
                   <div style={styles.resourcesSection}>
@@ -383,12 +394,34 @@ const styles = {
     gap: '1.5rem',
   },
 
+  descriptionRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: '1rem',
+    flexWrap: 'wrap',
+  },
+
   description: {
     fontFamily: "'Georgia', 'Times New Roman', serif",
     fontSize: '0.95rem',
     color: '#475569',
     lineHeight: '1.6',
     margin: 0,
+    flex: 1,
+  },
+
+  gradeBadge: {
+    backgroundColor: '#e2e8f0',
+    color: '#475569',
+    padding: '0.3rem 0.6rem',
+    borderRadius: '3px',
+    fontSize: '0.65rem',
+    fontFamily: "'Courier New', monospace",
+    fontWeight: 'bold',
+    whiteSpace: 'nowrap',
+    letterSpacing: '0.05em',
+    textTransform: 'uppercase',
   },
 
   resourcesSection: {
