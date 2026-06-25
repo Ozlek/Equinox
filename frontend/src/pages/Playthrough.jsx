@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import MathKeypad from './MathKeypad';
 import api from '../api/axios';
 
@@ -23,6 +23,8 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
   
   const [timeLeft, setTimeLeft] = useState(null);
   const isTimed = activeMods.includes('timed');
+  const isSubmitting = useRef(false);
+  const timerRef = useRef(null);
 
   const getRequestParams = (isFirstLoad = false) => {
     const modQuery = activeMods.length > 0 ? `&mods=${activeMods.join(',')}` : '';
@@ -55,13 +57,13 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
       if (error.response && error.response.data) {
         const serverData = error.response.data;
         
-        if (typeof serverData === 'object') {
+        if (serverData !== null && typeof serverData === 'object') {
           const parsedErrors = Object.keys(serverData)
             .map(key => `${key}: ${Array.isArray(serverData[key]) ? serverData[key].join(', ') : serverData[key]}`)
             .join(' | ');
           setSubmissionError(parsedErrors);
         } else {
-          setSubmissionError(serverData.toString());
+          setSubmissionError(String(serverData));
         }
       } else {
         setSubmissionError(`Network error status ${error.response?.status || 'unknown'}`);
@@ -73,12 +75,13 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
 
   useEffect(() => {
     if (timeLeft === null || timeLeft <= 0 || feedback || gameState?.is_completed) return;
-    const timerId = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
-    return () => clearInterval(timerId);
+    timerRef.current = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
+    return () => clearInterval(timerRef.current);
   }, [timeLeft, feedback, gameState]);
 
   useEffect(() => {
-    if (timeLeft === 0 && !feedback) {
+    if (timeLeft === 0 && !feedback && !isSubmitting.current) {
+       isSubmitting.current = true;
        submitAnswer(null, true);
     }
   }, [timeLeft]);
