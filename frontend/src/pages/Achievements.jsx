@@ -11,7 +11,9 @@ export default function AchievementsCard() {
     api.get('/progress/achievements/')
       .then(res => {
         // Response payloads are automatically unwrapped into res.data
-        setAchievements(res.data.achievements || []);
+        // Backend returns a flat array of achievements
+        const data = Array.isArray(res.data) ? res.data : (res.data.achievements || []);
+        setAchievements(data);
         setLoading(false);
       })
       .catch(err => {
@@ -59,7 +61,7 @@ export default function AchievementsCard() {
                       {badge.title}
                     </h4>
                     <p style={styles.description}>
-                      {badge.unlocked ? "Completed! 🌟" : badge.description}
+                      {badge.description}
                     </p>
                   </div>
                 </div>

@@ -67,7 +67,7 @@ export default function Settings({ onNavigate }) {
     setDeleteLoading(true);
     setDeleteError(null);
 
-    api.delete('/accounts/delete/')
+    api.delete('/accounts/delete-account/')
       .then(() => {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
@@ -80,6 +80,33 @@ export default function Settings({ onNavigate }) {
         setDeleteError('Failed to delete account. Please try again or contact support.');
         setDeleteLoading(false);
       });
+  };
+
+  const handleResetAchievements = () => {
+    if (!window.confirm('This will reset all your achievements. Are you sure?')) return;
+    
+    api.post('/accounts/reset-achievements/')
+      .then(res => {
+        alert(`Achievements reset! ${res.data.message}`);
+        // Clear any cached achievement data and reload
+        localStorage.removeItem('achievements_cache');
+        sessionStorage.clear();
+        // Force a hard refresh to get fresh data
+        window.location.href = window.location.href;
+      })
+      .catch(err => {
+        console.error('Failed to reset achievements:', err);
+        alert('Failed to reset achievements. Please try again.');
+      });
+  };
+
+  const handleResetPassword = () => {
+    // Navigate to forgot password page or open modal
+    if (onNavigate) {
+      onNavigate('forgot-password');
+    } else {
+      window.location.href = '/forgot-password';
+    }
   };
 
   const formatDate = (dateStr) => {
@@ -165,9 +192,21 @@ export default function Settings({ onNavigate }) {
               </div>
               <button
                 style={styles.actionBtn}
-                onClick={() => onNavigate ? onNavigate('forgot-password') : (window.location.href = '/')}
+                onClick={handleResetPassword}
               >
                 Reset Password
+              </button>
+            </div>
+            <div style={styles.actionRow}>
+              <div>
+                <div style={styles.actionRowTitle}>Reset Achievements</div>
+                <div style={styles.actionRowDesc}>Clear all achievement progress (for testing purposes).</div>
+              </div>
+              <button
+                style={{ ...styles.actionBtn, borderColor: 'rgba(246, 173, 85, 0.4)', color: '#f6ad55' }}
+                onClick={handleResetAchievements}
+              >
+                Reset Achievements
               </button>
             </div>
             <div style={styles.actionRow}>

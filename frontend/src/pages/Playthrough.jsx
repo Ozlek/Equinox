@@ -12,6 +12,108 @@ const getTimerLimit = (tier) => {
   return limits[tier] || 120;
 };
 
+// Achievement Popup Modal
+const AchievementPopup = ({ achievements, onClose }) => {
+  if (!achievements || achievements.length === 0) return null;
+  
+  return (
+    <div style={styles.popupOverlay} onClick={onClose}>
+      <div style={styles.popupContent} onClick={(e) => e.stopPropagation()}>
+        <div style={styles.popupHeader}>
+          <h2 style={styles.popupTitle}>🏆 Achievement Unlocked!</h2>
+          <button style={styles.popupCloseBtn} onClick={onClose}>✕</button>
+        </div>
+        {achievements.map((achievement, index) => (
+          <div key={index} style={styles.achievementItem}>
+            <div style={styles.achievementIcon}>{achievement.icon || '🏆'}</div>
+            <div style={styles.achievementInfo}>
+              <div style={styles.achievementTitle}>{achievement.title}</div>
+              <div style={styles.achievementDesc}>{achievement.description}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Analysis Popup Modal
+const AnalysisPopup = ({ analysis, onClose }) => {
+  if (!analysis) return null;
+  
+  const getPriorityColor = (priority) => {
+    const colors = { 'high': '#f56565', 'medium': '#f6ad55', 'low': '#63b3ed' };
+    return colors[priority] || '#a0aec0';
+  };
+
+  const getRecommendationIcon = (type) => {
+    const icons = { 'improvement': '📚', 'advancement': '🚀', 'skill_focus': '🎯', 'maintenance': '💪' };
+    return icons[type] || '💡';
+  };
+
+  return (
+    <div style={styles.popupOverlay} onClick={onClose}>
+      <div style={styles.popupContent} onClick={(e) => e.stopPropagation()}>
+        <div style={styles.popupHeader}>
+          <h2 style={styles.popupTitle}>🧠 Adaptive Learning Analysis</h2>
+          <button style={styles.popupCloseBtn} onClick={onClose}>✕</button>
+        </div>
+        
+        {analysis.analysis && (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <h3 style={{ color: '#63b3ed', marginBottom: '1rem' }}>📊 Performance Overview</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
+              <div style={{ backgroundColor: '#2d3748', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#63b3ed' }}>{analysis.analysis.overall_accuracy}%</div>
+                <div style={{ fontSize: '0.8rem', color: '#a0aec0' }}>Overall Accuracy</div>
+              </div>
+              <div style={{ backgroundColor: '#2d3748', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#68d391' }}>{analysis.analysis.strengths.length || 0}</div>
+                <div style={{ fontSize: '0.8rem', color: '#a0aec0' }}>Strengths</div>
+              </div>
+              <div style={{ backgroundColor: '#2d3748', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#f6ad55' }}>{analysis.analysis.weaknesses.length || 0}</div>
+                <div style={{ fontSize: '0.8rem', color: '#a0aec0' }}>Areas to Improve</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {analysis.recommendations && analysis.recommendations.length > 0 && (
+          <div>
+            <h3 style={{ color: '#63b3ed', marginBottom: '1rem' }}>💡 Personalized Recommendations</h3>
+            {analysis.recommendations.map((rec, index) => (
+              <div key={index} style={{ backgroundColor: '#2d3748', padding: '1rem', borderRadius: '8px', marginBottom: '0.75rem', borderLeft: `4px solid ${getPriorityColor(rec.priority)}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '1.5rem' }}>{getRecommendationIcon(rec.type)}</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: getPriorityColor(rec.priority), padding: '0.2rem 0.6rem', borderRadius: '6px', border: `1px solid ${getPriorityColor(rec.priority)}` }}>
+                    {rec.priority.toUpperCase()}
+                  </span>
+                </div>
+                <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#f7fafc', marginBottom: '0.5rem' }}>
+                  {rec.type === 'improvement' && '📚 Focus on Improvement'}
+                  {rec.type === 'advancement' && '🚀 Ready to Advance'}
+                  {rec.type === 'skill_focus' && '🎯 Skill Building'}
+                  {rec.type === 'maintenance' && '💪 Maintain Progress'}
+                </div>
+                <div style={{ fontSize: '0.9rem', color: '#63b3ed', marginBottom: '0.5rem' }}>
+                  Topic: <strong>{rec.topic}</strong> | Difficulty: <strong>{rec.difficulty}</strong>
+                </div>
+                <div style={{ fontSize: '0.85rem', color: '#a0aec0', marginBottom: '0.5rem', lineHeight: '1.5' }}>
+                  {rec.reason}
+                </div>
+                <div style={{ fontSize: '0.85rem', color: '#68d391', fontStyle: 'italic' }}>
+                  <em>{rec.expected_benefit}</em>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export default function PlaythroughChallenge({ topicId, initialDifficulty, activeMods = [], equippedModifier = '', onNavigate }) {
   const [gameState, setGameState] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState('');
@@ -20,6 +122,10 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
   const [showKeypad, setShowKeypad] = useState(false);
   const [showAdminAnswer, setShowAdminAnswer] = useState(false);
   const [showStreakPopup, setShowStreakPopup] = useState(false);
+  const [showAnalysisPopup, setShowAnalysisPopup] = useState(false);
+  const [showAchievementsPopup, setShowAchievementsPopup] = useState(false);
+  const [analysisData, setAnalysisData] = useState(null);
+  const [newAchievements, setNewAchievements] = useState([]);
   
   const [timeLeft, setTimeLeft] = useState(null);
   const isTimed = activeMods.includes('timed');
@@ -41,7 +147,26 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
       const data = response.data;
 
       if (data.session_complete || data.status === 'completed' || data.is_finished) {
-        setGameState({ is_completed: true, final_score: data.final_gamified_score || 0 });
+        // Check for achievements and analysis in the completion response
+        if (data.new_achievements && data.new_achievements.length > 0) {
+          console.log('Session complete - showing achievements:', data.new_achievements);
+          setNewAchievements(data.new_achievements);
+          setShowAchievementsPopup(true);
+        }
+        
+        if (data.adaptive_analysis && data.adaptive_analysis.recommendations) {
+          console.log('Session complete - showing analysis');
+          setAnalysisData(data.adaptive_analysis);
+          setTimeout(() => setShowAnalysisPopup(true), 1500);
+        }
+        
+        // Don't set is_completed here - let the button click handle it after popups
+        // Just store the final score and mark that we're waiting for popups
+        setGameState({ 
+          is_completed: false, // Keep showing the quiz UI so popups can display
+          final_score: data.final_gamified_score || 0,
+          waiting_for_popups: true // Flag to indicate we need to show completion after popups
+        });
       } else {
         setGameState(data);
         if (isTimed) setTimeLeft(getTimerLimit(data.current_tier));
@@ -112,8 +237,42 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
       });
       
       const data = response.data;
+      console.log('Submit answer response:', data); // Debug log
       setFeedback(data);
+      
+      // Check for new achievements
+      if (data.new_achievements && data.new_achievements.length > 0) {
+        console.log('Showing achievements popup:', data.new_achievements); // Debug log
+        setNewAchievements(data.new_achievements);
+        setShowAchievementsPopup(true);
+      } else {
+        console.log('No new achievements in response'); // Debug log
+      }
+      
+      // Check for adaptive analysis
+      if (data.adaptive_analysis && data.adaptive_analysis.recommendations) {
+        console.log('Showing analysis popup'); // Debug log
+        setAnalysisData(data.adaptive_analysis);
+        // Auto-show analysis after a short delay if quiz is complete
+        if (data.session_complete || data.is_finished) {
+          setTimeout(() => setShowAnalysisPopup(true), 500);
+        }
+      } else {
+        console.log('No adaptive analysis in response'); // Debug log
+      }
+      
       if (data.is_correct && data.current_streak > 4) setShowStreakPopup(true);
+      
+      // Don't fetch next question if session is complete - session is already ended on backend
+      if (data.session_complete || data.is_finished) {
+        console.log('Session complete - not fetching next question');
+        // Mark game as completed to prevent creating a new session
+        setGameState({ 
+          is_completed: true, 
+          final_score: data.final_gamified_score || data.gamified_score || 0 
+        });
+        return;
+      }
     } catch (error) {
       console.error("Failed to submit answer:", error);
 
@@ -121,7 +280,7 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
       error.response?.data?.detail || 
       `Network error status ${error.response?.status}: Check token validation.`
     );
-    }
+  }
   };
 
   const handleSubmit = (e) => { e.preventDefault(); if (!selectedAnswer || !selectedAnswer.trim()) return; submitAnswer(); };
@@ -144,6 +303,22 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
           </div>
           <button style={styles.primaryBtn} onClick={() => onNavigate ? onNavigate('dashboard') : window.location.href = '/'}>Return to Dashboard</button>
         </div>
+        
+        {/* Achievement Popup - included in completion screen */}
+        {showAchievementsPopup && (
+          <AchievementPopup 
+            achievements={newAchievements} 
+            onClose={() => setShowAchievementsPopup(false)} 
+          />
+        )}
+        
+        {/* Analysis Popup - included in completion screen */}
+        {showAnalysisPopup && (
+          <AnalysisPopup 
+            analysis={analysisData} 
+            onClose={() => setShowAnalysisPopup(false)} 
+          />
+        )}
       </div>
     );
   }
@@ -293,6 +468,7 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
               style={styles.primaryBtn} 
               onClick={() => {
                 if (isGameOver) {
+                  // Popups are already shown by submitAnswer(), just transition to completion screen
                   setGameState({ 
                     is_completed: true, 
                     final_score: feedback.final_gamified_score || feedback.gamified_score || 0 
@@ -318,6 +494,22 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
         )}
 
       </div>
+
+      {/* Achievement Popup */}
+      {showAchievementsPopup && (
+        <AchievementPopup 
+          achievements={newAchievements} 
+          onClose={() => setShowAchievementsPopup(false)} 
+        />
+      )}
+      
+      {/* Analysis Popup */}
+      {showAnalysisPopup && (
+        <AnalysisPopup 
+          analysis={analysisData} 
+          onClose={() => setShowAnalysisPopup(false)} 
+        />
+      )}
     </div>
   );
 }
@@ -350,5 +542,15 @@ const styles = {
   adminBtn: { background: 'none', border: '1px solid #ecc94b', color: '#ecc94b', borderRadius: '4px', padding: '0.3rem 0.8rem', cursor: 'pointer', fontSize: '0.75rem' },
   adminText: { marginTop: '0.5rem', color: '#ecc94b', fontSize: '0.8rem' },
   message: { textAlign: 'center', color: '#a0aec0', padding: '2rem' },
-  reviewSection: { backgroundColor: '#111827', padding: '1rem', borderRadius: '12px', border: '1px solid #2d3748' }
+  reviewSection: { backgroundColor: '#111827', padding: '1rem', borderRadius: '12px', border: '1px solid #2d3748' },
+  popupOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' },
+  popupContent: { backgroundColor: '#1a202c', borderRadius: '16px', padding: '2rem', maxWidth: '600px', width: '100%', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.8)' },
+  popupHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #2d3748', paddingBottom: '1rem' },
+  popupTitle: { margin: 0, fontSize: '1.5rem', color: '#f7fafc' },
+  popupCloseBtn: { backgroundColor: 'rgba(245, 101, 101, 0.1)', color: '#fc8181', border: '1px solid rgba(245, 101, 101, 0.2)', width: '36px', height: '36px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold' },
+  achievementItem: { backgroundColor: '#2d3748', padding: '1rem', borderRadius: '12px', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '1rem' },
+  achievementIcon: { fontSize: '2.5rem' },
+  achievementInfo: { flex: 1 },
+  achievementTitle: { fontSize: '1.1rem', fontWeight: 'bold', color: '#f7fafc', marginBottom: '0.25rem' },
+  achievementDesc: { fontSize: '0.85rem', color: '#a0aec0' }
 };

@@ -83,7 +83,7 @@ def check_auth_status(request):
     return Response({"authenticated": False})
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def onboarding_api(request):
     grade_level = request.data.get('grade_level')
     
@@ -101,3 +101,108 @@ def onboarding_api(request):
     profile.save()
  
     return Response({"success": True})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def check_auth_status(request):
+    if request.user.is_authenticated:
+        profile = getattr(request.user, 'profile', None)
+        return Response({
+            "authenticated": True,
+            "username": request.user.username,
+            "email": request.user.email or None,
+            "date_joined": request.user.date_joined.isoformat() if request.user.date_joined else None,
+            "needs_onboarding": profile is None or not profile.has_completed_onboarding
+        })
+    return Response({"authenticated": False})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def reset_achievements_api(request):
+    """
+    Reset all achievements for the current user (admin/testing function).
+    """
+    from users_progress.models import UnlockedAchievement
+    from users_progress.achievements import AchievementRegistry
+    
+    # Delete all unlocked achievements for this user
+    deleted_count, _ = UnlockedAchievement.objects.filter(user=request.user).delete()
+    
+    # Do NOT re-evaluate achievements - leave them all locked for testing
+    # The user will need to earn them again through normal gameplay
+    
+    # Get updated achievement list (all should be locked now)
+    achievements_list = []
+    for badge_id, badge_data in AchievementRegistry.BADGES.items():
+        achievements_list.append({
+            "id": badge_id,
+            "title": badge_data["title"],
+            "description": badge_data["description"],
+            "icon": badge_data["icon"],
+            "unlocked": False,  # All locked after reset
+        })
+    
+    return Response({
+        "success": True,
+        "message": f"Reset {deleted_count} achievements. All achievements are now locked.",
+        "newly_unlocked": [],
+        "achievements": achievements_list
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_grade_api(request):
+    """
+    Get the current user's grade level.
+    """
+    profile = getattr(request.user, 'profile', None)
+    grade_level = profile.grade_level if profile else None
+    
+    return Response({
+        "grade_level": grade_level
+    })
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def update_grade_api(request):
+    """
+    Update the current user's grade level.
+    """
+    grade_level = request.data.get('grade_level')
+    
+    # Validate grade_level is a valid integer in range 1-10
+    try:
+        grade_level_int = int(grade_level)
+        if not (1 <= grade_level_int <= 10):
+            raise ValueError("Grade level must be between 1 and 10")
+    except (ValueError, TypeError):
+        return Response({"error": "Invalid grade level. Must be a number between 1 and 10."}, status=status.HTTP_400_BAD_REQUEST)
+    
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    profile.grade_level = grade_level_int
+    profile.save()
+    
+    return Response({
+        "success": True,
+        "grade_level": grade_level_int
+    })
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_account_api(request):
+    """
+    Permanently delete the user's account and all associated data.
+    """
+    from django.contrib.auth.models import User
+    
+    # Delete the user (cascade will handle related data)
+    user = request.user
+    user.delete()
+    
+    return Response({
+        "success": True,
+        "message": "Account deleted successfully"
+    }, status=status.HTTP_200_OK)

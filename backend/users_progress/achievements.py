@@ -12,7 +12,7 @@ class AchievementRegistry:
             "description": "Complete your very first Equinox playthrough.",
             "icon": "🌱",
             # The condition is a lambda function that receives the user and evaluates to True/False
-            "condition": lambda user: UserProgress.objects.filter(user=user).exists()
+            "condition": lambda user: UserProgress.objects.filter(user=user).order_by('-completed_at').first() is not None
         },
         "algebra_master_1": {
             "title": "Algebra Initiate",
@@ -32,7 +32,7 @@ class AchievementRegistry:
                 user=user,
                 score=10,
                 difficulty="Expert"
-            ).exists()
+            ).order_by('-completed_at').first() is not None
         }
     }
 
@@ -45,7 +45,8 @@ class AchievementRegistry:
         newly_unlocked = []
         
         # Get a list of IDs the user already owns to skip redundant checks
-        already_unlocked_ids = UnlockedAchievement.objects.filter(user=user).values_list('achievement_id', flat=True)
+        # Convert QuerySet to list for proper 'in' operator support
+        already_unlocked_ids = list(UnlockedAchievement.objects.filter(user=user).values_list('achievement_id', flat=True))
 
         for badge_id, badge_data in cls.BADGES.items():
             if badge_id in already_unlocked_ids:
@@ -57,6 +58,7 @@ class AchievementRegistry:
                 newly_unlocked.append({
                     "id": badge_id,
                     "title": badge_data["title"],
+                    "description": badge_data["description"],
                     "icon": badge_data["icon"]
                 })
                 

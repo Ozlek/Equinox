@@ -1,10 +1,14 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
 from django.db.models import Max, Count
+from django.contrib.auth.models import User
+from collections import defaultdict
 from .models import UserProgress
 from .models import UnlockedAchievement
 from .achievements import AchievementRegistry
+from playthrough.models import DomainRating, ResponseLog
 
 # Pagination limit for leaderboard to prevent unbounded responses
 LEADERBOARD_PAGE_SIZE = 100
@@ -48,93 +52,109 @@ def progress_history_api(request):
 @permission_classes([IsAuthenticated])
 def user_achievements_api(request):
     """
-    Return all achievements with earned/locked status for the authenticated user.
+    Return ALL available achievements with their unlock status.
 
     Args:
         request: DRF ``Request``.
 
     Returns:
-        Response: ``{"achievements": list[dict]}``
+        Response: List of achievement dicts with id, title, description, icon,
+        unlocked (bool), and unlocked_at (iso string or None).
     """
-    unlocked_records = UnlockedAchievement.objects.filter(user=request.user)
-    unlocked_ids = set(unlocked_records.values_list('achievement_id', flat=True))
-
-    payload = []
-
+    from .achievements import AchievementRegistry
+    
+    unlocked_ids = set(
+        UnlockedAchievement.objects.filter(user=request.user)
+        .values_list('achievement_id', flat=True)
+    )
+    unlocked_at_map = {
+        ua.achievement_id: ua.unlocked_at.isoformat()
+        for ua in UnlockedAchievement.objects.filter(user=request.user)
+    }
+    
+    data = []
     for badge_id, badge_data in AchievementRegistry.BADGES.items():
-        is_earned = badge_id in unlocked_ids
-
-        payload.append({
+        data.append({
             "id": badge_id,
-            "title": badge_data["title"],
-            "description": badge_data["description"],
-            "icon": badge_data["icon"],
-            "unlocked": is_earned,
+            "title": badge_data.get('title', badge_id),
+            "description": badge_data.get('description', ''),
+            "icon": badge_data.get('icon', '🏆'),
+            "unlocked": badge_id in unlocked_ids,
+            "unlocked_at": unlocked_at_map.get(badge_id, None),
         })
+    
+    return Response(data)
 
-    return Response({"achievements": payload})
 
-
-# JWT authentication does not require CSRF tokens — the leaderboard endpoint
-# relies solely on the Bearer token supplied in the Authorization header, so
-# no CSRF exemption class is needed here.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def leaderboard_api(request, topic_id):
     """
-    Return the leaderboard for a specific topic.
+    Return top performers for a specific topic.
 
-    Each user is ranked by their personal best gamified score on that topic.
-    Uses ``values()`` + ``annotate()`` to aggregate per-user bests in a single
-    query, avoiding N+1 issues. ``select_related('user')`` is applied before
-    the ``values()`` call so the ORM can resolve the join efficiently.
+    Args:
+        request: DRF ``Request``.
+        topic_id (int): PK of the Topic.
+
+    Returns:
+        Response: List of leaderboard entries with username, score, and gamified_score.
+    """
+    from topics.models import Topic
+    from django.db.models import Max
+
+    topic = get_object_or_404(Topic, id=topic_id)
+
+    # Get the best UserProgress entry per user for this topic
+    best_progress = (
+        UserProgress.objects
+        .filter(topic=topic)
+        .values('user')
+        .annotate(
+            best_score=Max('score'),
+            best_gamified=Max('gamified_score'),
+            total_questions=Max('total_questions'),
+            latest_completed=Max('completed_at')
+        )
+        .order_by('-best_gamified')[:LEADERBOARD_PAGE_SIZE]
+    )
+
+    # Fetch usernames in a second query to keep the aggregation simple
+    user_ids = [entry['user'] for entry in best_progress]
+    users = User.objects.filter(id__in=user_ids)
+    user_map = {u.id: u.username for u in users}
+
+    data = [{
+        "user_id": entry['user'],
+        "username": user_map.get(entry['user'], 'Unknown'),
+        "score": entry['best_score'],
+        "gamified_score": entry['best_gamified'],
+        "total_questions": entry['total_questions'],
+        "completed_at": entry['latest_completed'].isoformat() if entry['latest_completed'] else None,
+    } for entry in best_progress]
+
+    return Response(data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def adaptive_analysis_api(request):
+    """
+    Analyze user performance and provide personalized recommendations for next topic and difficulty.
+
+    Analyzes ResponseLog history to calculate:
+    - Overall accuracy per domain
+    - Learning velocity (improvement rate over time)
+    - Consistency metrics
+    - Word problem vs direct problem performance
+    - Recommended next topic and difficulty level
 
     Args:
         request: DRF ``Request``. Must be authenticated.
-        topic_id (int): PK of the ``Topic`` to rank.
 
     Returns:
-        Response: ``{"topic_id": int, "current_user_rank": int|null,
-        "leaderboard": list[dict]}``
+        Response: ``{"analysis": dict, "recommendations": list[dict]}``
     """
-    current_user_id = request.user.id
+    from .adaptive_analysis import generate_adaptive_analysis
+    result = generate_adaptive_analysis(request.user)
+    return Response(result)
 
-    leaderboard_data = (
-        UserProgress.objects
-        .filter(topic_id=topic_id)
-        .select_related('user')
-        .values('user__id', 'user__username')
-        .annotate(
-            best_academic=Max('score'),
-            best_gamified=Max('gamified_score'),
-            best_total_questions=Max('total_questions'),
-            attempts=Count('id'),
-        )
-        .order_by('-best_gamified', '-best_academic')
-        [:LEADERBOARD_PAGE_SIZE]  # Limit response size for performance
-    )
-
-    result = []
-    current_user_rank = None
-
-    for rank, entry in enumerate(leaderboard_data, start=1):
-        is_current_user = entry['user__id'] == current_user_id
-
-        if is_current_user:
-            current_user_rank = rank
-
-        result.append({
-            "rank": rank,
-            "username": entry['user__username'],
-            "best_score": entry['best_academic'],
-            "gamified_score": entry['best_gamified'],
-            "total_questions": entry['best_total_questions'],
-            "attempts": entry['attempts'],
-            "is_current_user": is_current_user,
-        })
-
-    return Response({
-        "topic_id": topic_id,
-        "current_user_rank": current_user_rank,
-        "leaderboard": result,
-    })

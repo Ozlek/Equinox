@@ -4,10 +4,19 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from .models import Topic
 
+# Post-testing topics - focused set for user feedback gathering
+POST_TESTING_TOPICS = [
+    'Arithmetic',
+    'Fractions, Decimals, and Percentages',
+    'Ratios and Proportional Reasoning',
+    'Algebra and Algebraic Expressions',
+    'Geometry and Spatial Reasoning',
+]
+
 @api_view(['GET'])
 @permission_classes([AllowAny]) # Anyone can browse the available topic lists
 def topic_list_api(request):
-    topics = Topic.objects.all()
+    topics = Topic.objects.filter(name__in=POST_TESTING_TOPICS)
     data = [{
         "id": t.id,
         "name": t.name,

@@ -21,7 +21,8 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [currentView, setCurrentView] = useState('home'); 
   const [selectedTopicId, setSelectedTopicId] = useState(null);
-  const [selectedGrade, setSelectedGrade] = useState('Elementary');
+  const [selectedGrade, setSelectedGrade] = useState(null);
+  const [userGrade, setUserGrade] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [sessionDifficulty, setSessionDifficulty] = useState('Intermediate');
@@ -63,8 +64,16 @@ export default function App() {
           setUser(res.data.username);
           setNeedsOnboarding(res.data.needs_onboarding);
           setCurrentView('dashboard');
+          
+          // Fetch user's grade level
+          return api.get('/accounts/grade/');
         } else {
           setCurrentView('home');
+        }
+      })
+      .then(res => {
+        if (res && res.data && res.data.grade_level) {
+          setUserGrade(res.data.grade_level);
         }
       })
       .catch(() => {
@@ -195,7 +204,18 @@ export default function App() {
   return (
     <div style={appLayoutStyles.appContainer}>
       {user && needsOnboarding && (
-        <Questionnaire onComplete={() => setNeedsOnboarding(false)} />
+        <Questionnaire
+            onComplete={async () => {
+                setNeedsOnboarding(false);
+
+                try {
+                    const res = await api.get('/accounts/grade/');
+                    setUserGrade(res.data.grade_level);
+                } catch (err) {
+                    console.error("Failed to refresh grade:", err);
+                }
+            }}
+        />
       )}
 
       {/* 1. TOPBAR SYSTEM */}
@@ -218,6 +238,42 @@ export default function App() {
             >
               🌌 Equinox
             </button>
+            
+            {/* Grade Level Selector - only show for logged-in users */}
+            {user && userGrade && (
+              <select
+                value={userGrade}
+                onChange={(e) => {
+                  const newGrade = parseInt(e.target.value, 10);
+                  const previousGrade = userGrade;
+                  setUserGrade(newGrade);
+                  // Update grade on backend
+                  api.post('/accounts/grade/update/', {
+                      grade_level: newGrade
+                  })
+                  .catch(() => {
+                      setUserGrade(previousGrade);
+                  });
+                }}
+                style={{
+                  backgroundColor: '#1f2937',
+                  color: '#f7fafc',
+                  border: '1px solid #374151',
+                  borderRadius: '6px',
+                  padding: '0.35rem 0.6rem',
+                  fontSize: '0.85rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  fontFamily: "'Courier New', monospace",
+                  letterSpacing: '0.05em',
+                  outline: 'none',
+                }}
+              >
+                {[1,2,3,4,5,6,7,8,9,10].map(g => (
+                  <option key={g} value={g}>Grade {g}</option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '12px' }}>
@@ -286,7 +342,7 @@ export default function App() {
                   />
                 )}
                 
-                {currentView === 'catalogue' && <TopicCatalogue onSelectTopic={(id, grade) => { setSelectedTopicId(id); setSelectedGrade(grade || 'Elementary'); setCurrentView('detail'); }} />}
+                {currentView === 'catalogue' && <TopicCatalogue onSelectTopic={(id, grade) => { setSelectedTopicId(id); setSelectedGrade(grade || 'Elementary'); setCurrentView('detail'); }} userGrade={userGrade} />}
                 
                 {currentView === 'detail' && (
                   <TopicDetail 

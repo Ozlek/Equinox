@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
 
-export default function TopicCatalogue({ onSelectTopic }) {
+export default function TopicCatalogue({ onSelectTopic, userGrade }) {
   const [topics, setTopics] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedGrade, setSelectedGrade] = useState('Elementary');
+  const [selectedGrades, setSelectedGrades] = useState({});
+  const [modifiedTopics, setModifiedTopics] = useState({});
 
   useEffect(() => {
     api.get('/topics/')
@@ -14,11 +15,46 @@ export default function TopicCatalogue({ onSelectTopic }) {
         setLoading(false);
       })
       .catch((err) => {
-        console.error("Error retrieving topic catalogue structural framework:", err);
-        setError("Unable to load the topic structural framework matrix. Please try again.");
+        console.error("Error retrieving topic catalogue:", err);
+        setError("Unable to load the topic catalogue. Please try again.");
         setLoading(false);
       });
   }, []);
+
+  // Initialize default grade for each topic (use min grade)
+  useEffect(() => {
+  if (topics.length > 0) {
+    const defaults = {};
+
+    topics.forEach(topic => {
+      if (
+        userGrade &&
+        userGrade >= topic.grade_level_min &&
+        userGrade <= topic.grade_level_max
+      ) {
+        defaults[topic.id] = userGrade;
+      } else {
+        defaults[topic.id] = topic.grade_level_min || 1;
+      }
+    });
+
+    setSelectedGrades(defaults);
+  }
+}, [topics, userGrade]);
+
+  const handleGradeChange = (topicId, grade) => {
+    const parsed = parseInt(grade, 10);
+
+    setSelectedGrades(prev => ({
+      ...prev,
+      [topicId]: parsed
+    }));
+
+    setModifiedTopics(prev => ({
+        ...prev,
+        [topicId]: true
+      }));
+  };
 
   if (loading) return (
     <div style={styles.graphingPaper}>
@@ -38,8 +74,102 @@ export default function TopicCatalogue({ onSelectTopic }) {
     { bg: '#fde68a', text: '#92400e', rotate: '-0.3deg' },   // yellow
     { bg: '#f9a8d4', text: '#831843', rotate: '0.7deg' },    // pink
     { bg: '#c4b5fd', text: '#312e81', rotate: '-0.5deg' },   // purple
-    { bg: '#fdba74', text: '#7c2d12', rotate: '0.4deg' },    // orange
   ];
+
+  // Split topics into recommended and explore based on userGrade
+  const recommendedTopics = [];
+  const exploreTopics = [];
+  
+  topics.forEach((topic, index) => {
+    const topicInfo = { ...topic, colorIndex: index % stickyNoteColors.length };
+    if (userGrade && topic.grade_level_min <= userGrade && userGrade <= topic.grade_level_max) {
+      recommendedTopics.push(topicInfo);
+    } else {
+      exploreTopics.push(topicInfo);
+    }
+  });
+
+  const renderTopicCard = (topic, index) => {
+    const color = stickyNoteColors[topic.colorIndex];
+    const currentGrade = selectedGrades[topic.id] || topic.grade_level_min || 1;
+    
+    // Generate grade options from min to max
+    const gradeOptions = [];
+    for (let g = topic.grade_level_min; g <= topic.grade_level_max; g++) {
+      gradeOptions.push(g);
+    }
+
+    // Determine if this grade is different from user's grade
+    const gradeDiff = currentGrade - userGrade;
+    const showMismatchWarning = modifiedTopics[topic.id] && userGrade && gradeDiff !== 0;
+
+    return (
+      <div 
+        key={topic.id} 
+        style={{
+          ...styles.stickyNote,
+          backgroundColor: color.bg,
+          color: color.text,
+          transform: `rotate(${color.rotate})`,
+        }}
+      >
+        <div style={styles.stickyNotePin}>📌</div>
+        <div style={styles.stickyNoteContent}>
+          <div style={styles.stickyNoteHeader}>
+            <h3 style={{ ...styles.stickyNoteTitle, color: color.text }}>{topic.name}</h3>
+            <span style={{ ...styles.stickyNoteBadge, backgroundColor: color.text, color: color.bg }}>
+              Recommended for Grades {topic.grade_level_min}-{topic.grade_level_max}
+            </span>
+          </div>
+          
+          <p style={{ ...styles.stickyNoteDesc, color: color.text }}>{topic.description}</p>
+          
+          {/* Grade mismatch warning */}
+          {showMismatchWarning && (
+            <div style={{
+              ...styles.gradeWarning,
+              backgroundColor: gradeDiff > 0 ? '#fef3c7' : '#dbeafe',
+              color: gradeDiff > 0 ? '#92400e' : '#1e40af',
+              borderColor: gradeDiff > 0 ? '#f59e0b' : '#3b82f6',
+            }}>
+            {gradeDiff > 0 ? '⚠️ More challenging concepts' : 'ℹ️ May cover familiar material'}
+            </div>
+          )}
+          
+          <div style={styles.gradeSelector}>
+            <label style={{ ...styles.gradeLabel, color: color.text }}>Select Grade Level</label>
+            <select 
+              style={{
+                ...styles.gradeSelect,
+                backgroundColor: 'rgba(255,255,255,0.5)',
+                borderColor: color.text,
+                color: color.text,
+              }}
+              value={currentGrade}
+              onChange={(e) => handleGradeChange(topic.id, e.target.value)}
+            >
+              {gradeOptions.map(grade => (
+                <option key={grade} value={grade}>
+                  Grade {grade}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button 
+            style={{
+              ...styles.stickyNoteActionBtn,
+              backgroundColor: color.text,
+              color: color.bg,
+            }}
+            onClick={() => onSelectTopic(topic.id, currentGrade)}
+          >
+            Review Topic ➔
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <>
@@ -54,66 +184,47 @@ export default function TopicCatalogue({ onSelectTopic }) {
           {/* Title */}
           <div style={styles.headerArea}>
             <h1 style={styles.mainTitle}>📚 Topic Catalogue</h1>
-            <p style={styles.subtitle}>Select a structural framework area to configure your study session.</p>
+            {userGrade && (
+              <p style={styles.subtitle}>
+                Showing topics for Grade {userGrade} • 
+                <span style={{ color: '#059669', fontWeight: '600' }}> {recommendedTopics.length} recommended</span> • 
+                <span style={{ color: '#64748b' }}> {exploreTopics.length} to explore</span>
+              </p>
+            )}
           </div>
 
-          {/* Sticky Note Topic Grid */}
-          <div style={styles.grid}>
-            {topics.map((topic, index) => {
-              const color = stickyNoteColors[index % stickyNoteColors.length];
-              return (
-                <div 
-                  key={topic.id} 
-                  style={{
-                    ...styles.stickyNote,
-                    backgroundColor: color.bg,
-                    color: color.text,
-                    transform: `rotate(${color.rotate})`,
-                  }}
-                >
-                  <div style={styles.stickyNotePin}>📌</div>
-                  <div style={styles.stickyNoteContent}>
-                    <div style={styles.stickyNoteHeader}>
-                      <h3 style={{ ...styles.stickyNoteTitle, color: color.text }}>{topic.name}</h3>
-                      <span style={{ ...styles.stickyNoteBadge, backgroundColor: color.text, color: color.bg }}>
-                        {topic.grade_level}
-                      </span>
-                    </div>
-                    
-                    <p style={{ ...styles.stickyNoteDesc, color: color.text }}>{topic.description}</p>
-                    
-                    <div style={styles.gradeSelector}>
-                      <label style={{ ...styles.gradeLabel, color: color.text }}>Grade Level</label>
-                      <select 
-                        style={{
-                          ...styles.gradeSelect,
-                          backgroundColor: 'rgba(255,255,255,0.5)',
-                          borderColor: color.text,
-                          color: color.text,
-                        }}
-                        value={selectedGrade}
-                        onChange={(e) => setSelectedGrade(e.target.value)}
-                      >
-                        <option value="Elementary">Elementary (Grades 1-6)</option>
-                        <option value="Junior High">Junior High (Grades 7-10)</option>
-                      </select>
-                    </div>
+          {/* Recommended Topics Section */}
+          {recommendedTopics.length > 0 && (
+            <>
+              <div style={styles.sectionHeader}>
+                <span style={styles.sectionIcon}>⭐</span>
+                <h2 style={styles.sectionTitle}>Recommended for Grade {userGrade}</h2>
+              </div>
+              <div style={styles.grid}>
+                {recommendedTopics.map(topic => renderTopicCard(topic, topic.colorIndex))}
+              </div>
+            </>
+          )}
 
-                    <button 
-                      style={{
-                        ...styles.stickyNoteActionBtn,
-                        backgroundColor: color.text,
-                        color: color.bg,
-                      }}
-                      onClick={() => onSelectTopic(topic.id, selectedGrade)}
-                    >
-                      Review Topic ➔
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          {/* Divider */}
+          {recommendedTopics.length > 0 && exploreTopics.length > 0 && (
+            <div style={styles.divider}>
+              <span style={styles.dividerText}>— Explore Other Topics —</span>
+            </div>
+          )}
+
+          {/* Explore Other Topics Section */}
+          {exploreTopics.length > 0 && (
+            <>
+              <div style={styles.sectionHeader}>
+                <span style={styles.sectionIcon}>🔍</span>
+                <h2 style={{ ...styles.sectionTitle, color: '#64748b' }}>Explore Other Topics</h2>
+              </div>
+              <div style={styles.grid}>
+                {exploreTopics.map(topic => renderTopicCard(topic, topic.colorIndex))}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </>
@@ -179,7 +290,6 @@ const styles = {
     gap: '28px',
   },
 
-  // ── Sticky Note Topic Card ──
   stickyNote: {
     borderRadius: '2px',
     padding: '1.25rem',
@@ -211,9 +321,8 @@ const styles = {
 
   stickyNoteHeader: {
     display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: '8px',
+    flexDirection: 'column',
+    gap: '6px',
     marginBottom: '0.75rem',
   },
 
@@ -236,6 +345,7 @@ const styles = {
     letterSpacing: '0.05em',
     textTransform: 'uppercase',
     opacity: 0.8,
+    alignSelf: 'flex-start',
   },
 
   stickyNoteDesc: {
@@ -299,5 +409,46 @@ const styles = {
     fontSize: '1rem',
     fontStyle: 'italic',
     padding: '5rem',
+  },
+
+  sectionHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    marginBottom: '1rem',
+    marginTop: '0.5rem',
+  },
+  sectionIcon: {
+    fontSize: '1.5rem',
+  },
+  sectionTitle: {
+    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontSize: '1.3rem',
+    fontWeight: 'bold',
+    color: '#1e293b',
+    margin: 0,
+  },
+  divider: {
+    display: 'flex',
+    alignItems: 'center',
+    margin: '2rem 0',
+    gap: '1rem',
+  },
+  dividerText: {
+    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontSize: '0.9rem',
+    color: '#64748b',
+    fontStyle: 'italic',
+    whiteSpace: 'nowrap',
+  },
+  gradeWarning: {
+    padding: '0.5rem 0.75rem',
+    borderRadius: '4px',
+    border: '1px solid',
+    fontSize: '0.75rem',
+    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontWeight: '600',
+    marginBottom: '0.75rem',
+    textAlign: 'center',
   },
 };

@@ -107,12 +107,12 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
                   {/* Description */}
                   <div style={styles.descriptionRow}>
                     <p style={styles.description}>{topic.description}</p>
-                    <span style={styles.gradeBadge}>{selectedGrade}</span>
+                    <span style={styles.gradeBadge}>Grade {selectedGrade}</span>
                   </div>
 
                   {/* Learning Resources Section */}
                   <div style={styles.resourcesSection}>
-                    <h3 style={styles.sectionTitle}>📚 Learning Resources ({selectedGrade})</h3>
+                    <h3 style={styles.sectionTitle}>📚 Learning Resources (Grade {selectedGrade})</h3>
                     
                     {loadingResources ? (
                       <div style={styles.loadingText}>Loading learning resources...</div>

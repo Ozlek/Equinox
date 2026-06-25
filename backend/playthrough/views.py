@@ -22,6 +22,14 @@ from users_progress.achievements import AchievementRegistry
 
 logger = logging.getLogger(__name__)
 
+# Import adaptive analysis function at module level
+try:
+    from users_progress.adaptive_analysis import generate_adaptive_analysis
+    logger.info("Adaptive analysis module imported successfully")
+except Exception as e:
+    logger.warning(f"Could not import generate_adaptive_analysis: {e}")
+    generate_adaptive_analysis = None
+
 # ---------------------------------------------------------------------------
 # Config — pulled from settings with sensible defaults
 # ---------------------------------------------------------------------------
@@ -316,6 +324,10 @@ def submit_answer(request, topic, session, question):
     session.current_question_id = None
     session.save()
 
+    # Don't evaluate achievements here - only at session end
+    # This prevents premature achievement unlocking
+    new_badges = []
+
     # Check one-life game-over condition
     one_life_slugs = ['one_life']
     one_life_active = (
@@ -330,6 +342,7 @@ def submit_answer(request, topic, session, question):
         'shield_consumed': shield_consumed,
         'one_life_triggered': one_life_triggered,
         'current_tier': current_tier,
+        'new_achievements': new_badges,
     }
 
 
@@ -464,7 +477,16 @@ def end_session(session, topic, current_tier, new_badges=None):
             quantity__gt=0
         ).update(quantity=F('quantity') - 1)
 
+    session_id = session.id
     session.end_session()
+    logger.info(f"Session {session_id} deleted from database")
+    
+    # Verify deletion
+    still_exists = PlaythroughSession.objects.filter(id=session_id).exists()
+    if still_exists:
+        logger.error(f"ERROR: Session {session_id} still exists after deletion!")
+    else:
+        logger.info(f"Confirmed: Session {session_id} successfully deleted")
 
     return {
         'final_score': final_score,
@@ -543,9 +565,22 @@ def playthrough_api_view(request, topic_id):
         # Re-read tier after DDA may have adjusted the rating
         current_rating = dda.get_rating(request.user, topic.name)
         current_tier = dda.get_closest_tier(current_rating)
+        
+        # Check if this answer completed the session
+        is_session_complete = session.questions_served >= MAX_QUESTIONS_PER_SESSION
 
         if result['one_life_triggered']:
-            summary = end_session(session, topic, current_tier, new_badges=None)
+            new_badges = AchievementRegistry.evaluate_user(request.user)
+            summary = end_session(session, topic, current_tier, new_badges=new_badges)
+            
+            # Get adaptive analysis for the user
+            try:
+                from users_progress.views import generate_adaptive_analysis
+                analysis_data = generate_adaptive_analysis(request.user)
+            except Exception as e:
+                logger.error(f"Failed to get adaptive analysis: {e}")
+                analysis_data = {}
+            
             return Response({
                 "is_correct": False,
                 "correct_answer": question.correct_answer,
@@ -559,8 +594,47 @@ def playthrough_api_view(request, topic_id):
                 "gamified_score": summary['final_gamified_score'],
                 "current_streak": 0,
                 "shield_active": False,
+                "new_achievements": summary['new_achievements'],
+                "adaptive_analysis": analysis_data,
             }, status=status.HTTP_200_OK)
 
+        # Check if session is complete and include completion data in POST response
+        if is_session_complete:
+            logger.info(f"Session {session.id} complete in POST - evaluating achievements")
+            new_badges = AchievementRegistry.evaluate_user(request.user)
+            logger.info(f"New badges unlocked: {new_badges}")
+            
+            # Get adaptive analysis
+            logger.info("Attempting to generate adaptive analysis...")
+            try:
+                from users_progress.adaptive_analysis import generate_adaptive_analysis
+                analysis_data = generate_adaptive_analysis(request.user)
+                logger.info(f"Adaptive analysis result: {analysis_data}")
+            except Exception as e:
+                logger.error(f"Failed to get adaptive analysis: {e}", exc_info=True)
+                analysis_data = {}
+            
+            # End the session and save progress
+            summary = end_session(session, topic, current_tier, new_badges=new_badges)
+            
+            return Response({
+                "is_correct": result['is_correct'],
+                "correct_answer": question.correct_answer,
+                "score": session.score,
+                "current_score": session.score,
+                "questions_served": session.questions_served,
+                "points_earned": result['points_earned'],
+                "gamified_score": session.gamified_score,
+                "current_streak": session.current_streak,
+                "shield_active": (session.modifier_type == 'STREAK_SHIELD'),
+                "session_complete": True,
+                "is_finished": True,
+                "final_score": summary['final_score'],
+                "final_gamified_score": summary['final_gamified_score'],
+                "new_achievements": summary['new_achievements'],
+                "adaptive_analysis": analysis_data,
+            })
+        
         return Response({
             "is_correct": result['is_correct'],
             "correct_answer": question.correct_answer,
@@ -571,21 +645,41 @@ def playthrough_api_view(request, topic_id):
             "gamified_score": session.gamified_score,
             "current_streak": session.current_streak,
             "shield_active": (session.modifier_type == 'STREAK_SHIELD'),
+            "new_achievements": result.get('new_achievements', []),
         })
 
     # -------------------------------------------------------------------------
     # ACTION B: EVALUATE END GAME OR SERVE NEXT QUESTION (GET)
     # -------------------------------------------------------------------------
+    # Refresh session from database to get latest questions_served count
+    session.refresh_from_db()
+    logger.debug(f"GET request - session.questions_served={session.questions_served}, MAX={MAX_QUESTIONS_PER_SESSION}")
+    
     if session.questions_served >= MAX_QUESTIONS_PER_SESSION:
+        logger.info(f"Session {session.id} complete - evaluating achievements")
         new_badges = AchievementRegistry.evaluate_user(request.user)
+        logger.info(f"New badges unlocked: {new_badges}")
         summary = end_session(session, topic, current_tier, new_badges=new_badges)
-        return Response({
+        
+        # Get adaptive analysis for the user
+        try:
+            from users_progress.views import generate_adaptive_analysis
+            analysis_data = generate_adaptive_analysis(request.user)
+            logger.info(f"Adaptive analysis generated: {len(analysis_data.get('recommendations', []))} recommendations")
+        except Exception as e:
+            logger.error(f"Failed to get adaptive analysis: {e}")
+            analysis_data = {}
+        
+        response_data = {
             "session_complete": True,
             "final_score": summary['final_score'],
             "final_gamified_score": summary['final_gamified_score'],
             "total_questions": MAX_QUESTIONS_PER_SESSION,
             "new_achievements": summary['new_achievements'],
-        })
+            "adaptive_analysis": analysis_data,
+        }
+        logger.info(f"Returning completion response with {len(new_badges)} achievements and {len(analysis_data.get('recommendations', []))} recommendations")
+        return Response(response_data)
 
     # Serve the current question if one is already active, otherwise pick a new one
     if session.current_question_id:
