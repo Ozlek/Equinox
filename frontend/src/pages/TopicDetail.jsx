@@ -104,7 +104,467 @@ const LESSONS = {
             tip: "Underline important numbers before solving."
           }
         }
-      ]
+      ],
+      2: [
+      {
+      id:1,
+      title:"Place Value",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Identify ones, tens and hundreds",
+      "Read and write whole numbers",
+      "Compare numbers"
+      ],
+      example:"245 = 2 hundreds, 4 tens, 5 ones",
+      tip:"Start from the rightmost digit."
+      }
+      },
+      {
+      id:2,
+      title:"Addition without Regrouping",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Add 2-digit numbers",
+      "Align digits correctly",
+      "Check answers"
+      ],
+      example:"24 + 15 = 39",
+      tip:"Add ones before tens."
+      }
+      },
+      {
+      id:3,
+      title:"Addition with Regrouping",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Carry numbers correctly",
+      "Add larger values",
+      "Understand regrouping"
+      ],
+      example:"38 + 27 = 65",
+      tip:"If ones exceed 9, carry to the tens."
+      }
+      },
+      {
+      id:4,
+      title:"Subtraction with Regrouping",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Subtract 2-digit numbers",
+      "Borrow correctly",
+      "Check subtraction"
+      ],
+      example:"52 − 18 = 34",
+      tip:"Borrow from the next place value when needed."
+      }
+      },
+      {
+      id:5,
+      title:"Money",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Identify Philippine coins",
+      "Count money",
+      "Solve simple money problems"
+      ],
+      example:"₱20 + ₱10 = ₱30",
+      tip:"Group similar denominations."
+      }
+      },
+      {
+      id:6,
+      title:"Word Problems",
+      completed:false,
+      locked:true,
+      lesson:{
+      objectives:[
+      "Read carefully",
+      "Choose the operation",
+      "Solve daily-life problems"
+      ],
+      example:"Ben bought 12 mangoes then 8 more.",
+      tip:"Underline important numbers."
+      }
+      }
+      ],
+      3: [
+      {
+      id:1,
+      title:"Multiplication Basics",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Understand multiplication as repeated addition",
+      "Multiply one-digit numbers",
+      "Recognize multiplication sentences"
+      ],
+      example:"4 × 3 = 12",
+      tip:"Think of multiplication as adding equal groups."
+      }
+      },
+      {
+      id:2,
+      title:"Multiplication Tables",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Recall multiplication facts",
+      "Practice tables from 2 to 10",
+      "Build multiplication fluency"
+      ],
+      example:"7 × 6 = 42",
+      tip:"Practice one multiplication table at a time."
+      }
+      },
+      {
+      id:3,
+      title:"Division Basics",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Understand division as sharing equally",
+      "Solve basic division problems",
+      "Relate multiplication and division"
+      ],
+      example:"12 ÷ 3 = 4",
+      tip:"Ask yourself how many equal groups can be made."
+      }
+      },
+      {
+      id:4,
+      title:"Simple Fractions",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Recognize fractions",
+      "Identify numerator and denominator",
+      "Compare simple fractions"
+      ],
+      example:"1/2 of 8 = 4",
+      tip:"A fraction represents equal parts of a whole."
+      }
+      },
+      {
+      id:5,
+      title:"Measurement",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Measure length",
+      "Measure mass",
+      "Measure time"
+      ],
+      example:"1 meter = 100 centimeters",
+      tip:"Always check the unit."
+      }
+      },
+      {
+      id:6,
+      title:"Word Problems",
+      completed:false,
+      locked:true,
+      lesson:{
+      objectives:[
+      "Analyze situations",
+      "Choose the correct operation",
+      "Solve step-by-step"
+      ],
+      example:"A box has 24 pencils shared by 6 students.",
+      tip:"Underline important information."
+      }
+      }
+      ],
+      4: [
+      {
+      id:1,
+      title:"Multi-digit Multiplication",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Multiply 2-digit numbers",
+      "Use vertical multiplication",
+      "Check answers"
+      ],
+      example:"24 × 13 = 312",
+      tip:"Multiply each place value carefully."
+      }
+      },
+      {
+      id:2,
+      title:"Long Division",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Divide large numbers",
+      "Interpret remainders",
+      "Use long division"
+      ],
+      example:"84 ÷ 6 = 14",
+      tip:"Divide, multiply, subtract, bring down."
+      }
+      },
+      {
+      id:3,
+      title:"Factors and Multiples",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Identify factors",
+      "Find multiples",
+      "Recognize common factors"
+      ],
+      example:"Factors of 12: 1,2,3,4,6,12",
+      tip:"Factors divide evenly."
+      }
+      },
+      {
+      id:4,
+      title:"Fractions and Decimals",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Compare fractions",
+      "Convert simple decimals",
+      "Understand place value"
+      ],
+      example:"0.5 = 1/2",
+      tip:"Decimals are another way to write fractions."
+      }
+      },
+      {
+      id:5,
+      title:"Geometry Basics",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Identify polygons",
+      "Measure angles",
+      "Recognize symmetry"
+      ],
+      example:"A square has four equal sides.",
+      tip:"Look for equal sides and angles."
+      }
+      },
+      {
+      id:6,
+      title:"Word Problems",
+      completed:false,
+      locked:true,
+      lesson:{
+      objectives:[
+      "Solve multi-step problems",
+      "Identify operations",
+      "Interpret answers"
+      ],
+      example:"Maria bought 3 boxes with 24 candies each.",
+      tip:"Break large problems into smaller parts."
+      }
+      }
+      ],
+      5: [
+      {
+      id:1,
+      title:"Decimals",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Read decimals",
+      "Compare decimals",
+      "Add decimals"
+      ],
+      example:"3.25 + 1.50 = 4.75",
+      tip:"Align decimal points."
+      }
+      },
+      {
+      id:2,
+      title:"Percentages",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Understand percentages",
+      "Convert fractions",
+      "Solve simple percentage problems"
+      ],
+      example:"50% of 20 = 10",
+      tip:"Percent means out of 100."
+      }
+      },
+      {
+      id:3,
+      title:"Fraction Operations",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Add fractions",
+      "Subtract fractions",
+      "Simplify answers"
+      ],
+      example:"1/4 + 2/4 = 3/4",
+      tip:"Add numerators when denominators are equal."
+      }
+      },
+      {
+      id:4,
+      title:"Area and Perimeter",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Find perimeter",
+      "Find area",
+      "Use formulas"
+      ],
+      example:"Rectangle Area = length × width",
+      tip:"Perimeter is around, area is inside."
+      }
+      },
+      {
+      id:5,
+      title:"Volume",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Measure volume",
+      "Apply formulas",
+      "Interpret units"
+      ],
+      example:"2 × 3 × 4 = 24 cubic units",
+      tip:"Volume uses cubic units."
+      }
+      },
+      {
+      id:6,
+      title:"Word Problems",
+      completed:false,
+      locked:true,
+      lesson:{
+      objectives:[
+      "Apply multiple concepts",
+      "Interpret data",
+      "Solve systematically"
+      ],
+      example:"Find the total cost of several items.",
+      tip:"Read the question twice."
+      }
+      }
+      ],
+      6: [
+      {
+      id:1,
+      title:"Ratios",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Understand ratios",
+      "Write ratios",
+      "Compare ratios"
+      ],
+      example:"2:3",
+      tip:"Ratios compare quantities."
+      }
+      },
+      {
+      id:2,
+      title:"Integers",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Recognize positive and negative numbers",
+      "Compare integers",
+      "Order integers"
+      ],
+      example:"-3 < 2",
+      tip:"Numbers farther right are greater."
+      }
+      },
+      {
+      id:3,
+      title:"Algebraic Expressions",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Recognize variables",
+      "Evaluate expressions",
+      "Simplify expressions"
+      ],
+      example:"x + 5",
+      tip:"Variables represent unknown numbers."
+      }
+      },
+      {
+      id:4,
+      title:"Statistics",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Read graphs",
+      "Interpret data",
+      "Find averages"
+      ],
+      example:"Mean = Sum ÷ Number of values",
+      tip:"Always organize the data first."
+      }
+      },
+      {
+      id:5,
+      title:"Probability",
+      completed:false,
+      locked:false,
+      lesson:{
+      objectives:[
+      "Understand chance",
+      "Find simple probability",
+      "Interpret outcomes"
+      ],
+      example:"Rolling a 3 on a die = 1/6",
+      tip:"Probability ranges from 0 to 1."
+      }
+      },
+      {
+      id:6,
+      title:"Problem Solving",
+      completed:false,
+      locked:true,
+      lesson:{
+      objectives:[
+      "Combine multiple skills",
+      "Analyze situations",
+      "Solve logically"
+      ],
+      example:"Solve a real-life multi-step problem.",
+      tip:"Plan your solution before calculating."
+      }
+      }
+      ],
     }
   };
 
@@ -241,11 +701,11 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
                       </h3>
 
                       <div style={styles.progressBox}>
-                        <span>📖 Learning Progress</span>
+                        <span style={{color:"#1e293b",fontWeight:"700"}}>📖 Learning Progress</span>
                         <div style={styles.progressBar}>
                           <div style={styles.progressFill} />
                         </div>
-                        <small>2 of 6 Lessons Mastered</small>
+                        <small style={{color:"#64748b"}}>2 of 6 Lessons Mastered</small>
                       </div>
 
                       {(LESSONS[topic.name]?.[selectedGrade] || []).map((lesson) => {
@@ -333,7 +793,7 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
                       }}
                       >
 
-                      ⭐ Beginner Lesson
+                      📖 Grade {selectedGrade}
 
                       </span>
 
@@ -350,7 +810,7 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
                       </div>
 
                       <p style={styles.lessonIntro}>
-                          Master this lesson before entering a Playthrough.
+                          Master this lesson before starting your challenge.
                       </p>
 
                       {selectedLesson.lesson && (
