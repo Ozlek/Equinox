@@ -3,6 +3,111 @@ import Leaderboard from './Leaderboard';
 import ChallengeConfigModal from './ChallengeConfig';
 import api from '../api/axios';
 
+const LESSONS = {
+    Arithmetic: {
+      1: [
+        {
+          id: 1,
+          title: "Counting Numbers",
+          completed: true,
+          locked: false,
+          lesson: {
+            objectives: [
+              "Count numbers from 1 to 20",
+              "Count objects correctly",
+              "Recognize increasing number order"
+            ],
+            example: "🍎🍎🍎🍎 = 4",
+            tip: "Point to each object while counting."
+          }
+        },
+        {
+          id:2,
+
+          title:"Number Recognition",
+
+          completed:true,
+
+          locked:false,
+
+          lesson:{
+              objectives:[
+
+                  "Recognize numbers from 0 to 20",
+
+                  "Identify missing numbers",
+
+                  "Read numbers correctly"
+
+              ],
+              example:"15",
+              tip:"Practice reading numbers aloud."
+          }
+        },
+        {
+          id: 3,
+          title: "Addition within 10",
+          completed: false,
+          locked: false,
+          lesson: {
+            objectives: [
+              "Add two numbers within 10",
+              "Represent addition using objects",
+              "Solve simple addition problems"
+            ],
+            example: "3 + 2 = 5",
+            tip: "Start counting from the bigger number."
+          }
+        },
+        {
+          id: 4,
+          title: "Addition within 20",
+          completed: false,
+          locked: false,
+          lesson: {
+            objectives: [
+              "Add numbers within 20",
+              "Use counting strategies",
+              "Solve simple equations"
+            ],
+            example: "13 + 5 = 18",
+            tip: "Break the second number into smaller parts."
+          }
+        },
+        {
+          id: 5,
+          title: "Subtraction within 10",
+          completed: false,
+          locked: false,
+          lesson: {
+            objectives: [
+              "Subtract numbers within 10",
+              "Understand taking away",
+              "Solve subtraction problems"
+            ],
+            example: "9 − 4 = 5",
+            tip: "Count backwards carefully."
+          }
+        },
+        {
+          id: 6,
+          title: "Word Problems",
+          completed: false,
+          locked: true,
+          lesson: {
+            objectives: [
+              "Read mathematical situations",
+              "Identify important numbers",
+              "Choose the correct operation"
+            ],
+            example: "Anna has 5 apples and buys 3 more.",
+            tip: "Underline important numbers before solving."
+          }
+        }
+      ]
+    }
+  };
+
 export default function TopicDetail({ topicId, selectedGrade, onBack, onStartChallenge }) {
   const [topic, setTopic] = useState(null);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
@@ -11,6 +116,18 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
   const [resources, setResources] = useState([]);
   const [loadingResources, setLoadingResources] = useState(false);
   const [failedEmbeds, setFailedEmbeds] = useState({});
+  const [selectedLesson, setSelectedLesson] = useState(null);
+
+  useEffect(() => {
+      if (!topic) return;
+
+      const lessons =
+          LESSONS[topic.name]?.[selectedGrade];
+
+      if (lessons?.length) {
+          setSelectedLesson(lessons[0]);
+      }
+  }, [topic, selectedGrade]);
 
   useEffect(() => {
     // Guard against invalid topicId
@@ -96,6 +213,9 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
                   <div style={styles.titleLabelInner}>
                     <h1 style={styles.coverTitle}>{topic.name}</h1>
                     <p style={styles.coverSubtitle}>Grades {topic.grade_level_min}-{topic.grade_level_max}</p>
+                    <p style={styles.workspaceSubtitle}>
+                    📖 Grade {selectedGrade} Learning Journey
+                    </p>
                   </div>
                 </div>
               </div>
@@ -110,71 +230,228 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
                     <span style={styles.gradeBadge}>Grade {selectedGrade}</span>
                   </div>
 
-                  {/* Learning Resources Section */}
-                  <div style={styles.resourcesSection}>
-                    <h3 style={styles.sectionTitle}>📚 Learning Resources (Grade {selectedGrade})</h3>
-                    
-                    {loadingResources ? (
-                      <div style={styles.loadingText}>Loading learning resources...</div>
-                    ) : resources.length > 0 ? (
-                      <div style={styles.resourcesList}>
-                        {resources.map((resource) => (
-                          <div key={resource.id} style={styles.resourceCard}>
-                            <div style={styles.resourceHeader}>
-                              <h4 style={styles.resourceTitle}>{resource.title}</h4>
-                              <span style={styles.resourceTypeBadge}>{resource.type}</span>
-                            </div>
-                            {resource.description && (
-                              <p style={styles.resourceDescription}>{resource.description}</p>
-                            )}
-                            <div style={styles.iframeContainer}>
-                              {resource.type === 'KHAN_ACADEMY' ? (
-                                <div style={styles.externalLink}>
-                                  <p style={styles.externalLinkText}>
-                                    📚 This resource is hosted on Khan Academy
-                                  </p>
-                                  <a 
-                                    href={resource.embed_url} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    style={styles.externalLinkButton}
-                                  >
-                                    Open Khan Academy Lesson →
-                                  </a>
-                                </div>
-                              ) : failedEmbeds[resource.id] ? (
-                                <div style={styles.fallbackLink}>
-                                  <p style={styles.fallbackText}>This embed cannot be displayed directly.</p>
-                                  <a 
-                                    href={resource.embed_url} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    style={styles.fallbackButton}
-                                  >
-                                    Open Resource in New Tab →
-                                  </a>
-                                </div>
-                              ) : (
-                                <iframe
-                                  src={resource.embed_url}
-                                  width="100%"
-                                  height="500"
-                                  frameBorder="0"
-                                  allowFullScreen
-                                  title={resource.title}
-                                  style={styles.iframe}
-                                  onError={() => handleIframeError(resource.id)}
-                                />
-                              )}
-                            </div>
-                          </div>
-                        ))}
+                  {/* Learning Workspace */}
+                  <div style={styles.workspace}>
+
+                    {/* LEFT PANEL */}
+                    <div style={styles.lessonSidebar}>
+
+                      <h3 style={styles.sectionTitle}>
+                        📚 Learning Journey
+                      </h3>
+
+                      <div style={styles.progressBox}>
+                        <span>📖 Learning Progress</span>
+                        <div style={styles.progressBar}>
+                          <div style={styles.progressFill} />
+                        </div>
+                        <small>2 of 6 Lessons Mastered</small>
                       </div>
-                    ) : (
-                      <div style={styles.noResources}>
-                        <p>No learning resources available for this grade level yet.</p>
+
+                      {(LESSONS[topic.name]?.[selectedGrade] || []).map((lesson) => {
+
+                        const isSelected =
+                          selectedLesson?.id === lesson.id;
+
+                        return (
+
+                          <button
+                            key={lesson.id}
+                            disabled={lesson.locked}
+                            onClick={() => setSelectedLesson(lesson)}
+                            style={{
+                              ...styles.lessonButton,
+
+                              backgroundColor: isSelected ? "#dbeafe" : "#fffefb",
+                              border: isSelected
+                                ? "2px solid #3b82f6"
+                                : "1px solid #d6d3d1",
+                              fontWeight: isSelected ? "700" : "500",
+
+                              opacity:
+                                lesson.locked
+                                  ? 0.55
+                                  : 1,
+
+                              cursor:
+                                lesson.locked
+                                  ? "not-allowed"
+                                  : "pointer",
+                            }}
+                          >
+
+                            <span>
+
+                              {lesson.locked
+                                ? "🔒"
+                                : lesson.completed
+                                  ? "✅"
+                                  : isSelected
+                                    ? "⭐"
+                                    : "📖"}
+
+                            </span>
+
+                            <span>{lesson.title}</span>
+
+                          </button>
+
+                        );
+
+                      })}
+
+                    </div>
+
+                    {/* RIGHT PANEL */}
+
+                    <div style={styles.lessonPreview}>
+
+                      {selectedLesson && (
+
+                      <div style={styles.lessonCard}>
+
+                      <h2 style={styles.lessonTitle}>
+                          {selectedLesson.title}
+                      </h2>
+                      <div
+                      style={{
+                      display:"inline-flex",
+                      alignItems:"center",
+                      gap:"8px",
+                      marginBottom:"1rem"
+                      }}
+                      >
+
+                      <span
+                      style={{
+                      background:"#dcfce7",
+                      padding:"4px 10px",
+                      borderRadius:"999px",
+                      fontSize:".75rem",
+                      fontWeight:"700",
+                      color:"#166534"
+                      }}
+                      >
+
+                      ⭐ Beginner Lesson
+
+                      </span>
+
+                      <span
+                      style={{
+                      fontSize:".75rem",
+                      color:"#64748b"
+                      }}
+                      >
+
+                      Estimated Time: ⏱ 3–5 minutes
+
+                      </span>
                       </div>
-                    )}
+
+                      <p style={styles.lessonIntro}>
+                          Master this lesson before entering a Playthrough.
+                      </p>
+
+                      {selectedLesson.lesson && (
+
+                      <>
+
+                      <h4 style={{ color:"#1e293b", marginBottom:"0.5rem", fontWeight:"700", fontSize:"1rem" }}>
+                      🎯 Learning Objectives
+                      </h4>
+
+                      <ul style={styles.objectiveList}>
+                      {selectedLesson.lesson.objectives.map(objective => (
+
+                      <li
+                          key={objective}
+                          style={{
+                              color:"#334155",
+                              marginBottom:"8px"
+                          }}
+                        >
+                          {objective}
+                      </li>
+
+                      ))}
+                      </ul>
+
+                      <h4 style={{ color:"#1e293b", marginBottom:"0.5rem" }}>
+                      📝 Example Problem
+                      </h4>
+
+                      <div style={styles.exampleBox}>
+                      {selectedLesson.lesson.example}
+                      </div>
+
+                      <h4 style={{ color:"#1e293b", marginBottom:"0.5rem" }}>
+                      💡 Remember
+                      </h4>
+
+                      <div style={styles.tipBox}>
+                      {selectedLesson.lesson.tip}
+                      </div>
+
+                      </>
+
+                      )}
+
+                      <h4
+                      style={{
+                      marginTop:"1.5rem",
+                      marginBottom:"0.75rem",
+                      color:"#1e293b"
+                      }}
+                      >
+                      📚 Learning Resources
+                      </h4>
+
+                      <div style={styles.resourceCards}>
+
+                      {resources.map(resource=>(
+
+                      <a
+                      key={resource.id}
+                      href={resource.embed_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={styles.resourceCardMini}
+                      >
+
+                      <strong style={{color:"#1e293b"}}>{resource.title}</strong>
+
+                      <small
+                      style={{
+                      marginTop:"4px",
+                      color:"#64748b"
+                      }}
+                      >
+                      📘 Open Resource →
+                      </small>
+
+                      <span
+                      style={{
+                          color:"#64748b",
+                          fontSize:".75rem",
+                          marginTop:"4px"
+                      }}
+                      >
+                      {resource.type}
+                      </span>
+
+                      </a>
+
+                      ))}
+
+                      </div>
+
+                      </div>
+
+                      )}
+
+                    </div>
+
                   </div>
                   
                   {/* Action buttons */}
@@ -261,11 +538,11 @@ const styles = {
   notebookCover: {
     position: 'relative',
     display: 'flex',
-    backgroundColor: '#1e293b',
+    backgroundColor: '#5b8c5a',
     borderRadius: '6px',
     width: '100%',
     boxShadow: '0 12px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06)',
-    border: '2px solid #334155',
+    border: '2px solid #48734a',
     overflow: 'hidden',
   },
 
@@ -666,4 +943,173 @@ const styles = {
     fontStyle: 'italic',
     padding: '5rem',
   },
+
+  workspace: {
+    display: "flex",
+    gap: "2rem",
+    alignItems: "stretch",
+    marginTop: "1rem",
+  },
+
+  workspaceSubtitle: {
+    margin: "6px 0 0",
+    color: "#cbd5e1",
+    fontStyle: "italic",
+    fontSize: ".85rem",
+  },
+
+  lessonSidebar: {
+    width: "34%",
+    borderRight: "2px dashed #d6d3d1",
+    paddingRight: "1.5rem",
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.75rem",
+  },
+
+  lessonCard: {
+    background: "#fffefb",
+    border: "1px solid #d6d3d1",
+    borderRadius: "12px",
+    padding: "1.5rem",
+    boxShadow: "0 4px 10px rgba(0,0,0,.06)",
+    color: "#1e293b",
+  },
+
+  lessonPreview: {
+    flex: 1,
+    paddingLeft: "1.5rem",
+    display: "flex",
+    flexDirection: "column",
+    gap: "1rem",
+  },
+
+  lessonButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+
+    width: "100%",
+
+    padding: "0.85rem 1rem",
+
+    border: "1px solid #d6d3d1",
+
+    borderRadius: "8px",
+
+    background: "#fffefb",
+
+    color: "#1e293b",
+
+    fontFamily: "'Georgia', serif",
+
+    fontSize: "0.95rem",
+
+    textAlign: "left",
+
+    cursor: "pointer",
+
+    transition: "all .15s ease",
+
+    boxShadow: "0 2px 6px rgba(0,0,0,.05)",
+  },
+
+  lessonTitle: {
+    margin: 0,
+    color: "#1e293b",
+    fontSize: "2rem",
+    fontWeight: "700",
+  },
+
+  lessonIntro: {
+    color: "#64748b",
+    fontStyle: "italic",
+    fontSize: "1rem",
+    marginBottom: "1rem",
+  },
+
+  objectiveList: {
+    paddingLeft: "1.25rem",
+    lineHeight: 1.8,
+    color: "#334155",
+  },
+
+  exampleBox: {
+    background: "#eff6ff",
+    color: "#1e293b",
+    border: "1px solid #bfdbfe",
+    padding: "1rem",
+    borderRadius: "8px",
+    fontWeight: "600",
+  },
+
+  tipBox: {
+    background: "#fef3c7",
+    color: "#92400e",
+    border: "1px solid #fbbf24",
+    padding: "1rem",
+    borderRadius: "8px",
+  },
+
+  resourceCards: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))",
+    gap: "1rem",
+  },
+
+  resourceCardMini:{
+
+  background:"#f8fafc",
+
+  border:"1px solid #d6d3d1",
+
+  borderRadius:"8px",
+
+  padding:"1rem",
+
+  display:"flex",
+
+  flexDirection:"column",
+
+  gap:"4px",
+
+  textDecoration:"none",
+
+  color:"#1e293b",
+
+  transition:".15s",
+
+  },
+
+  progressBox: {
+    background:"#fffefb",
+
+    border:"1px solid #d6d3d1",
+
+    borderRadius:"10px",
+
+    padding:"1rem",
+
+    boxShadow:"0 2px 8px rgba(0,0,0,.04)",
+  },  
+
+  progressBar: {
+    height: "8px",
+    background: "#e5e7eb",
+    borderRadius: "999px",
+    overflow: "hidden",
+    margin: "8px 0",
+  },
+
+  progressFill: {
+    width: "35%",
+    height: "100%",
+    background: "#22c55e",
+  },
+
+  noLessonSelected: {
+    padding: "3rem",
+    textAlign: "center",
+    color: "#64748b",
+  }
 };
