@@ -1,13 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
 
-const MOD_LABELS = {
-  'timed': '⏱️ Timed',
-  'disable_adjuster': '🔒 Locked DDA',
-  'one_life': '❤️‍🔥 One Life',
-  'easy_going': '🍃 Easy'
-};
-
 const getTierColor = (tier) => {
   const colors = {
     'Novice': '#58ec84',
@@ -15,7 +8,6 @@ const getTierColor = (tier) => {
     'Advanced': '#f6ad55',
     'Expert': '#f56565',    
   };
-
   return colors[tier] || '#a0aec0';
 };
 
@@ -41,15 +33,14 @@ const getRecommendationIcon = (type) => {
 export default function ProgressHistory({ onNavigate }) {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null); // Tracks network or parsing errors safely
+  const [error, setError] = useState(null);
   const [adaptiveAnalysis, setAdaptiveAnalysis] = useState(null);
   const [showAnalysis, setShowAnalysis] = useState(false);
 
   useEffect(() => {
-    // Shared Axios instance inherently preserves credentials and toggles host environments
     api.get('/progress/')
       .then((res) => {
-        setRecords(res.data || []); // Payloads automatically unwrapped to response.data
+        setRecords(res.data || []);
         setLoading(false);
       })
       .catch((err) => {
@@ -70,238 +61,703 @@ export default function ProgressHistory({ onNavigate }) {
       });
   };
 
-  if (loading) return <div style={styles.message}>Analyzing Student Mastery Profile Records...</div>;
+  const ruledBg = {
+    backgroundImage: `
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 27px,
+        rgba(148, 163, 184, 0.15) 27px,
+        rgba(148, 163, 184, 0.15) 28px
+      )
+    `,
+    backgroundPosition: '0 20px',
+  };
 
-  if (error) return <div style={{ ...styles.message, color: '#f56565' }}>⚠️ {error}</div>;
+  if (loading) {
+    return (
+      <div style={styles.graphingPaper}>
+        <div style={styles.notebookWrap}>
+          <div style={styles.spiralBar}>
+            {[...Array(10)].map((_, i) => (
+              <div key={i} style={styles.spiralHole}>
+                <div style={styles.spiralRing} />
+              </div>
+            ))}
+          </div>
+          <div style={{ ...styles.notebookPage, ...ruledBg }}>
+            <div style={styles.redMargin} />
+            <div style={styles.pageInner}>
+              <span style={styles.handwrittenMuted}>📖 Reviewing your records...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={styles.graphingPaper}>
+        <div style={styles.notebookWrap}>
+          <div style={styles.spiralBar}>
+            {[...Array(10)].map((_, i) => (
+              <div key={i} style={styles.spiralHole}>
+                <div style={styles.spiralRing} />
+              </div>
+            ))}
+          </div>
+          <div style={{ ...styles.notebookPage, ...ruledBg }}>
+            <div style={styles.redMargin} />
+            <div style={styles.pageInner}>
+              <span style={{ ...styles.handwrittenMuted, color: '#dc2626' }}>⚠️ {error}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <div style={styles.header}>
-          <h2 style={styles.title}>📈 Progress History</h2>
-          <button 
-            style={styles.closeBtn} 
-            title="Return to Dashboard" 
-            onClick={() => onNavigate ? onNavigate('dashboard') : window.location.href = '/'}
-          >
-            ✕
-          </button>
-        </div>
-
-        {!showAnalysis ? (
-          <div style={styles.actionArea}>
-            <button style={styles.analyzeBtn} onClick={loadAdaptiveAnalysis}>
-              🧠 Get Adaptive Learning Analysis
-            </button>
+    <>
+      <style>{`
+        @keyframes diagonalSlide {
+          0% { background-position: 0 0, 0 0, 0 0; }
+          100% { background-position: -400px 400px, 0 0, 0 0; }
+        }
+      `}</style>
+      <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&display=swap" rel="stylesheet" />
+      <div style={styles.graphingPaper}>
+        <div style={styles.notebookWrap}>
+          {/* Spiral binding */}
+          <div style={styles.spiralBar}>
+            {[...Array(12)].map((_, i) => (
+              <div key={i} style={styles.spiralHole}>
+                <div style={styles.spiralRing} />
+              </div>
+            ))}
           </div>
-        ) : null}
 
-        {records.length === 0 ? (
-          <div style={styles.emptyState}>
-            No completions recorded yet! Jump into a challenge playthrough to log metrics.
-          </div>
-        ) : (
-          <div style={styles.tableWrapper}>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Topic</th>
-                  <th style={styles.th}>Grade</th>
-                  <th style={styles.th}>Accuracy</th>
-                  <th style={styles.th}>Total Points</th>
-                  <th style={styles.th}>Highest Tier</th>
-                  <th style={styles.th}>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {records.map((r) => {
-                  const tierColor = getTierColor(r.difficulty_achieved);
-                  const accuracyPercentage = r.total_questions > 0 ? (r.score / r.total_questions) * 100 : 0;
-                  const accuracyColor = accuracyPercentage >= 75 ? '#68d391' : accuracyPercentage >= 50 ? '#ecc94b' : '#fc8181';
-                  const localDate = new Date(r.completed_at).toLocaleString(undefined, {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  });
+          {/* Notebook page */}
+          <div style={{ ...styles.notebookPage, ...ruledBg }}>
+            <div style={styles.redMargin} />
+            <div style={styles.pageInner}>
+              {/* Page Title */}
+              <div style={styles.pageTitleRow}>
+                <div style={styles.titleLeft}>
+                  <span style={styles.handwrittenTitle}>Progress History</span>
+                  <span style={styles.handwrittenSub}>Your quiz records</span>
+                </div>
+                <button 
+                  style={styles.closeBtn} 
+                  onClick={() => onNavigate ? onNavigate('dashboard') : window.location.href = '/'}
+                >
+                  ✕
+                </button>
+              </div>
 
-                  return (
-                    <tr key={r.id} style={styles.tr}>
-                      <td style={{ ...styles.td, fontWeight: 'bold', color: '#f7fafc' }}>
-                        {r.topic_name}
-                      </td>
-                      <td style={styles.td}>
-                        <span style={styles.gradeBadge}>{r.grade_level}</span>
-                      </td>
-                      <td style={styles.td}>
-                        <span style={{ color: accuracyColor, fontWeight: 'bold' }}>
-                          {r.score} / {r.total_questions}
-                        </span>
-                      </td>
-                      <td style={{ ...styles.td, color: '#63b3ed', fontWeight: 'bold' }}>
-                        {r.gamified_score?.toLocaleString() || 0}
-                      </td>
-                      <td style={styles.td}>
-                        <span style={{ ...styles.tierBadge, borderColor: tierColor, color: tierColor }}>
-                          {r.difficulty_achieved}
-                        </span>
-                      </td>
-                      <td style={{ ...styles.td, color: '#a0aec0', fontSize: '0.85rem' }}>
-                        {localDate}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+              {/* Adaptive Analysis Button */}
+              {!showAnalysis && (
+                <div style={styles.analysisPrompt}>
+                  <button style={styles.stickyNoteBtn} onClick={loadAdaptiveAnalysis}>
+                    <span style={styles.stickyNotePin}>📌</span>
+                    <span style={styles.stickyNoteLabel}>Get Adaptive Learning Analysis</span>
+                  </button>
+                </div>
+              )}
 
-        {showAnalysis && adaptiveAnalysis && (
-          <div style={styles.analysisSection}>
-            <h3 style={styles.analysisTitle}>🧠 Adaptive Learning Analysis</h3>
-            
-            {adaptiveAnalysis.analysis && (
-              <div style={styles.analysisCard}>
-                <h4 style={styles.analysisSubtitle}>📊 Performance Overview</h4>
-                <div style={styles.metricsGrid}>
-                  <div style={styles.metricCard}>
-                    <div style={styles.metricValue}>{adaptiveAnalysis.analysis.overall_accuracy}%</div>
-                    <div style={styles.metricLabel}>Overall Accuracy</div>
-                  </div>
-                  <div style={styles.metricCard}>
-                    <div style={styles.metricValue}>{adaptiveAnalysis.analysis.strengths.length || 0}</div>
-                    <div style={styles.metricLabel}>Strengths</div>
-                  </div>
-                  <div style={styles.metricCard}>
-                    <div style={styles.metricValue}>{adaptiveAnalysis.analysis.weaknesses.length || 0}</div>
-                    <div style={styles.metricLabel}>Areas to Improve</div>
+              {/* Records list */}
+              {records.length === 0 ? (
+                <div style={styles.emptyState}>
+                  <span style={styles.emptyIcon}>📭</span>
+                  <p style={styles.emptyText}>No completions recorded yet!</p>
+                  <p style={styles.emptyHint}>Jump into a challenge playthrough to log metrics.</p>
+                </div>
+              ) : (
+                <div style={styles.recordsList}>
+                  {records.map((r) => {
+                    const tierColor = getTierColor(r.difficulty_achieved);
+                    const accuracyPercentage = r.total_questions > 0 ? (r.score / r.total_questions) * 100 : 0;
+                    const accuracyColor = accuracyPercentage >= 75 ? '#22c55e' : accuracyPercentage >= 50 ? '#eab308' : '#ef4444';
+                    const localDate = new Date(r.completed_at).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    });
+
+                    return (
+                      <div key={r.id} style={styles.recordCard}>
+                        <div style={styles.recordHeader}>
+                          <span style={styles.handwrittenTopic}>{r.topic_name}</span>
+                          <span style={styles.gradeTag}>{r.grade_level}</span>
+                        </div>
+
+                        <div style={styles.recordBody}>
+                          <div style={styles.recordStat}>
+                            <span style={styles.statLabel}>Score</span>
+                            <span style={{ ...styles.statValue, color: accuracyColor }}>
+                              {r.score} / {r.total_questions}
+                            </span>
+                          </div>
+                          <div style={styles.recordStat}>
+                            <span style={styles.statLabel}>Points</span>
+                            <span style={styles.statValue}>{r.gamified_score?.toLocaleString() || 0}</span>
+                          </div>
+                          <div style={styles.recordStat}>
+                            <span style={styles.statLabel}>Tier</span>
+                            <span style={{ ...styles.statValue, color: tierColor }}>{r.difficulty_achieved}</span>
+                          </div>
+                          <div style={styles.recordStat}>
+                            <span style={styles.statLabel}>Date</span>
+                            <span style={styles.statDate}>{localDate}</span>
+                          </div>
+                        </div>
+
+                        {/* Hand-drawn progress mini-bar */}
+                        <div style={styles.miniBar}>
+                          <div style={{ ...styles.miniBarFill, width: `${accuracyPercentage}%`, backgroundColor: accuracyColor }} />
+                        </div>
+
+                        {/* Squiggle underline */}
+                        <svg width="100%" height="4" viewBox="0 0 200 4" preserveAspectRatio="none" style={styles.squiggle}>
+                          <path d="M0,2 Q25,0 50,2 T100,2 T150,2 T200,2" fill="none" stroke="#cbd5e1" strokeWidth="0.7" strokeLinecap="round" />
+                        </svg>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Adaptive Analysis Section */}
+              {showAnalysis && adaptiveAnalysis && (
+                <div style={styles.analysisSection}>
+                  <div style={styles.analysisDivider}>~~*~~</div>
+                  <span style={styles.handwrittenSectionTitle}>Adaptive Learning Analysis</span>
+                  
+                  {adaptiveAnalysis.analysis && (
+                    <div style={styles.analysisCard}>
+                      <div style={styles.metricsGrid}>
+                        <div style={styles.metricItem}>
+                          <span style={styles.metricValue}>{adaptiveAnalysis.analysis.overall_accuracy}%</span>
+                          <span style={styles.metricLabel}>Accuracy</span>
+                        </div>
+                        <div style={styles.metricItem}>
+                          <span style={styles.metricValue}>{adaptiveAnalysis.analysis.strengths.length || 0}</span>
+                          <span style={styles.metricLabel}>Strengths</span>
+                        </div>
+                        <div style={styles.metricItem}>
+                          <span style={styles.metricValue}>{adaptiveAnalysis.analysis.weaknesses.length || 0}</span>
+                          <span style={styles.metricLabel}>To Improve</span>
+                        </div>
+                      </div>
+
+                      {adaptiveAnalysis.analysis.domains && Object.keys(adaptiveAnalysis.analysis.domains).length > 0 && (
+                        <div style={styles.domainsSection}>
+                          <span style={styles.handwrittenSectionSub}>Domain Performance</span>
+                          {Object.entries(adaptiveAnalysis.analysis.domains).map(([domain, data]) => (
+                            <div key={domain} style={styles.domainRow}>
+                              <div style={styles.domainHeader}>
+                                <span style={styles.handwrittenDomain}>{domain}</span>
+                                <span style={{ color: getTierColor(data.current_tier), ...styles.domainTier }}>{data.current_tier}</span>
+                              </div>
+                              <div style={styles.domainBar}>
+                                <div style={{ ...styles.domainBarFill, width: `${data.accuracy}%` }} />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {adaptiveAnalysis.recommendations && adaptiveAnalysis.recommendations.length > 0 && (
+                    <div style={styles.recsSection}>
+                      <span style={styles.handwrittenSectionSub}>Recommendations</span>
+                      {adaptiveAnalysis.recommendations.map((rec, index) => (
+                        <div key={index} style={styles.recCard}>
+                          <div style={styles.recHeader}>
+                            <span style={styles.recIcon}>{getRecommendationIcon(rec.type)}</span>
+                            <span style={{ ...styles.recPriority, color: getPriorityColor(rec.priority) }}>{rec.priority.toUpperCase()}</span>
+                          </div>
+                          <span style={styles.recTopic}>{rec.topic} — {rec.difficulty}</span>
+                          <p style={styles.recReason}>{rec.reason}</p>
+                          <p style={styles.recBenefit}>{rec.expected_benefit}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div style={styles.hideBtnWrap}>
+                    <button style={styles.hideBtn} onClick={() => setShowAnalysis(false)}>
+                      ✕ Hide Analysis
+                    </button>
                   </div>
                 </div>
+              )}
 
-                {adaptiveAnalysis.analysis.domains && Object.keys(adaptiveAnalysis.analysis.domains).length > 0 && (
-                  <div style={styles.domainBreakdown}>
-                    <h5 style={styles.domainTitle}>Domain Performance</h5>
-                    {Object.entries(adaptiveAnalysis.analysis.domains).map(([domain, data]) => (
-                      <div key={domain} style={styles.domainItem}>
-                        <div style={styles.domainHeader}>
-                          <span style={styles.domainName}>{domain}</span>
-                          <span style={{ ...styles.domainTier, color: getTierColor(data.current_tier) }}>
-                            {data.current_tier}
-                          </span>
-                        </div>
-                        <div style={styles.domainMetrics}>
-                          <span style={styles.domainStat}>
-                            Accuracy: <strong>{data.accuracy}%</strong>
-                          </span>
-                          <span style={styles.domainStat}>
-                            Word Problems: <strong>{data.word_problem_accuracy}%</strong>
-                          </span>
-                          <span style={styles.domainStat}>
-                            Direct Problems: <strong>{data.direct_problem_accuracy}%</strong>
-                          </span>
-                        </div>
-                        <div style={styles.progressBar}>
-                          <div style={{ ...styles.progressFill, width: `${data.accuracy}%` }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+              {/* Footer */}
+              <div style={styles.footer}>
+                <span style={styles.handwrittenFooter}>— End of Records —</span>
               </div>
-            )}
-
-            {adaptiveAnalysis.recommendations && adaptiveAnalysis.recommendations.length > 0 && (
-              <div style={styles.recommendationsCard}>
-                <h4 style={styles.analysisSubtitle}>💡 Personalized Recommendations</h4>
-                {adaptiveAnalysis.recommendations.map((rec, index) => (
-                  <div key={index} style={styles.recommendationItem}>
-                    <div style={styles.recommendationHeader}>
-                      <span style={styles.recommendationIcon}>
-                        {getRecommendationIcon(rec.type)}
-                      </span>
-                      <span style={{ ...styles.recommendationPriority, color: getPriorityColor(rec.priority) }}>
-                        {rec.priority.toUpperCase()}
-                      </span>
-                    </div>
-                    <div style={styles.recommendationContent}>
-                      <div style={styles.recommendationTitle}>
-                        {rec.type === 'improvement' && '📚 Focus on Improvement'}
-                        {rec.type === 'advancement' && '🚀 Ready to Advance'}
-                        {rec.type === 'skill_focus' && '🎯 Skill Building'}
-                        {rec.type === 'maintenance' && '💪 Maintain Progress'}
-                      </div>
-                      <div style={styles.recommendationTopic}>
-                        Topic: <strong>{rec.topic}</strong> | Difficulty: <strong>{rec.difficulty}</strong>
-                      </div>
-                      <div style={styles.recommendationReason}>{rec.reason}</div>
-                      <div style={styles.recommendationBenefit}>
-                        <em>{rec.expected_benefit}</em>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <button 
-              style={styles.hideAnalysisBtn} 
-              onClick={() => setShowAnalysis(false)}
-            >
-              Hide Analysis
-            </button>
+            </div>
           </div>
-        )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
 const styles = {
-  container: { padding: '1rem', display: 'flex', justifyContent: 'center' },
-  card: { backgroundColor: '#1a202c', borderRadius: '16px', padding: '2rem', width: '100%', maxWidth: '1000px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', color: '#f7fafc' },
-  header: { marginBottom: '1.5rem', borderBottom: '1px solid #2d3748', paddingBottom: '1rem' },
-  title: { margin: 0, fontSize: '1.5rem', color: '#f7fafc' },
-  closeBtn: { backgroundColor: 'rgba(245, 101, 101, 0.1)', color: '#fc8181', border: '1px solid rgba(245, 101, 101, 0.2)', width: '36px', height: '36px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold' },
-  emptyState: { backgroundColor: 'rgba(99, 179, 237, 0.1)', color: '#63b3ed', padding: '1.5rem', borderRadius: '8px', textAlign: 'center', border: '1px dashed #4a5568' },
-  tableWrapper: { overflowX: 'auto', borderRadius: '8px', border: '1px solid #2d3748' },
-  table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
-  th: { backgroundColor: '#2d3748', color: '#a0aec0', padding: '1rem', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '2px solid #1a202c' },
-  tr: { borderBottom: '1px solid #2d3748', transition: 'background-color 0.2s ease' },
-  td: { padding: '1rem', verticalAlign: 'middle' },
-  gradeBadge: { backgroundColor: '#4a5568', color: '#e2e8f0', padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold' },
-  tierBadge: { fontSize: '0.75rem', padding: '0.3rem 0.6rem', borderRadius: '6px', border: '1px solid', fontWeight: 'bold', textTransform: 'uppercase' },
-  message: { textAlign: 'center', color: '#a0aec0', padding: '3rem' },
-  actionArea: { textAlign: 'center', marginBottom: '2rem' },
-  analyzeBtn: { backgroundColor: '#63b3ed', color: '#fff', border: 'none', padding: '1rem 2rem', borderRadius: '12px', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 12px rgba(99, 179, 237, 0.3)', transition: 'all 0.2s ease' },
-  analysisSection: { marginTop: '2rem', paddingTop: '2rem', borderTop: '2px solid #2d3748' },
-  analysisTitle: { fontSize: '1.5rem', color: '#f7fafc', marginBottom: '1.5rem', textAlign: 'center' },
-  analysisCard: { backgroundColor: '#2d3748', borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem' },
-  analysisSubtitle: { fontSize: '1.1rem', color: '#f7fafc', marginBottom: '1rem', marginTop: 0 },
-  metricsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1.5rem' },
-  metricCard: { backgroundColor: '#1a202c', padding: '1rem', borderRadius: '8px', textAlign: 'center' },
-  metricValue: { fontSize: '2rem', fontWeight: 'bold', color: '#63b3ed', marginBottom: '0.5rem' },
-  metricLabel: { fontSize: '0.85rem', color: '#a0aec0' },
-  domainBreakdown: { marginTop: '1.5rem' },
-  domainTitle: { fontSize: '1rem', color: '#f7fafc', marginBottom: '1rem' },
-  domainItem: { backgroundColor: '#1a202c', padding: '1rem', borderRadius: '8px', marginBottom: '0.75rem' },
-  domainHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' },
-  domainName: { fontWeight: 'bold', color: '#f7fafc' },
-  domainTier: { fontSize: '0.85rem', fontWeight: 'bold', padding: '0.2rem 0.6rem', borderRadius: '6px', border: '1px solid' },
-  domainMetrics: { display: 'flex', gap: '1rem', marginBottom: '0.5rem', flexWrap: 'wrap' },
-  domainStat: { fontSize: '0.85rem', color: '#a0aec0' },
-  progressBar: { height: '8px', backgroundColor: '#4a5568', borderRadius: '4px', overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: '#63b3ed', transition: 'width 0.3s ease' },
-  recommendationsCard: { backgroundColor: '#2d3748', borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem' },
-  recommendationItem: { backgroundColor: '#1a202c', padding: '1rem', borderRadius: '8px', marginBottom: '0.75rem', borderLeft: '4px solid #63b3ed' },
-  recommendationHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' },
-  recommendationIcon: { fontSize: '1.5rem' },
-  recommendationPriority: { fontSize: '0.75rem', fontWeight: 'bold', padding: '0.2rem 0.6rem', borderRadius: '6px', border: '1px solid' },
-  recommendationContent: { marginTop: '0.5rem' },
-  recommendationTitle: { fontSize: '1rem', fontWeight: 'bold', color: '#f7fafc', marginBottom: '0.5rem' },
-  recommendationTopic: { fontSize: '0.9rem', color: '#63b3ed', marginBottom: '0.5rem' },
-  recommendationReason: { fontSize: '0.85rem', color: '#a0aec0', marginBottom: '0.5rem', lineHeight: '1.5' },
-  recommendationBenefit: { fontSize: '0.85rem', color: '#68d391', fontStyle: 'italic' },
-  hideAnalysisBtn: { backgroundColor: 'rgba(245, 101, 101, 0.1)', color: '#fc8181', border: '1px solid rgba(245, 101, 101, 0.2)', padding: '0.75rem 1.5rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold', display: 'block', margin: '1.5rem auto 0', transition: 'all 0.2s ease' }
+  graphingPaper: {
+    minHeight: 'calc(100vh - 60px)',
+    backgroundColor: '#f5f3f0',
+    backgroundImage: [
+      `url('data:image/svg+xml;utf8,<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg"><text x="50" y="70" font-size="48" font-weight="bold" fill="rgba(239,68,68,0.25)" text-anchor="middle">+</text><text x="200" y="120" font-size="48" font-weight="bold" fill="rgba(251,191,36,0.25)" text-anchor="middle">−</text><text x="350" y="170" font-size="48" font-weight="bold" fill="rgba(79,70,229,0.25)" text-anchor="middle">×</text><text x="100" y="220" font-size="48" font-weight="bold" fill="rgba(34,197,94,0.3)" text-anchor="middle">÷</text><text x="300" y="280" font-size="48" font-weight="bold" fill="rgba(239,68,68,0.25)" text-anchor="middle">+</text><text x="150" y="330" font-size="48" font-weight="bold" fill="rgba(251,191,36,0.25)" text-anchor="middle">−</text></svg>')`,
+      'repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(120,100,80,0.28) 39px, rgba(120,100,80,0.28) 42px)',
+      'repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(120,100,80,0.28) 39px, rgba(120,100,80,0.28) 42px)',
+    ].join(', '),
+    backgroundRepeat: 'repeat',
+    animation: 'diagonalSlide 12s linear infinite',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    padding: '1.5rem 1rem',
+    boxSizing: 'border-box',
+    position: 'relative',
+  },
+
+  notebookWrap: {
+    display: 'flex',
+    width: '100%',
+    maxWidth: '780px',
+    backgroundColor: '#f8f7f4',
+    borderRadius: '4px',
+    border: '1px solid #e2e8f0',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+    overflow: 'hidden',
+    position: 'relative',
+    zIndex: 1,
+  },
+
+  spiralBar: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '16px 6px',
+    backgroundColor: '#e2e8f0',
+    borderRight: '1px solid #cbd5e1',
+    flexShrink: 0,
+  },
+  spiralHole: {
+    width: '10px',
+    height: '10px',
+    borderRadius: '50%',
+    backgroundColor: '#cbd5e1',
+    border: '1px solid #94a3b8',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  spiralRing: {
+    width: '4px',
+    height: '4px',
+    borderRadius: '50%',
+    backgroundColor: '#64748b',
+  },
+
+  notebookPage: {
+    flex: 1,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+
+  redMargin: {
+    position: 'absolute',
+    left: '28px',
+    top: 0,
+    bottom: 0,
+    width: '2px',
+    backgroundColor: '#ef4444',
+    opacity: 0.25,
+    zIndex: 1,
+  },
+
+  pageInner: {
+    position: 'relative',
+    zIndex: 2,
+    padding: '1.25rem 1.25rem 1rem 2.5rem',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1rem',
+  },
+
+  // ── Page Title ──
+  pageTitleRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  titleLeft: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1px',
+  },
+  handwrittenTitle: {
+    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontSize: '1.6rem',
+    fontWeight: 700,
+    color: '#1e293b',
+    lineHeight: 1.2,
+  },
+  handwrittenSub: {
+    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontSize: '0.85rem',
+    color: '#64748b',
+  },
+  closeBtn: {
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    color: '#ef4444',
+    border: '1px solid rgba(239, 68, 68, 0.2)',
+    width: '32px',
+    height: '32px',
+    borderRadius: '2px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '0.9rem',
+    fontWeight: 'bold',
+    flexShrink: 0,
+    fontFamily: "'Georgia', serif",
+  },
+
+  // ── Analysis Prompt ──
+  analysisPrompt: {
+    display: 'flex',
+    justifyContent: 'center',
+  },
+  stickyNoteBtn: {
+    padding: '0.65rem 1.2rem',
+    border: 'none',
+    borderRadius: '2px',
+    cursor: 'pointer',
+    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontSize: '0.95rem',
+    fontWeight: 600,
+    backgroundColor: '#93c5fd',
+    color: '#1e293b',
+    fontStyle: 'italic',
+    transform: 'rotate(-0.3deg)',
+    boxShadow: '2px 3px 8px rgba(0,0,0,0.12)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+  },
+  stickyNotePin: { fontSize: '0.8rem', lineHeight: 1 },
+  stickyNoteLabel: {},
+
+  // ── Empty State ──
+  emptyState: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '0.5rem',
+    padding: '2rem',
+    border: '2px dashed #cbd5e1',
+    borderRadius: '4px',
+  },
+  emptyIcon: { fontSize: '2rem', lineHeight: 1 },
+  emptyText: {
+    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontSize: '1rem',
+    color: '#475569',
+    margin: 0,
+  },
+  emptyHint: {
+    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontSize: '0.85rem',
+    color: '#94a3b8',
+    margin: 0,
+    fontStyle: 'italic',
+  },
+
+  // ── Records List ──
+  recordsList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+  },
+
+  recordCard: {
+    backgroundColor: '#fff',
+    border: '1px solid #e2e8f0',
+    borderRadius: '4px',
+    padding: '0.9rem 1rem',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+  },
+
+  recordHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '0.5rem',
+  },
+  handwrittenTopic: {
+    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontSize: '1.1rem',
+    fontWeight: 600,
+    color: '#1e293b',
+  },
+  gradeTag: {
+    fontFamily: "'Courier New', monospace",
+    fontSize: '0.6rem',
+    fontWeight: 'bold',
+    color: '#475569',
+    backgroundColor: '#e2e8f0',
+    padding: '0.15rem 0.45rem',
+    borderRadius: '2px',
+    letterSpacing: '0.05em',
+    textTransform: 'uppercase',
+  },
+
+  recordBody: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, 1fr)',
+    gap: '8px',
+    marginBottom: '0.5rem',
+  },
+  recordStat: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1px',
+  },
+  statLabel: {
+    fontFamily: "'Courier New', monospace",
+    fontSize: '0.55rem',
+    fontWeight: 'bold',
+    color: '#94a3b8',
+    letterSpacing: '0.05em',
+    textTransform: 'uppercase',
+  },
+  statValue: {
+    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontSize: '1rem',
+    fontWeight: 600,
+    color: '#1e293b',
+  },
+  statDate: {
+    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontSize: '0.85rem',
+    color: '#64748b',
+  },
+
+  miniBar: {
+    height: '5px',
+    backgroundColor: '#e2e8f0',
+    borderRadius: '3px',
+    overflow: 'hidden',
+    marginTop: '4px',
+  },
+  miniBarFill: {
+    height: '100%',
+    borderRadius: '3px',
+    transition: 'width 0.5s ease',
+  },
+
+  squiggle: {
+    marginTop: '6px',
+  },
+
+  // ── Analysis Section ──
+  analysisSection: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1rem',
+    marginTop: '0.5rem',
+    paddingTop: '0.5rem',
+  },
+  analysisDivider: {
+    textAlign: 'center',
+    color: '#94a3b8',
+    fontSize: '0.9rem',
+    letterSpacing: '0.3em',
+    fontFamily: "'Georgia', serif",
+  },
+  handwrittenSectionTitle: {
+    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontSize: '1.3rem',
+    fontWeight: 700,
+    color: '#1e293b',
+    textAlign: 'center',
+  },
+  handwrittenSectionSub: {
+    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontSize: '1.05rem',
+    fontWeight: 600,
+    color: '#475569',
+    display: 'block',
+    marginBottom: '0.5rem',
+  },
+
+  analysisCard: {
+    backgroundColor: '#fff',
+    border: '1px solid #e2e8f0',
+    borderRadius: '4px',
+    padding: '1rem',
+  },
+
+  metricsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '10px',
+    marginBottom: '1rem',
+  },
+  metricItem: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '2px',
+    padding: '0.75rem',
+    backgroundColor: '#f8fafc',
+    borderRadius: '4px',
+  },
+  metricValue: {
+    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontSize: '1.4rem',
+    fontWeight: 700,
+    color: '#1e293b',
+  },
+  metricLabel: {
+    fontFamily: "'Courier New', monospace",
+    fontSize: '0.55rem',
+    fontWeight: 'bold',
+    color: '#94a3b8',
+    letterSpacing: '0.05em',
+    textTransform: 'uppercase',
+  },
+
+  domainsSection: {
+    borderTop: '1px solid #e2e8f0',
+    paddingTop: '0.75rem',
+  },
+  domainRow: {
+    marginBottom: '0.75rem',
+  },
+  domainHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '4px',
+  },
+  handwrittenDomain: {
+    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontSize: '0.95rem',
+    fontWeight: 600,
+    color: '#1e293b',
+  },
+  domainTier: {
+    fontFamily: "'Courier New', monospace",
+    fontSize: '0.65rem',
+    fontWeight: 'bold',
+    padding: '0.15rem 0.4rem',
+    borderRadius: '2px',
+    border: '1px solid',
+  },
+  domainBar: {
+    height: '6px',
+    backgroundColor: '#e2e8f0',
+    borderRadius: '3px',
+    overflow: 'hidden',
+  },
+  domainBarFill: {
+    height: '100%',
+    backgroundColor: '#63b3ed',
+    borderRadius: '3px',
+    transition: 'width 0.5s ease',
+  },
+
+  recsSection: {},
+  recCard: {
+    backgroundColor: '#fff',
+    border: '1px solid #e2e8f0',
+    borderRadius: '4px',
+    padding: '0.85rem',
+    marginBottom: '0.75rem',
+    borderLeft: '3px solid #93c5fd',
+  },
+  recHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '4px',
+  },
+  recIcon: { fontSize: '1.2rem', lineHeight: 1 },
+  recPriority: {
+    fontFamily: "'Courier New', monospace",
+    fontSize: '0.6rem',
+    fontWeight: 'bold',
+    padding: '0.15rem 0.4rem',
+    borderRadius: '2px',
+    border: '1px solid',
+  },
+  recTopic: {
+    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontSize: '0.9rem',
+    fontWeight: 600,
+    color: '#475569',
+    display: 'block',
+    marginBottom: '4px',
+  },
+  recReason: {
+    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontSize: '0.8rem',
+    color: '#64748b',
+    margin: '0 0 4px 0',
+    lineHeight: 1.4,
+  },
+  recBenefit: {
+    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontSize: '0.8rem',
+    color: '#22c55e',
+    fontStyle: 'italic',
+    margin: 0,
+  },
+
+  hideBtnWrap: {
+    display: 'flex',
+    justifyContent: 'center',
+  },
+  hideBtn: {
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    color: '#ef4444',
+    border: '1px solid rgba(239, 68, 68, 0.2)',
+    padding: '0.45rem 1rem',
+    borderRadius: '2px',
+    cursor: 'pointer',
+    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontSize: '0.85rem',
+    fontWeight: 600,
+  },
+
+  // ── Footer ──
+  footer: {
+    textAlign: 'center',
+    paddingTop: '0.25rem',
+  },
+  handwrittenFooter: {
+    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontSize: '0.8rem',
+    color: '#94a3b8',
+  },
+
+  // ── Muted text ──
+  handwrittenMuted: {
+    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontSize: '1rem',
+    color: '#64748b',
+    textAlign: 'center',
+    display: 'block',
+    padding: '1rem',
+  },
 };

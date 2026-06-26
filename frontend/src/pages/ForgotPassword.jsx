@@ -13,10 +13,7 @@ export default function ForgotPassword({ onNavigate }) {
     setIsSubmitting(true);
 
     try {
-      // Endpoint provided by dj-rest-auth via your include statement
       await api.post('/accounts/password/reset/', { email });
-      
-      // If successful, trigger the success screen UI state
       setIsEmailSent(true);
     } catch (err) {
       console.error("Password Reset Request Error:", err);
@@ -40,11 +37,10 @@ export default function ForgotPassword({ onNavigate }) {
     }
   };
 
-  // --- SUCCESS STATE UI ---
   if (isEmailSent) {
     return (
-      <div style={styles.container}>
-        <div style={styles.authCard}>
+      <div style={styles.graphingPaper}>
+        <div style={styles.card}>
           <div style={styles.headerSection}>
             <h2 style={styles.mainTitle}>📩 Email Dispatched</h2>
             <p style={styles.subtitle}>Check your student or academic inbox</p>
@@ -61,7 +57,7 @@ export default function ForgotPassword({ onNavigate }) {
 
           <button 
             type="button" 
-            style={{ ...styles.submitBtn, backgroundColor: '#63b3ed', color: '#1a202c' }}
+            style={styles.submitBtn}
             onClick={() => onNavigate('login')}
           >
             Return to Log In
@@ -71,95 +67,247 @@ export default function ForgotPassword({ onNavigate }) {
     );
   }
 
-  // --- DEFAULT FORM UI ---
   return (
-    <div style={styles.container}>
-      <div style={styles.authCard}>
-        
-        <div style={styles.headerSection}>
-          <h2 style={styles.mainTitle}>Recover Account</h2>
-          <p style={styles.subtitle}>We'll send you an authentication bypass link</p>
-        </div>
+    <>
+      <style>{`
+        @keyframes diagonalSlide {
+          0% { background-position: 0 0, 0 0, 0 0; }
+          100% { background-position: -400px 400px, 0 0, 0 0; }
+        }
+      `}</style>
+      <div style={styles.graphingPaper}>
+        <div style={styles.card}>
+          
+          <div style={styles.headerSection}>
+            <h2 style={styles.mainTitle}>Recover Account</h2>
+            <p style={styles.subtitle}>We'll send you an authentication bypass link</p>
+          </div>
 
-        {/* Flat Error Banner */}
-        {errors.length > 0 && (
-          <div style={styles.errorBanner}>
-            <div style={styles.bannerTextContainer}>
-              <h5 style={styles.bannerTitle}>⚠️ Recovery Request Failed</h5>
-              <div style={styles.bannerDescription}>
-                {errors.map((msg, idx) => (
-                  <div key={`err-${idx}`} style={styles.errorItem}>{msg}</div>
-                ))}
+          {errors.length > 0 && (
+            <div style={styles.errorBanner}>
+              <div style={styles.bannerTextContainer}>
+                <h5 style={styles.bannerTitle}>⚠️ Recovery Request Failed</h5>
+                <div style={styles.bannerDescription}>
+                  {errors.map((msg, idx) => (
+                    <div key={`err-${idx}`} style={styles.errorItem}>{msg}</div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <form onSubmit={handleResetSubmit} style={styles.formElement}>
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Registered Email Address</label>
-            <input 
-              type="email" 
-              autoComplete="email"
-              style={styles.inputField} 
-              placeholder="e.g., student@example.com"
-              value={email} 
-              onChange={e => setEmail(e.target.value)} 
-              required 
+          <form onSubmit={handleResetSubmit} style={styles.formElement}>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Registered Email Address</label>
+              <input 
+                type="email" 
+                autoComplete="email"
+                style={styles.inputField} 
+                placeholder="e.g., student@example.com"
+                value={email} 
+                onChange={e => setEmail(e.target.value)} 
+                required 
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <button 
+              type="submit" 
               disabled={isSubmitting}
-            />
-          </div>
+              style={{ 
+                ...styles.submitBtn, 
+                opacity: isSubmitting ? 0.7 : 1,
+                cursor: isSubmitting ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {isSubmitting ? "Generating Token..." : "Send Password Recovery Link ➔"}
+            </button>
+          </form>
 
-          <button 
-            type="submit" 
-            disabled={isSubmitting}
-            style={{ 
-              ...styles.submitBtn, 
-              backgroundColor: isSubmitting ? '#4a5568' : '#63b3ed', 
-              color: isSubmitting ? '#a0aec0' : '#1a202c',
-              cursor: isSubmitting ? 'not-allowed' : 'pointer'
-            }}
-          >
-            {isSubmitting ? "Generating Token..." : "Send PasswordRecovery Link ➔"}
-          </button>
-        </form>
+          <p style={styles.footerText}>
+            Remembered your profile?{' '}
+            <button style={styles.switchBtn} onClick={() => onNavigate('login')}>
+              Back to Log In
+            </button>
+          </p>
 
-        <p style={styles.footerText}>
-          Remembered your profile?{' '}
-          <button style={styles.switchBtn} onClick={() => onNavigate('login')}>
-            Back to Log In
-          </button>
-        </p>
-
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
 const styles = {
-  container: { display: 'flex', justifyContent: 'center', alignItems: 'flex-start', minHeight: 'calc(100vh - 140px)', padding: '1rem', color: '#f7fafc' },
-  authCard: { backgroundColor: '#1a202c', border: '1px solid #2d3748', borderRadius: '16px', padding: '2.5rem', width: '100%', maxWidth: '460px', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column' },
-  headerSection: { marginBottom: '2rem', textAlign: 'center' },
-  mainTitle: { margin: '0 0 0.5rem 0', fontSize: '2rem', fontWeight: 'bold', color: '#fff' },
-  subtitle: { margin: 0, color: '#a0aec0', fontSize: '0.95rem', lineHeight: '1.4' },
-  
-  formElement: { display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%' },
-  formGroup: { display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' },
-  label: { color: '#a0aec0', fontSize: '0.85rem', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase' },
-  inputField: { width: '100%', padding: '0.75rem 1rem', backgroundColor: '#111827', border: '1px solid #2d3748', borderRadius: '8px', color: '#fff', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' },
-  
-  submitBtn: { width: '100%', padding: '0.85rem', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '1rem', marginTop: '0.5rem', transition: 'all 0.1s ease', cursor: 'pointer' },
-  
-  errorBanner: { display: 'flex', backgroundColor: 'rgba(245, 101, 101, 0.12)', border: '1px solid #f56565', borderRadius: '12px', padding: '1rem', marginBottom: '1.5rem' },
-  bannerTextContainer: { display: 'flex', flexDirection: 'column', gap: '4px', width: '100%' },
-  bannerTitle: { margin: 0, color: '#f56565', fontSize: '1rem', fontWeight: 'bold' },
-  bannerDescription: { color: '#e2e8f0', fontSize: '0.875rem', lineHeight: '1.4' },
-  errorItem: { marginTop: '2px' },
+  graphingPaper: {
+    minHeight: 'calc(100vh - 60px)',
+    backgroundColor: '#f5f3f0',
+    backgroundImage: [
+      `url('data:image/svg+xml;utf8,<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg"><text x="50" y="70" font-size="48" font-weight="bold" fill="rgba(239,68,68,0.25)" text-anchor="middle">+</text><text x="200" y="120" font-size="48" font-weight="bold" fill="rgba(251,191,36,0.25)" text-anchor="middle">−</text><text x="350" y="170" font-size="48" font-weight="bold" fill="rgba(79,70,229,0.25)" text-anchor="middle">×</text><text x="100" y="220" font-size="48" font-weight="bold" fill="rgba(34,197,94,0.3)" text-anchor="middle">÷</text><text x="300" y="280" font-size="48" font-weight="bold" fill="rgba(239,68,68,0.25)" text-anchor="middle">+</text><text x="150" y="330" font-size="48" font-weight="bold" fill="rgba(251,191,36,0.25)" text-anchor="middle">−</text></svg>')`,
+      'repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(120,100,80,0.28) 39px, rgba(120,100,80,0.28) 42px)',
+      'repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(120,100,80,0.28) 39px, rgba(120,100,80,0.28) 42px)',
+    ].join(', '),
+    backgroundRepeat: 'repeat',
+    animation: 'diagonalSlide 12s linear infinite',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: '1rem',
+    boxSizing: 'border-box',
+    position: 'relative',
+  },
 
-  successBlock: { display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: 'rgba(72, 187, 120, 0.08)', border: '1px solid #48bb78', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.5rem' },
-  successText: { margin: 0, color: '#e2e8f0', fontSize: '0.95rem', lineHeight: '1.5' },
-  successSubtext: { margin: 0, color: '#a0aec0', fontSize: '0.85rem', lineHeight: '1.4', italic: 'true' },
-  
-  footerText: { marginTop: '2rem', textAlign: 'center', color: '#a0aec0', fontSize: '0.9rem', margin: '2rem 0 0 0' },
-  switchBtn: { background: 'none', border: 'none', color: '#63b3ed', padding: 0, cursor: 'pointer', fontWeight: 'bold', textDecoration: 'underline' }
+  card: {
+    width: '100%',
+    maxWidth: '460px',
+    backgroundColor: '#fff',
+    borderRadius: '4px',
+    border: '1px solid #e2e8f0',
+    boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+    padding: '2rem',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1.25rem',
+    position: 'relative',
+    zIndex: 1,
+  },
+
+  headerSection: {
+    textAlign: 'center',
+  },
+  mainTitle: {
+    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontSize: '1.5rem',
+    fontWeight: 'bold',
+    color: '#1e293b',
+    margin: '0 0 0.25rem 0',
+  },
+  subtitle: {
+    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontSize: '0.85rem',
+    color: '#64748b',
+    fontStyle: 'italic',
+    margin: 0,
+  },
+
+  formElement: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1rem',
+    width: '100%',
+  },
+  formGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    width: '100%',
+  },
+  label: {
+    fontFamily: "'Courier New', monospace",
+    color: '#475569',
+    fontSize: '0.65rem',
+    fontWeight: '700',
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+  },
+
+  inputField: {
+    width: '100%',
+    padding: '0.7rem 0.9rem',
+    backgroundColor: '#f8fafc',
+    border: '1px solid #cbd5e1',
+    borderRadius: '3px',
+    color: '#1e293b',
+    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontSize: '0.9rem',
+    outline: 'none',
+    boxSizing: 'border-box',
+    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.06)',
+  },
+
+  submitBtn: {
+    width: '100%',
+    padding: '0.75rem',
+    border: 'none',
+    borderRadius: '2px',
+    fontWeight: 'bold',
+    fontSize: '0.9rem',
+    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontStyle: 'italic',
+    backgroundColor: '#93c5fd',
+    color: '#1e293b',
+    transform: 'rotate(-0.3deg)',
+    boxShadow: '2px 3px 8px rgba(0,0,0,0.12)',
+    marginTop: '0.25rem',
+    cursor: 'pointer',
+  },
+
+  errorBanner: {
+    backgroundColor: 'rgba(239, 68, 68, 0.06)',
+    border: '1px solid #fca5a5',
+    borderRadius: '3px',
+    padding: '0.85rem',
+  },
+  bannerTextContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+    width: '100%',
+  },
+  bannerTitle: {
+    margin: 0,
+    color: '#dc2626',
+    fontSize: '0.85rem',
+    fontWeight: 'bold',
+    fontFamily: "'Courier New', monospace",
+  },
+  bannerDescription: {
+    color: '#1e293b',
+    fontSize: '0.8rem',
+    lineHeight: '1.4',
+    fontFamily: "'Georgia', 'Times New Roman', serif",
+  },
+  errorItem: {
+    marginTop: '2px',
+  },
+
+  successBlock: {
+    backgroundColor: 'rgba(34, 197, 94, 0.06)',
+    border: '1px solid #86efac',
+    borderRadius: '3px',
+    padding: '1rem',
+  },
+  successText: {
+    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontSize: '0.9rem',
+    color: '#1e293b',
+    margin: '0 0 0.5rem 0',
+    lineHeight: '1.5',
+  },
+  successSubtext: {
+    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontSize: '0.8rem',
+    color: '#64748b',
+    fontStyle: 'italic',
+    margin: 0,
+  },
+
+  footerText: {
+    textAlign: 'center',
+    color: '#64748b',
+    fontSize: '0.85rem',
+    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontStyle: 'italic',
+    margin: 0,
+  },
+  switchBtn: {
+    background: 'none',
+    border: 'none',
+    color: '#3b82f6',
+    padding: 0,
+    cursor: 'pointer',
+    fontWeight: 'bold',
+    textDecoration: 'underline',
+    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontSize: '0.85rem',
+  },
 };
