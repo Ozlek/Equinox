@@ -14,7 +14,7 @@ class Command(BaseCommand):
         gen = EquinoxQuestionGenerator()
         
         # 2. Get or create your 5 target core topics in the database
-        domains = ["Arithmetic"]
+        domains = ["Arithmetic", "Algebra", "Geometry", "Statistics", "Trigonometry"]
         topic_objects = {}
         
         for name in domains:
@@ -66,8 +66,7 @@ class Command(BaseCommand):
             self.stdout.write(f"Seeding items for {domain}...")
             
             for template_idx in range(10):
-                question_count = 100 if domain == "Arithmetic" else 20
-                for loop_counter in range(question_count):
+                for loop_counter in range(20):
                     raw_data = gen.generate(domain, template_index=template_idx)
                     
                     # 50/50 alternating assignment split logic
@@ -78,21 +77,16 @@ class Command(BaseCommand):
                         Question.objects.create(
                             topic=topic_instance,
                             question_text=raw_data['question'],
-                            question_solution=f"""Correct Answer:
-
-                            {raw_data['answer']}
-
-                            Review the lesson "{raw_data.get('lesson', 'Arithmetic')}" if you need more practice.
-                            """,
+                            question_solution=f"Step-by-step solution:\n1. Identify the given values\n2. Apply the relevant formula\n3. Calculate the result\n4. Verify the answer\n\nAnswer: {raw_data['answer']}",
                             choice_a=ch_a,
                             choice_b=ch_b,
                             choice_c=ch_c,
                             choice_d=ch_d,
                             correct_answer=correct_letter, # Stores 'A', 'B', 'C', or 'D'
                             difficulty=raw_data['base_difficulty'],
-                            grade_level=raw_data.get("grade_level", 7),
+                            grade_level=7,  # Junior High = grade 7
                             source='seed',
-                            is_word_problem=raw_data.get("is_word_problem", False),
+                            is_word_problem=False  # Procedurally generated questions are not word problems
                         )
                     else:
                         # ODD iterations: Build Clean Text-Box Input structures
@@ -108,7 +102,7 @@ class Command(BaseCommand):
                             difficulty=raw_data['base_difficulty'],
                             grade_level=7,  # Junior High = grade 7
                             source='seed',
-                            is_word_problem=raw_data.get("is_word_problem", False),
+                            is_word_problem=False  # Procedurally generated questions are not word problems
                         )
                     total_created += 1
         self.stdout.write(self.style.SUCCESS(f"Successfully seeded {total_created} questions into the Equinox database!"))

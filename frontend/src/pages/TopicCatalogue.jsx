@@ -89,13 +89,9 @@ export default function TopicCatalogue({ onSelectTopic, userGrade }) {
     }
   });
 
-  // To be changed AFTER Post_test
-  const POST_TEST_TOPIC = "Arithmetic";
-
   const renderTopicCard = (topic, index) => {
     const color = stickyNoteColors[topic.colorIndex];
     const currentGrade = selectedGrades[topic.id] || topic.grade_level_min || 1;
-    const isAvailable = topic.name === POST_TEST_TOPIC;
     
     // Generate grade options from min to max
     const gradeOptions = [];
@@ -112,12 +108,8 @@ export default function TopicCatalogue({ onSelectTopic, userGrade }) {
         key={topic.id} 
         style={{
           ...styles.stickyNote,
-          backgroundColor: isAvailable
-          ? color.bg
-          : "#e5e7eb",
-          color: isAvailable
-          ? color.text
-          : "#6b7280",
+          backgroundColor: color.bg,
+          color: color.text,
           transform: `rotate(${color.rotate})`,
         }}
       >
@@ -125,24 +117,9 @@ export default function TopicCatalogue({ onSelectTopic, userGrade }) {
         <div style={styles.stickyNoteContent}>
           <div style={styles.stickyNoteHeader}>
             <h3 style={{ ...styles.stickyNoteTitle, color: color.text }}>{topic.name}</h3>
-            <span
-            style={{
-                ...styles.stickyNoteBadge,
-                backgroundColor: isAvailable
-                    ? "#166534"
-                    : "#64748b",
-                color: "#fff",
-            }}
-            >
-            {
-            isAvailable
-            ? "AVAILABLE FOR POST-TEST EVALUATION"
-            : "FUTURE LEARNING MODULES"
-            }
-            </span>
-            {/*<span style={{ ...styles.stickyNoteBadge, backgroundColor: color.text, color: color.bg }}>
+            <span style={{ ...styles.stickyNoteBadge, backgroundColor: color.text, color: color.bg }}>
               Recommended for Grades {topic.grade_level_min}-{topic.grade_level_max}
-            </span>*/}
+            </span>
           </div>
           
           <p style={{ ...styles.stickyNoteDesc, color: color.text }}>{topic.description}</p>
@@ -179,32 +156,16 @@ export default function TopicCatalogue({ onSelectTopic, userGrade }) {
             </select>
           </div>
 
-          <button
+          <button 
             style={{
-                ...styles.stickyNoteActionBtn,
-                backgroundColor: isAvailable
-                    ? color.text
-                    : "#9ca3af",
-                color: isAvailable
-                    ? color.bg
-                    : "#f8fafc",
-                cursor: isAvailable
-                    ? "pointer"
-                    : "not-allowed",
+              ...styles.stickyNoteActionBtn,
+              backgroundColor: color.text,
+              color: color.bg,
             }}
-            disabled={!isAvailable}
-            onClick={() => {
-                if (isAvailable) {
-                    onSelectTopic(topic.id, currentGrade);
-                }
-            }}
-            >
-            {
-            isAvailable
-            ? "Review Topic ➔"
-            : "Coming Soon 🔒"
-            }
-            </button>
+            onClick={() => onSelectTopic(topic.id, currentGrade)}
+          >
+            Review Topic ➔
+          </button>
         </div>
       </div>
     );
@@ -223,29 +184,6 @@ export default function TopicCatalogue({ onSelectTopic, userGrade }) {
           {/* Title */}
           <div style={styles.headerArea}>
             <h1 style={styles.mainTitle}>📚 Topic Catalogue</h1>
-            <div
-            style={{
-            background:"#ecfdf5",
-            border:"1px solid #86efac",
-            padding:"0.75rem 1rem",
-            borderRadius:"8px",
-            marginTop:"1rem",
-            marginBottom:"1rem",
-            color:"#166534",
-            fontSize:".9rem",
-            fontFamily:"Georgia, serif",
-            textAlign:"center",
-            }}
-            >
-
-            🧪 <strong>Post-Test Evaluation</strong>
-
-            <br />
-
-            For this evaluation, the <strong>Arithmetic</strong> learning pathway is available.
-            Additional mathematics modules will be introduced in future updates.
-
-            </div>
             {userGrade && (
               <p style={styles.subtitle}>
                 Showing topics for Grade {userGrade} • 

@@ -11,16 +11,11 @@ class EquinoxQuestionGenerator:
         # Maps domains to their available template functions
         self.registry = {
             "Arithmetic": [
-                self.arith_01_counting,
-                self.arith_02_number_recognition,
-                self.arith_03_addition,
-                self.arith_04_subtraction,
-                self.arith_05_word_problem,
-                self.arith_06_place_value,
-                self.arith_07_addition_regroup,
-                self.arith_08_subtraction_regroup,
-                self.arith_09_money,
-                self.arith_10_word_problem,
+                self.arith_01_basic_addition, self.arith_02_subtraction_negative,
+                self.arith_03_multiplication_mesh, self.arith_04_integer_division,
+                self.arith_05_order_of_ops, self.arith_06_fraction_addition,
+                self.arith_07_decimal_multiplication, self.arith_08_percentage_of_value,
+                self.arith_09_lcm, self.arith_10_gcd
             ],
             "Algebra": [
                 self.alg_01_linear_one_step, self.alg_02_linear_two_step,
@@ -67,272 +62,56 @@ class EquinoxQuestionGenerator:
     # ==========================================
     # ARITHMETIC TEMPLATES (1-10)
     # ==========================================
+    def arith_01_basic_addition(self):
+        a, b = random.randint(10, 99), random.randint(10, 99)
+        return {"question": f"Calculate: {a} + {b}", "answer": str(a + b), "domain": "Arithmetic", "id": "arith_01", "base_difficulty": "Novice", "is_word_problem": False, "source": "seed"}
+
+    def arith_02_subtraction_negative(self):
+        a, b = random.randint(50, 150), random.randint(60, 200)
+        return {"question": f"Calculate: {a} - {b}", "answer": str(a - b), "domain": "Arithmetic", "id": "arith_02", "base_difficulty": "Novice", "is_word_problem": False, "source": "seed"}
+
+    def arith_03_multiplication_mesh(self):
+        a, b = random.randint(6, 15), random.randint(6, 12)
+        return {"question": f"Calculate: {a} × {b}", "answer": str(a * b), "domain": "Arithmetic", "id": "arith_03", "base_difficulty": "Novice", "is_word_problem": False, "source": "seed"}
+
+    def arith_04_integer_division(self):
+        b = random.randint(4, 12)
+        ans = random.randint(5, 15)
+        a = b * ans
+        return {"question": f"Calculate: {a} ÷ {b}", "answer": str(ans), "domain": "Arithmetic", "id": "arith_04", "base_difficulty": "Novice", "is_word_problem": False, "source": "seed"}
+
+    def arith_05_order_of_ops(self):
+        a, b, c = random.randint(2, 6), random.randint(3, 8), random.randint(1, 10)
+        return {"question": f"Simplify using PEMDAS: {a} + {b} × {c}", "answer": str(a + (b * c)), "domain": "Arithmetic", "id": "arith_05", "base_difficulty": "Intermediate", "is_word_problem": False, "source": "seed"}
+
+    def arith_06_fraction_addition(self):
+        # Same denominator for clean input
+        den = random.choice([3, 4, 5, 7])
+        num1 = random.randint(1, den - 1)
+        num2 = random.randint(1, den - 1)
+        return {"question": f"Add the fractions: {num1}/{den} + {num2}/{den}", "answer": f"{num1+num2}/{den}", "domain": "Arithmetic", "id": "arith_06", "base_difficulty": "Intermediate", "is_word_problem": False, "source": "seed"}
+
+    def arith_07_decimal_multiplication(self):
+        a = round(random.uniform(1.1, 4.9), 1)
+        b = 2
+        return {"question": f"Calculate: {a} × {b}", "answer": str(round(a * b, 1)), "domain": "Arithmetic", "id": "arith_07", "base_difficulty": "Intermediate", "is_word_problem": False, "source": "seed"}
+
+    def arith_08_percentage_of_value(self):
+        pct = random.choice([10, 20, 25, 50])
+        val = random.randint(1, 10) * 40
+        ans = int((pct / 100) * val)
+        return {"question": f"What is {pct}% of {val}?", "answer": str(ans), "domain": "Arithmetic", "id": "arith_08", "base_difficulty": "Intermediate", "is_word_problem": False, "source": "seed"}
+
+    def arith_09_lcm(self):
+        a, b = random.choice([(4,6), (3,5), (6,8), (4,10)])
+        ans = math.lcm(a, b)
+        return {"question": f"Find the Least Common Multiple (LCM) of {a} and {b}", "answer": str(ans), "domain": "Arithmetic", "id": "arith_09", "base_difficulty": "Advanced", "is_word_problem": False, "source": "seed"}
+
+    def arith_10_gcd(self):
+        a, b = random.choice([(12,18), (24,36), (15,45), (18,24)])
+        ans = math.gcd(a, b)
+        return {"question": f"Find the Greatest Common Divisor (GCD) of {a} and {b}", "answer": str(ans), "domain": "Arithmetic", "id": "arith_10", "base_difficulty": "Advanced", "is_word_problem": False, "source": "seed"}
 
-    def arith_01_counting(self):
-        count = random.randint(3, 10)
-        emoji = random.choice(["🍎", "⭐", "⚽", "🐶"])
-
-        objects = " ".join([emoji] * count)
-
-        return {
-            "question": f"Count the objects:\n\n{objects}",
-            "answer": str(count),
-            "domain": "Arithmetic",
-            "id": "arith_g1_counting",
-            "base_difficulty": 1.0,
-            "grade_level": 1,
-            "lesson": "Counting Numbers",
-            "is_word_problem": False,
-            "source": "seed",
-        }
-    
-    def arith_02_number_recognition(self):
-        number = random.randint(0, 20)
-
-        return {
-            "question": f"What number is shown?\n\n{number}",
-            "answer": str(number),
-            "domain":"Arithmetic",
-            "id":"arith_g1_numbers",
-            "base_difficulty": 1.0,
-            "grade_level":1,
-            "lesson":"Number Recognition",
-            "is_word_problem":False,
-            "source":"seed"
-        }
-    
-    def arith_03_addition(self):
-        a = random.randint(0,9)
-        b = random.randint(0,9-a)
-        return {
-
-            "question":f"What is {a} + {b}?",
-
-            "answer":str(a+b),
-
-            "domain":"Arithmetic",
-
-            "id":"arith_g1_add",
-
-            "base_difficulty": 1.0,
-
-            "grade_level":1,
-
-            "lesson":"Addition Within 10",
-
-            "is_word_problem":False,
-
-            "source":"seed"
-        }
-    
-    def arith_04_subtraction(self):
-
-        a=random.randint(5,10)
-
-        b=random.randint(1,a)
-
-        return{
-
-            "question":f"What is {a} - {b}?",
-
-            "answer":str(a-b),
-
-            "domain":"Arithmetic",
-
-            "id":"arith_g1_sub",
-
-            "base_difficulty": 1.0,
-
-            "grade_level":1,
-
-            "lesson":"Subtraction Within 10",
-
-            "is_word_problem":False,
-
-            "source":"seed"
-        }
-
-    def arith_05_word_problem(self):
-
-        names=["Anna","Ben","Maria","Leo","John"]
-
-        items=["apples","pencils","books","candies","stickers"]
-
-        name=random.choice(names)
-
-        item=random.choice(items)
-
-        a=random.randint(2,8)
-
-        b=random.randint(1,5)
-
-        return{
-
-            "question":f"{name} has {a} {item}. A friend gives {name} {b} more. How many {item} does {name} have now?",
-
-            "answer":str(a+b),
-
-            "domain":"Arithmetic",
-
-            "id":"arith_g1_word",
-
-            "base_difficulty":1.0,
-
-            "grade_level":1,
-
-            "lesson":"Word Problems",
-
-            "is_word_problem":True,
-
-            "source":"seed"
-        }
-    
-    def arith_06_place_value(self):
-
-        number=random.randint(100,999)
-
-        digits=list(str(number))
-
-        place=random.choice(["hundreds","tens","ones"])
-
-        idx={"hundreds":0,"tens":1,"ones":2}[place]
-
-        return{
-
-            "question":f"In the number {number}, what digit is in the {place} place?",
-
-            "answer":digits[idx],
-
-            "domain":"Arithmetic",
-
-            "id":"arith_g2_place",
-
-            "base_difficulty":1.0,
-
-            "grade_level":2,
-
-            "lesson":"Place Value",
-
-            "is_word_problem":False,
-
-            "source":"seed"
-
-        }
-    
-    def arith_07_addition_regroup(self):
-
-        a=random.randint(25,79)
-
-        b=random.randint(21,79)
-
-        return{
-
-            "question":f"Calculate {a} + {b}",
-
-            "answer":str(a+b),
-
-            "domain":"Arithmetic",
-
-            "id":"arith_g2_add",
-
-            "base_difficulty":2.0,
-
-            "grade_level":2,
-
-            "lesson":"Addition with Regrouping",
-
-            "is_word_problem":False,
-
-            "source":"seed"
-    }
-
-    def arith_08_subtraction_regroup(self):
-
-        a=random.randint(40,99)
-
-        b=random.randint(20,a-1)
-
-        return{
-
-            "question":f"Calculate {a} - {b}",
-
-            "answer":str(a-b),
-
-            "domain":"Arithmetic",
-
-            "id":"arith_g2_sub",
-
-            "base_difficulty":2.0,
-
-            "grade_level":2,
-
-            "lesson":"Subtraction with Regrouping",
-
-            "is_word_problem":False,
-
-            "source":"seed"
-
-        }
-    
-    def arith_09_money(self):
-
-        price=random.choice([5,10,15,20])
-
-        qty=random.randint(2,6)
-
-        return{
-
-            "question":f"A notebook costs ₱{price}. You buy {qty}. How much do you pay?",
-
-            "answer":str(price*qty),
-
-            "domain":"Arithmetic",
-
-            "id":"arith_g2_money",
-
-            "base_difficulty":2.0,
-
-            "grade_level":2,
-
-            "lesson":"Money",
-
-            "is_word_problem":True,
-
-            "source":"seed"
-
-        }
-    
-    def arith_10_word_problem(self):
-
-        names=["Anna","Ben","Maria","Leo"]
-
-        name=random.choice(names)
-
-        total=random.randint(20,60)
-
-        spent=random.randint(5,15)
-
-        return{
-
-            "question":f"{name} had ₱{total}. {name} spent ₱{spent}. How much money is left?",
-
-            "answer":str(total-spent),
-
-            "domain":"Arithmetic",
-
-            "id":"arith_g2_word",
-
-            "base_difficulty":2.0,
-
-            "grade_level":2,
-
-            "lesson":"Word Problems",
-
-            "is_word_problem":True,
-
-            "source":"seed"
-
-        }
 
     # ==========================================
     # ALGEBRA TEMPLATES (11-20)
