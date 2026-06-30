@@ -7,7 +7,7 @@ function AccordionItem({ question, answer, isOpen, onToggle }) {
       <button style={accordionStyles.trigger} onClick={onToggle} aria-expanded={isOpen}>
         <span style={accordionStyles.question}>{question}</span>
         <span style={{ ...accordionStyles.chevron, transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-          <i className="bi bi-chevron-down" style={{ fontSize: '0.9rem', color: '#63b3ed' }}></i>
+          <i className="bi bi-chevron-down" style={{ fontSize: '0.9rem', color: '#3b82f6' }}></i>
         </span>
       </button>
       <div
@@ -79,13 +79,13 @@ export default function Help({ onNavigate }) {
         <span>
           Modifiers are optional challenge rules you can apply before starting a playthrough to increase difficulty and boost your potential score multiplier. Available modifiers include:
           <br /><br />
-          <strong style={{ color: '#e2e8f0' }}>⏱️ Timed</strong> — Each question has a countdown timer. Running out of time counts as an incorrect answer.
+          <strong style={{ color: '#1e293b' }}>⏱️ Timed</strong> — Each question has a countdown timer. Running out of time counts as an incorrect answer.
           <br />
-          <strong style={{ color: '#e2e8f0' }}>🔒 Locked DDA</strong> — Disables the adaptive difficulty engine, locking you into your chosen starting difficulty.
+          <strong style={{ color: '#1e293b' }}>🔒 Locked DDA</strong> — Disables the adaptive difficulty engine, locking you into your chosen starting difficulty.
           <br />
-          <strong style={{ color: '#e2e8f0' }}>❤️‍🔥 One Life</strong> — A single wrong answer ends the playthrough immediately.
+          <strong style={{ color: '#1e293b' }}>❤️‍🔥 One Life</strong> — A single wrong answer ends the playthrough immediately.
           <br />
-          <strong style={{ color: '#e2e8f0' }}>🍃 Easy Going</strong> — Removes time pressure and reduces penalty weight for a more relaxed experience.
+          <strong style={{ color: '#1e293b' }}>🍃 Easy Going</strong> — Removes time pressure and reduces penalty weight for a more relaxed experience.
           <br /><br />
           Select modifiers on the Challenge Configuration screen before launching a playthrough.
         </span>
@@ -183,138 +183,160 @@ export default function Help({ onNavigate }) {
 
   return (
     <div style={styles.container}>
-      <div style={styles.card}>
+      <div style={styles.reportPaper}>
 
-        {/* ── Header ── */}
-        <div style={styles.header}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '1.6rem' }}>❓</span>
-            <h2 style={styles.title}>Help & Documentation</h2>
+        {/* ── Header with punched holes ── */}
+        <div style={styles.reportHeader}>
+          <div style={styles.punchedHoles}>
+            {[...Array(7)].map((_, i) => (
+              <div key={i} style={styles.hole} />
+            ))}
           </div>
-          <button
-            style={styles.closeBtn}
-            title="Return to Dashboard"
-            onClick={() => onNavigate ? onNavigate('dashboard') : (window.location.href = '/')}
-          >
-            ✕
-          </button>
+          <div style={styles.headerContent}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '1.5rem' }}>❓</span>
+              <h2 style={styles.title}>Help & Documentation</h2>
+            </div>
+            <button
+              style={styles.closeBtn}
+              title="Return to Dashboard"
+              onClick={() => onNavigate ? onNavigate('dashboard') : (window.location.href = '/')}
+            >
+              ✕
+            </button>
+          </div>
+          <p style={styles.reportSubtitle}>Equinox Platform Guide & Reference</p>
         </div>
 
-        {/* ── FAQ Section ── */}
-        <section style={styles.section}>
-          <h3 style={styles.sectionTitle}>
-            <i className="bi bi-chat-square-text" style={styles.sectionIcon}></i>
-            Frequently Asked Questions
-          </h3>
-          <div style={styles.accordionContainer}>
-            {faqs.map((faq, index) => (
-              <AccordionItem
-                key={index}
-                question={faq.question}
-                answer={faq.answer}
-                isOpen={openFaq === index}
-                onToggle={() => toggleFaq(index)}
-              />
-            ))}
+        {/* ── Ruled Content Area ── */}
+        <div style={styles.ruledContent}>
+          <div style={styles.redMargin} />
+          <div style={styles.contentInner}>
+
+            {/* ── FAQ Section ── */}
+            <section style={styles.section}>
+              <h3 style={styles.sectionTitle}>
+                <i className="bi bi-chat-square-text" style={styles.sectionIcon}></i>
+                Frequently Asked Questions
+              </h3>
+              <div style={styles.accordionContainer}>
+                {faqs.map((faq, index) => (
+                  <AccordionItem
+                    key={index}
+                    question={faq.question}
+                    answer={faq.answer}
+                    isOpen={openFaq === index}
+                    onToggle={() => toggleFaq(index)}
+                  />
+                ))}
+              </div>
+            </section>
+
+            <div style={styles.divider} />
+
+            {/* ── Getting Started ── */}
+            <section style={styles.section}>
+              <h3 style={styles.sectionTitle}>
+                <i className="bi bi-rocket-takeoff" style={styles.sectionIcon}></i>
+                Getting Started
+              </h3>
+              <p style={styles.sectionIntro}>
+                New to Equinox? Follow these steps to go from sign-up to your first completed challenge.
+              </p>
+              <div style={styles.stepsContainer}>
+                {steps.map((step) => (
+                  <Step
+                    key={step.number}
+                    number={step.number}
+                    title={step.title}
+                    description={step.description}
+                  />
+                ))}
+              </div>
+            </section>
+
+            <div style={styles.divider} />
+
+            {/* ── Glossary ── */}
+            <section style={styles.section}>
+              <h3 style={styles.sectionTitle}>
+                <i className="bi bi-book" style={styles.sectionIcon}></i>
+                Glossary
+              </h3>
+              <p style={styles.sectionIntro}>
+                Key terms used throughout the Equinox platform.
+              </p>
+              <div style={styles.glossaryContainer}>
+                {glossaryTerms.map((item, index) => (
+                  <GlossaryTerm
+                    key={index}
+                    term={item.term}
+                    definition={item.definition}
+                  />
+                ))}
+              </div>
+            </section>
+
+            <div style={styles.divider} />
+
+            {/* ── Contact & Support ── */}
+            <section style={styles.section}>
+              <h3 style={styles.sectionTitle}>
+                <i className="bi bi-envelope" style={styles.sectionIcon}></i>
+                Contact & Support
+              </h3>
+              <div style={styles.supportGrid}>
+                <a
+                  href="mailto:support@equinox.app"
+                  style={styles.supportCard}
+                >
+                  <div style={styles.supportIcon}>
+                    <i className="bi bi-envelope-fill" style={{ fontSize: '1.5rem', color: '#3b82f6' }}></i>
+                  </div>
+                  <div>
+                    <div style={styles.supportCardTitle}>Email Support</div>
+                    <div style={styles.supportCardDesc}>support@equinox.app</div>
+                  </div>
+                </a>
+                <a
+                  href="https://github.com/equinox-platform"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={styles.supportCard}
+                >
+                  <div style={styles.supportIcon}>
+                    <i className="bi bi-github" style={{ fontSize: '1.5rem', color: '#3b82f6' }}></i>
+                  </div>
+                  <div>
+                    <div style={styles.supportCardTitle}>GitHub Repository</div>
+                    <div style={styles.supportCardDesc}>Source code & issue tracker</div>
+                  </div>
+                </a>
+                <a
+                  href="https://github.com/equinox-platform/docs"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={styles.supportCard}
+                >
+                  <div style={styles.supportIcon}>
+                    <i className="bi bi-file-earmark-text-fill" style={{ fontSize: '1.5rem', color: '#3b82f6' }}></i>
+                  </div>
+                  <div>
+                    <div style={styles.supportCardTitle}>Documentation</div>
+                    <div style={styles.supportCardDesc}>Full platform reference docs</div>
+                  </div>
+                </a>
+              </div>
+            </section>
+
           </div>
-        </section>
+        </div>
 
-        <div style={styles.divider} />
-
-        {/* ── Getting Started ── */}
-        <section style={styles.section}>
-          <h3 style={styles.sectionTitle}>
-            <i className="bi bi-rocket-takeoff" style={styles.sectionIcon}></i>
-            Getting Started
-          </h3>
-          <p style={styles.sectionIntro}>
-            New to Equinox? Follow these steps to go from sign-up to your first completed challenge.
-          </p>
-          <div style={styles.stepsContainer}>
-            {steps.map((step) => (
-              <Step
-                key={step.number}
-                number={step.number}
-                title={step.title}
-                description={step.description}
-              />
-            ))}
-          </div>
-        </section>
-
-        <div style={styles.divider} />
-
-        {/* ── Glossary ── */}
-        <section style={styles.section}>
-          <h3 style={styles.sectionTitle}>
-            <i className="bi bi-book" style={styles.sectionIcon}></i>
-            Glossary
-          </h3>
-          <p style={styles.sectionIntro}>
-            Key terms used throughout the Equinox platform.
-          </p>
-          <div style={styles.glossaryContainer}>
-            {glossaryTerms.map((item, index) => (
-              <GlossaryTerm
-                key={index}
-                term={item.term}
-                definition={item.definition}
-              />
-            ))}
-          </div>
-        </section>
-
-        <div style={styles.divider} />
-
-        {/* ── Contact & Support ── */}
-        <section style={styles.section}>
-          <h3 style={styles.sectionTitle}>
-            <i className="bi bi-envelope" style={styles.sectionIcon}></i>
-            Contact & Support
-          </h3>
-          <div style={styles.supportGrid}>
-            <a
-              href="mailto:support@equinox.app"
-              style={styles.supportCard}
-            >
-              <div style={styles.supportIcon}>
-                <i className="bi bi-envelope-fill" style={{ fontSize: '1.5rem', color: '#63b3ed' }}></i>
-              </div>
-              <div>
-                <div style={styles.supportCardTitle}>Email Support</div>
-                <div style={styles.supportCardDesc}>support@equinox.app</div>
-              </div>
-            </a>
-            <a
-              href="https://github.com/equinox-platform"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={styles.supportCard}
-            >
-              <div style={styles.supportIcon}>
-                <i className="bi bi-github" style={{ fontSize: '1.5rem', color: '#63b3ed' }}></i>
-              </div>
-              <div>
-                <div style={styles.supportCardTitle}>GitHub Repository</div>
-                <div style={styles.supportCardDesc}>Source code & issue tracker</div>
-              </div>
-            </a>
-            <a
-              href="https://github.com/equinox-platform/docs"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={styles.supportCard}
-            >
-              <div style={styles.supportIcon}>
-                <i className="bi bi-file-earmark-text-fill" style={{ fontSize: '1.5rem', color: '#63b3ed' }}></i>
-              </div>
-              <div>
-                <div style={styles.supportCardTitle}>Documentation</div>
-                <div style={styles.supportCardDesc}>Full platform reference docs</div>
-              </div>
-            </a>
-          </div>
-        </section>
+        {/* ── Footer ── */}
+        <div style={styles.reportFooter}>
+          <span>Equinox Help Guide • Generated {new Date().toLocaleDateString()}</span>
+          <span>Page 1 of 1</span>
+        </div>
 
       </div>
     </div>
@@ -325,102 +347,176 @@ export default function Help({ onNavigate }) {
 
 const styles = {
   container: {
-    padding: '1rem',
+    minHeight: 'calc(100vh - 60px)',
+    backgroundColor: '#f5f3f0',
+    backgroundImage: [
+      `url('data:image/svg+xml;utf8,<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg"><text x="50" y="70" font-size="48" font-weight="bold" fill="rgba(239,68,68,0.25)" text-anchor="middle">+</text><text x="200" y="120" font-size="48" font-weight="bold" fill="rgba(251,191,36,0.25)" text-anchor="middle">−</text><text x="350" y="170" font-size="48" font-weight="bold" fill="rgba(79,70,229,0.25)" text-anchor="middle">×</text><text x="100" y="220" font-size="48" font-weight="bold" fill="rgba(34,197,94,0.3)" text-anchor="middle">÷</text><text x="300" y="280" font-size="48" font-weight="bold" fill="rgba(239,68,68,0.25)" text-anchor="middle">+</text><text x="150" y="330" font-size="48" font-weight="bold" fill="rgba(251,191,36,0.25)" text-anchor="middle">−</text></svg>')`,
+      'repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(120,100,80,0.28) 39px, rgba(120,100,80,0.28) 42px)',
+      'repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(120,100,80,0.28) 39px, rgba(120,100,80,0.28) 42px)',
+    ].join(', '),
+    backgroundRepeat: 'repeat',
+    animation: 'diagonalSlide 12s linear infinite',
     display: 'flex',
     justifyContent: 'center',
+    alignItems: 'flex-start',
+    padding: '1.5rem 1rem',
+    boxSizing: 'border-box',
+    position: 'relative',
   },
-  card: {
-    backgroundColor: '#1a202c',
-    border: '1px solid #2d3748',
-    borderRadius: '16px',
-    padding: '2rem',
+
+  // ── Report Paper ──
+  reportPaper: {
+    position: 'relative',
+    zIndex: 1,
     width: '100%',
     maxWidth: '800px',
-    boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-    color: '#f7fafc',
+    backgroundColor: '#fefdfb',
+    borderRadius: '4px',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)',
+    border: '1px solid #d6d3d1',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+    color: '#1e293b',
+    overflow: 'hidden',
   },
-  header: {
+
+  // ── Header ──
+  reportHeader: {
+    position: 'relative',
+    backgroundColor: '#1e293b',
+    padding: '1.5rem 2rem 1rem',
+    borderBottom: '3px solid #3b82f6',
+  },
+  punchedHoles: {
+    position: 'absolute',
+    left: '20px',
+    top: '0',
+    bottom: '0',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-around',
+    padding: '12px 0',
+    zIndex: 2,
+  },
+  hole: {
+    width: '10px',
+    height: '10px',
+    borderRadius: '50%',
+    backgroundColor: '#fefdfb',
+    border: '2px solid #475569',
+  },
+  headerContent: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '2rem',
-    borderBottom: '1px solid #2d3748',
-    paddingBottom: '1.25rem',
+    marginLeft: '28px',
   },
   title: {
     margin: 0,
-    fontSize: '1.6rem',
+    fontSize: '1.8rem',
     fontWeight: 'bold',
-    color: '#f7fafc',
+    color: '#f8fafc',
+    fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif",
   },
   closeBtn: {
-    backgroundColor: 'rgba(245, 101, 101, 0.1)',
+    backgroundColor: 'rgba(245, 101, 101, 0.15)',
     color: '#fc8181',
-    border: '1px solid rgba(245, 101, 101, 0.2)',
-    width: '36px',
-    height: '36px',
-    borderRadius: '8px',
+    border: '1px solid rgba(245, 101, 101, 0.3)',
+    width: '34px',
+    height: '34px',
+    borderRadius: '6px',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '1.1rem',
+    fontSize: '1rem',
     fontWeight: 'bold',
     flexShrink: 0,
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
   },
+  reportSubtitle: {
+    margin: '0.5rem 0 0 28px',
+    color: '#94a3b8',
+    fontSize: '0.85rem',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+    fontStyle: 'italic',
+  },
+
+  // ── Ruled Content ──
+  ruledContent: {
+    display: 'flex',
+    flexDirection: 'row',
+    backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 31px, rgba(203,213,225,0.3) 31px, rgba(203,213,225,0.3) 32px)',
+    position: 'relative',
+  },
+  redMargin: {
+    width: '3px',
+    backgroundColor: '#ef4444',
+    opacity: 0.5,
+    flexShrink: 0,
+    marginLeft: '2rem',
+    alignSelf: 'stretch',
+  },
+  contentInner: {
+    flex: 1,
+    padding: '1.5rem 2rem',
+  },
+
+  // ── Content Styles ──
   section: {
     marginBottom: '0.5rem',
   },
   sectionTitle: {
     fontSize: '1rem',
     fontWeight: '700',
-    color: '#63b3ed',
+    color: '#3b82f6',
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
     marginBottom: '1.25rem',
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
   },
   sectionIcon: {
     fontSize: '1rem',
-    color: '#63b3ed',
+    color: '#3b82f6',
   },
   sectionIntro: {
-    color: '#a0aec0',
-    fontSize: '0.9rem',
+    color: '#64748b',
+    fontSize: '0.95rem',
     lineHeight: '1.6',
     marginBottom: '1.25rem',
     marginTop: '-0.5rem',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
   },
   divider: {
-    borderTop: '1px solid #2d3748',
+    borderTop: '1px solid #e2e8f0',
     margin: '1.75rem 0',
   },
   accordionContainer: {
     display: 'flex',
     flexDirection: 'column',
     gap: '0',
-    borderRadius: '12px',
-    border: '1px solid #2d3748',
+    borderRadius: '8px',
+    border: '1px solid #e2e8f0',
     overflow: 'hidden',
   },
   stepsContainer: {
     display: 'flex',
     flexDirection: 'column',
     gap: '0',
-    backgroundColor: '#111827',
-    borderRadius: '12px',
-    border: '1px solid #2d3748',
+    backgroundColor: '#f8fafc',
+    borderRadius: '8px',
+    border: '1px solid #e2e8f0',
     overflow: 'hidden',
   },
   glossaryContainer: {
     display: 'flex',
     flexDirection: 'column',
     gap: '0',
-    backgroundColor: '#111827',
-    borderRadius: '12px',
-    border: '1px solid #2d3748',
+    backgroundColor: '#f8fafc',
+    borderRadius: '8px',
+    border: '1px solid #e2e8f0',
     overflow: 'hidden',
   },
   supportGrid: {
@@ -432,9 +528,9 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '14px',
-    backgroundColor: '#111827',
-    border: '1px solid #2d3748',
-    borderRadius: '12px',
+    backgroundColor: '#f8fafc',
+    border: '1px solid #e2e8f0',
+    borderRadius: '8px',
     padding: '1.1rem 1.25rem',
     textDecoration: 'none',
     transition: 'border-color 0.15s ease, background-color 0.15s ease',
@@ -443,7 +539,7 @@ const styles = {
   supportIcon: {
     width: '44px',
     height: '44px',
-    backgroundColor: 'rgba(99, 179, 237, 0.1)',
+    backgroundColor: 'rgba(59, 130, 246, 0.08)',
     borderRadius: '10px',
     display: 'flex',
     alignItems: 'center',
@@ -451,25 +547,40 @@ const styles = {
     flexShrink: 0,
   },
   supportCardTitle: {
-    color: '#e2e8f0',
-    fontSize: '0.9rem',
+    color: '#1e293b',
+    fontSize: '0.95rem',
     fontWeight: '700',
     marginBottom: '2px',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
   },
   supportCardDesc: {
-    color: '#718096',
-    fontSize: '0.8rem',
+    color: '#64748b',
+    fontSize: '0.85rem',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+  },
+
+  // ── Footer ──
+  reportFooter: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '0.75rem 2rem',
+    borderTop: '1px solid #e2e8f0',
+    fontSize: '0.75rem',
+    color: '#94a3b8',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+    backgroundColor: '#f8fafc',
   },
 };
 
 const accordionStyles = {
   item: {
-    backgroundColor: '#111827',
-    borderBottom: '1px solid #1f2937',
+    backgroundColor: '#fefdfb',
+    borderBottom: '1px solid #f1f5f9',
     transition: 'background-color 0.15s ease',
   },
   itemOpen: {
-    backgroundColor: '#131c2b',
+    backgroundColor: '#f8fafc',
   },
   trigger: {
     width: '100%',
@@ -484,11 +595,12 @@ const accordionStyles = {
     gap: '12px',
   },
   question: {
-    color: '#e2e8f0',
-    fontSize: '0.95rem',
+    color: '#1e293b',
+    fontSize: '1rem',
     fontWeight: '600',
     lineHeight: '1.4',
     flex: 1,
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
   },
   chevron: {
     display: 'flex',
@@ -504,9 +616,10 @@ const accordionStyles = {
     paddingRight: '1.25rem',
   },
   answer: {
-    color: '#a0aec0',
-    fontSize: '0.88rem',
+    color: '#64748b',
+    fontSize: '0.93rem',
     lineHeight: '1.7',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
   },
 };
 
@@ -516,15 +629,15 @@ const stepStyles = {
     alignItems: 'flex-start',
     gap: '16px',
     padding: '1.1rem 1.25rem',
-    borderBottom: '1px solid #1f2937',
+    borderBottom: '1px solid #e2e8f0',
   },
   number: {
     width: '32px',
     height: '32px',
     borderRadius: '50%',
-    backgroundColor: 'rgba(13, 202, 240, 0.15)',
-    border: '1px solid rgba(13, 202, 240, 0.35)',
-    color: '#0dcaf0',
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    border: '1px solid rgba(59, 130, 246, 0.25)',
+    color: '#3b82f6',
     fontSize: '0.85rem',
     fontWeight: '800',
     display: 'flex',
@@ -532,20 +645,23 @@ const stepStyles = {
     justifyContent: 'center',
     flexShrink: 0,
     marginTop: '2px',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
   },
   content: {
     flex: 1,
   },
   title: {
-    color: '#e2e8f0',
-    fontSize: '0.95rem',
+    color: '#1e293b',
+    fontSize: '1rem',
     fontWeight: '700',
     marginBottom: '4px',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
   },
   description: {
-    color: '#718096',
-    fontSize: '0.85rem',
+    color: '#64748b',
+    fontSize: '0.9rem',
     lineHeight: '1.55',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
   },
 };
 
@@ -554,22 +670,24 @@ const glossaryStyles = {
     display: 'flex',
     gap: '1.5rem',
     padding: '1rem 1.25rem',
-    borderBottom: '1px solid #1f2937',
+    borderBottom: '1px solid #e2e8f0',
     flexWrap: 'wrap',
   },
   term: {
-    color: '#0dcaf0',
-    fontSize: '0.9rem',
+    color: '#3b82f6',
+    fontSize: '0.95rem',
     fontWeight: '800',
     minWidth: '120px',
     flexShrink: 0,
     letterSpacing: '0.03em',
     paddingTop: '1px',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
   },
   definition: {
-    color: '#a0aec0',
-    fontSize: '0.87rem',
+    color: '#64748b',
+    fontSize: '0.92rem',
     lineHeight: '1.6',
     flex: 1,
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
   },
 };

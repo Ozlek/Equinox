@@ -184,6 +184,7 @@ export default function TopicCatalogue({ onSelectTopic, userGrade }) {
           {/* Title */}
           <div style={styles.headerArea}>
             <h1 style={styles.mainTitle}>📚 Topic Catalogue</h1>
+            <p style={styles.adventureMessage}>Choose your learning adventure!</p>
             {userGrade && (
               <p style={styles.subtitle}>
                 Showing topics for Grade {userGrade} • 
@@ -269,18 +270,24 @@ const styles = {
     padding: '0.5rem 0',
   },
   mainTitle: {
-    fontFamily: "'Georgia', 'Times New Roman', serif",
-    fontSize: '2rem',
+    fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif",
+    fontSize: '2.5rem',
     fontWeight: 'bold',
     color: '#1e293b',
     margin: 0,
     letterSpacing: '-0.01em',
   },
+  adventureMessage: {
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+    fontSize: '1.1rem',
+    color: '#059669',
+    margin: '0.25rem 0 0.5rem',
+    fontWeight: '500',
+  },
   subtitle: {
-    fontFamily: "'Georgia', 'Times New Roman', serif",
-    fontSize: '0.9rem',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+    fontSize: '0.95rem',
     color: '#64748b',
-    fontStyle: 'italic',
     margin: 0,
   },
 
@@ -291,14 +298,15 @@ const styles = {
   },
 
   stickyNote: {
-    borderRadius: '2px',
-    padding: '1.25rem',
-    boxShadow: '3px 4px 12px rgba(0,0,0,0.15), -1px -1px 0 rgba(255,255,255,0.4) inset',
+    borderRadius: '3px',
+    padding: '1.5rem 1.25rem',
+    boxShadow: '4px 5px 14px rgba(0,0,0,0.15), -1px -1px 0 rgba(255,255,255,0.4) inset',
     transition: 'transform 0.15s ease, box-shadow 0.15s ease',
     display: 'flex',
     flexDirection: 'column',
     gap: '0',
     position: 'relative',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
   },
 
   stickyNotePin: {
@@ -328,33 +336,31 @@ const styles = {
 
   stickyNoteTitle: {
     margin: 0,
-    fontFamily: "'Georgia', 'Times New Roman', serif",
-    fontSize: '1.1rem',
+    fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif",
+    fontSize: '1.4rem',
     fontWeight: 'bold',
-    opacity: 0.85,
+    opacity: 0.9,
     lineHeight: '1.3',
   },
 
   stickyNoteBadge: {
     padding: '0.2rem 0.5rem',
     borderRadius: '2px',
-    fontSize: '0.6rem',
-    fontFamily: "'Courier New', monospace",
-    fontWeight: 'bold',
+    fontSize: '0.65rem',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+    fontWeight: '600',
     whiteSpace: 'nowrap',
-    letterSpacing: '0.05em',
-    textTransform: 'uppercase',
+    letterSpacing: '0.03em',
     opacity: 0.8,
     alignSelf: 'flex-start',
   },
 
   stickyNoteDesc: {
     margin: '0 0 1rem 0',
-    fontSize: '0.85rem',
-    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontSize: '0.9rem',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     lineHeight: '1.5',
-    opacity: 0.75,
-    fontStyle: 'italic',
+    opacity: 0.8,
     flexGrow: 1,
   },
 
@@ -364,11 +370,11 @@ const styles = {
 
   gradeLabel: {
     display: 'block',
-    fontSize: '0.6rem',
-    fontFamily: "'Courier New', monospace",
+    fontSize: '0.7rem',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontWeight: '700',
     marginBottom: '4px',
-    letterSpacing: '0.08em',
+    letterSpacing: '0.04em',
     textTransform: 'uppercase',
     opacity: 0.7,
   },
@@ -379,24 +385,22 @@ const styles = {
     backgroundColor: 'rgba(255,255,255,0.5)',
     border: '1px solid',
     borderRadius: '2px',
-    fontFamily: "'Georgia', 'Times New Roman', serif",
-    fontSize: '0.85rem',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+    fontSize: '0.9rem',
     cursor: 'pointer',
     boxSizing: 'border-box',
-    fontStyle: 'italic',
     outline: 'none',
   },
 
   stickyNoteActionBtn: {
     width: '100%',
-    padding: '0.55rem 0.8rem',
+    padding: '0.6rem 0.8rem',
     border: 'none',
     borderRadius: '2px',
     cursor: 'pointer',
-    fontFamily: "'Georgia', 'Times New Roman', serif",
-    fontSize: '0.85rem',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+    fontSize: '0.95rem',
     fontWeight: 'bold',
-    fontStyle: 'italic',
     letterSpacing: '0.02em',
     opacity: 0.9,
     transition: 'opacity 0.15s ease',
@@ -405,9 +409,8 @@ const styles = {
   message: {
     textAlign: 'center',
     color: '#475569',
-    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontSize: '1rem',
-    fontStyle: 'italic',
     padding: '5rem',
   },
 
@@ -422,8 +425,8 @@ const styles = {
     fontSize: '1.5rem',
   },
   sectionTitle: {
-    fontFamily: "'Georgia', 'Times New Roman', serif",
-    fontSize: '1.3rem',
+    fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif",
+    fontSize: '1.5rem',
     fontWeight: 'bold',
     color: '#1e293b',
     margin: 0,
@@ -435,18 +438,17 @@ const styles = {
     gap: '1rem',
   },
   dividerText: {
-    fontFamily: "'Georgia', 'Times New Roman', serif",
-    fontSize: '0.9rem',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+    fontSize: '0.95rem',
     color: '#64748b',
-    fontStyle: 'italic',
     whiteSpace: 'nowrap',
   },
   gradeWarning: {
     padding: '0.5rem 0.75rem',
     borderRadius: '4px',
     border: '1px solid',
-    fontSize: '0.75rem',
-    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontSize: '0.8rem',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontWeight: '600',
     marginBottom: '0.75rem',
     textAlign: 'center',

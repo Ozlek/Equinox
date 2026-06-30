@@ -133,26 +133,49 @@ export default function App() {
     );
   }
 
-  const SidebarLink = ({ view, icon, label }) => {
+  const sidebarNavItems = [
+    { view: 'dashboard', icon: 'grid-1x2-fill', label: 'Dashboard' },
+    { view: 'catalogue', icon: 'book-half', label: 'Topic Catalogue' },
+    { view: 'progress', icon: 'graph-up-arrow', label: 'Progress History' },
+    { view: 'help', icon: 'question-circle-fill', label: 'Help' },
+    { view: 'settings', icon: 'gear-fill', label: 'Settings' },
+  ];
+
+  const SidebarLink = ({ view, icon, label, index }) => {
     const isActive = currentView === view;
     const isThisHovered = hoveredLink === view;
+    const tabColors = ['#93c5fd', '#86efac', '#fde68a', '#f9a8d4', '#c4b5fd'];
+    const tabColor = tabColors[index % tabColors.length];
 
     return (
       <div style={{ position: 'relative', width: '100%' }} onMouseEnter={() => setHoveredLink(view)} onMouseLeave={() => setHoveredLink(null)}>
-        <button 
-          className="btn w-100 d-flex justify-content-center align-items-center rounded-3 p-0"
-          style={{
-            height: '48px',
-            border: 'none',
-            backgroundColor: isActive ? '#0dcaf0' : 'transparent', 
-            color: isActive ? '#111827' : '#a0aec0',
-            transition: 'all 0.15s ease',
-            cursor: 'pointer'
-          }}
-          onClick={() => navigateTo(view)}
-        >
-          <i className={`bi bi-${icon}`} style={{ fontSize: '1.4rem' }}></i>
-        </button>
+        <div style={{
+          ...styles.tabMarker,
+          backgroundColor: isActive ? tabColor : 'transparent',
+          borderColor: isActive ? tabColor : '#1f2937',
+          boxShadow: isActive ? `2px 2px 8px rgba(0,0,0,0.3)` : 'none',
+          cursor: 'pointer',
+        }} onClick={() => navigateTo(view)}>
+          <button 
+            style={{
+              ...styles.tabBtn,
+              color: isActive ? '#1e293b' : '#64748b',
+            }}
+          >
+            <i className={`bi bi-${icon}`} style={{ fontSize: '1.2rem' }}></i>
+          </button>
+          
+          {/* Tab label - visible on hover / always when active */}
+          {(isActive || isThisHovered) && (
+            <span style={{
+              ...styles.tabLabel,
+              color: isActive ? '#1e293b' : '#f8fafc',
+              fontWeight: isActive ? '700' : '500',
+            }}>
+              {label}
+            </span>
+          )}
+        </div>
 
         {!isMobile && isThisHovered && (
           <div style={appLayoutStyles.sidebarTooltip}>
@@ -194,11 +217,14 @@ export default function App() {
 
   const dynamicSidebarStyle = {
     ...appLayoutStyles.sidebar,
-    position: isMobile ? 'fixed' : 'relative',
+    position: isMobile ? 'fixed' : 'absolute',
     transform: (isMobile && !mobileSidebarOpen) ? 'translateX(-100%)' : 'translateX(0)',
-    width: isMobile ? '240px' : '72px', 
+    width: isMobile ? '240px' : '280px',
     top: isMobile ? '60px' : '0',
     height: isMobile ? 'calc(100vh - 60px)' : '100%',
+    padding: '0',
+    left: '0',
+    zIndex: 1020,
   };
 
   return (
@@ -299,12 +325,10 @@ export default function App() {
         {user && (
           <>
             <div style={dynamicSidebarStyle}>
-              <div className="d-flex flex-column align-items-center gap-3 p-2 pt-4">
-                <SidebarLink view="dashboard" icon="grid-1x2-fill" label="Dashboard" />
-                <SidebarLink view="catalogue" icon="book-half" label="Topic Catalogue" />
-                <SidebarLink view="progress" icon="graph-up-arrow" label="Progress History" />
-                <SidebarLink view="help" icon="question-circle-fill" label="Help" />
-                <SidebarLink view="settings" icon="gear-fill" label="Settings" />
+              <div style={styles.sidebarInner}>
+                {sidebarNavItems.map((item, index) => (
+                  <SidebarLink key={item.view} view={item.view} icon={item.icon} label={item.label} index={index} />
+                ))}
               </div>
             </div>
 
@@ -383,13 +407,69 @@ export default function App() {
   );
 }
 
-const appLayoutStyles = {
-  appContainer: { display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', backgroundColor: '#1a202c', color: '#f7fafc' },
-  topbar: { height: '60px', backgroundColor: '#111827', borderBottom: '1px solid #1f2937', zIndex: 1030, display: 'flex', alignItems: 'center', flexShrink: 0 },
-  mainGrid: { display: 'flex', flex: 1, height: 'calc(100vh - 60px)', overflow: 'hidden', position: 'relative' },
-  sidebar: { backgroundColor: '#111827', borderRight: '1px solid #1f2937', transition: 'transform 0.2s ease-in-out, width 0.2s ease-in-out', zIndex: 1020, left: 0 },
-  sidebarTooltip: { position: 'absolute', left: '100%', top: '50%', transform: 'translateY(-50%)', marginLeft: '12px', backgroundColor: '#1f2937', color: '#f7fafc', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '500', whiteSpace: 'nowrap', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)', border: '1px solid #374151', pointerEvents: 'none', zIndex: 1050 },
-  topbarTooltip: { position: 'absolute', top: '100%', right: '0', marginTop: '8px', backgroundColor: '#1f2937', color: '#f7fafc', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '500', whiteSpace: 'nowrap', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)', border: '1px solid #374151', pointerEvents: 'none', zIndex: 1050 },
-  mobileBackdrop: { position: 'fixed', top: '60px', left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(3px)', zIndex: 1010 },
-  contentContainer: { flex: 1, overflowY: 'auto', height: '100%', backgroundColor: '#1a202c' }
-};
+  const styles = {
+    sidebarInner: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '8px',
+      padding: '1rem 0',
+      alignItems: 'center',
+    },
+    tabMarker: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '6px',
+      width: '100%',
+      padding: '12px 16px',
+      borderRadius: '0 24px 24px 0',
+      border: '2px solid transparent',
+      borderLeft: 'none',
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      marginLeft: '-2px',
+      position: 'relative',
+      backgroundColor: '#1f2937',
+      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+      fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+      fontWeight: 'bold',
+      textTransform: 'uppercase',
+      letterSpacing: '0.05em',
+      fontSize: '1.1rem',
+      marginRight: '0',
+    },
+    tabBtn: {
+      background: 'none',
+      border: 'none',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '40px',
+      height: '40px',
+      borderRadius: '12px',
+      cursor: 'pointer',
+      transition: 'all 0.15s ease',
+      flexShrink: 0,
+      padding: 0,
+      color: '#f8fafc',
+      fontSize: '1.2rem',
+    },
+    tabLabel: {
+      fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+      fontSize: '1.1rem',
+      whiteSpace: 'nowrap',
+      transition: 'opacity 0.15s ease',
+      letterSpacing: '0.05em',
+      fontWeight: 'bold',
+    },
+  };
+
+  const appLayoutStyles = {
+    appContainer: { display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', backgroundColor: '#1a202c', color: '#f7fafc' },
+    topbar: { height: '60px', backgroundColor: '#111827', borderBottom: '1px solid #1f2937', zIndex: 1030, display: 'flex', alignItems: 'center', flexShrink: 0 },
+    mainGrid: { display: 'flex', flex: 1, height: 'calc(100vh - 60px)', overflow: 'hidden', position: 'relative' },
+    sidebar: { backgroundColor: '#111827', borderRight: '1px solid #1f2937', transition: 'transform 0.2s ease-in-out', zIndex: 1020, left: 0, padding: '0', width: '280px' },
+    sidebarTooltip: { position: 'absolute', left: '100%', top: '50%', transform: 'translateY(-50%)', marginLeft: '12px', backgroundColor: '#1f2937', color: '#f7fafc', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '500', whiteSpace: 'nowrap', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)', border: '1px solid #374151', pointerEvents: 'none', zIndex: 1050 },
+    topbarTooltip: { position: 'absolute', top: '100%', right: '0', marginTop: '8px', backgroundColor: '#1f2937', color: '#f7fafc', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '500', whiteSpace: 'nowrap', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)', border: '1px solid #374151', pointerEvents: 'none', zIndex: 1050 },
+    mobileBackdrop: { position: 'fixed', top: '60px', left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(3px)', zIndex: 1010 },
+    contentContainer: { flex: 1, overflowY: 'auto', height: '100%', backgroundColor: '#1a202c', marginLeft: '280px' }
+  };

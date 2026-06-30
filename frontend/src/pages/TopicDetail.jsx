@@ -3,6 +3,111 @@ import Leaderboard from './Leaderboard';
 import ChallengeConfigModal from './ChallengeConfig';
 import api from '../api/axios';
 
+const LESSONS = {
+    Arithmetic: {
+      1: [
+        {
+          id: 1,
+          title: "Counting Numbers",
+          completed: true,
+          locked: false,
+          lesson: {
+            objectives: [
+              "Count numbers from 1 to 20",
+              "Count objects correctly",
+              "Recognize increasing number order"
+            ],
+            example: "🍎🍎🍎🍎 = 4",
+            tip: "Point to each object while counting."
+          }
+        },
+        {
+          id:2,
+
+          title:"Number Recognition",
+
+          completed:true,
+
+          locked:false,
+
+          lesson:{
+              objectives:[
+
+                  "Recognize numbers from 0 to 20",
+
+                  "Identify missing numbers",
+
+                  "Read numbers correctly"
+
+              ],
+              example:"15",
+              tip:"Practice reading numbers aloud."
+          }
+        },
+        {
+          id: 3,
+          title: "Addition within 10",
+          completed: false,
+          locked: false,
+          lesson: {
+            objectives: [
+              "Add two numbers within 10",
+              "Represent addition using objects",
+              "Solve simple addition problems"
+            ],
+            example: "3 + 2 = 5",
+            tip: "Start counting from the bigger number."
+          }
+        },
+        {
+          id: 4,
+          title: "Addition within 20",
+          completed: false,
+          locked: false,
+          lesson: {
+            objectives: [
+              "Add numbers within 20",
+              "Use counting strategies",
+              "Solve simple equations"
+            ],
+            example: "13 + 5 = 18",
+            tip: "Break the second number into smaller parts."
+          }
+        },
+        {
+          id: 5,
+          title: "Subtraction within 10",
+          completed: false,
+          locked: false,
+          lesson: {
+            objectives: [
+              "Subtract numbers within 10",
+              "Understand taking away",
+              "Solve subtraction problems"
+            ],
+            example: "9 − 4 = 5",
+            tip: "Count backwards carefully."
+          }
+        },
+        {
+          id: 6,
+          title: "Word Problems",
+          completed: false,
+          locked: true,
+          lesson: {
+            objectives: [
+              "Read mathematical situations",
+              "Identify important numbers",
+              "Choose the correct operation"
+            ],
+            example: "Anna has 5 apples and buys 3 more.",
+            tip: "Underline important numbers before solving."
+          }
+        }
+      ]
+    }
+  };
+
 export default function TopicDetail({ topicId, selectedGrade, onBack, onStartChallenge }) {
   const [topic, setTopic] = useState(null);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
@@ -11,6 +116,7 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
   const [resources, setResources] = useState([]);
   const [loadingResources, setLoadingResources] = useState(false);
   const [failedEmbeds, setFailedEmbeds] = useState({});
+  const [selectedLesson, setSelectedLesson] = useState(null);
 
   useEffect(() => {
     // Guard against invalid topicId
@@ -110,71 +216,228 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
                     <span style={styles.gradeBadge}>Grade {selectedGrade}</span>
                   </div>
 
-                  {/* Learning Resources Section */}
-                  <div style={styles.resourcesSection}>
-                    <h3 style={styles.sectionTitle}>📚 Learning Resources (Grade {selectedGrade})</h3>
-                    
-                    {loadingResources ? (
-                      <div style={styles.loadingText}>Loading learning resources...</div>
-                    ) : resources.length > 0 ? (
-                      <div style={styles.resourcesList}>
-                        {resources.map((resource) => (
-                          <div key={resource.id} style={styles.resourceCard}>
-                            <div style={styles.resourceHeader}>
-                              <h4 style={styles.resourceTitle}>{resource.title}</h4>
-                              <span style={styles.resourceTypeBadge}>{resource.type}</span>
-                            </div>
-                            {resource.description && (
-                              <p style={styles.resourceDescription}>{resource.description}</p>
-                            )}
-                            <div style={styles.iframeContainer}>
-                              {resource.type === 'KHAN_ACADEMY' ? (
-                                <div style={styles.externalLink}>
-                                  <p style={styles.externalLinkText}>
-                                    📚 This resource is hosted on Khan Academy
-                                  </p>
-                                  <a 
-                                    href={resource.embed_url} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    style={styles.externalLinkButton}
-                                  >
-                                    Open Khan Academy Lesson →
-                                  </a>
-                                </div>
-                              ) : failedEmbeds[resource.id] ? (
-                                <div style={styles.fallbackLink}>
-                                  <p style={styles.fallbackText}>This embed cannot be displayed directly.</p>
-                                  <a 
-                                    href={resource.embed_url} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    style={styles.fallbackButton}
-                                  >
-                                    Open Resource in New Tab →
-                                  </a>
-                                </div>
-                              ) : (
-                                <iframe
-                                  src={resource.embed_url}
-                                  width="100%"
-                                  height="500"
-                                  frameBorder="0"
-                                  allowFullScreen
-                                  title={resource.title}
-                                  style={styles.iframe}
-                                  onError={() => handleIframeError(resource.id)}
-                                />
-                              )}
-                            </div>
-                          </div>
-                        ))}
+                  {/* Learning Workspace */}
+                  <div style={styles.workspace}>
+
+                    {/* LEFT PANEL */}
+                    <div style={styles.lessonSidebar}>
+
+                      <h3 style={styles.sectionTitle}>
+                        📚 Learning Journey
+                      </h3>
+
+                      <div style={styles.progressBox}>
+                        <span>📖 Learning Progress</span>
+                        <div style={styles.progressBar}>
+                          <div style={styles.progressFill} />
+                        </div>
+                        <small>2 of 6 Lessons Mastered</small>
                       </div>
-                    ) : (
-                      <div style={styles.noResources}>
-                        <p>No learning resources available for this grade level yet.</p>
+
+                      {(LESSONS[topic.name]?.[selectedGrade] || []).map((lesson) => {
+
+                        const isSelected =
+                          selectedLesson?.id === lesson.id;
+
+                        return (
+
+                          <button
+                            key={lesson.id}
+                            disabled={lesson.locked}
+                            onClick={() => setSelectedLesson(lesson)}
+                            style={{
+                              ...styles.lessonButton,
+
+                              backgroundColor: isSelected ? "#dbeafe" : "#fffefb",
+                              border: isSelected
+                                ? "2px solid #3b82f6"
+                                : "1px solid #d6d3d1",
+                              fontWeight: isSelected ? "700" : "500",
+
+                              opacity:
+                                lesson.locked
+                                  ? 0.55
+                                  : 1,
+
+                              cursor:
+                                lesson.locked
+                                  ? "not-allowed"
+                                  : "pointer",
+                            }}
+                          >
+
+                            <span>
+
+                              {lesson.locked
+                                ? "🔒"
+                                : lesson.completed
+                                  ? "✅"
+                                  : isSelected
+                                    ? "⭐"
+                                    : "📖"}
+
+                            </span>
+
+                            <span>{lesson.title}</span>
+
+                          </button>
+
+                        );
+
+                      })}
+
+                    </div>
+
+                    {/* RIGHT PANEL */}
+
+                    <div style={styles.lessonPreview}>
+
+                      {selectedLesson && (
+
+                      <div style={styles.lessonCard}>
+
+                      <h2 style={styles.lessonTitle}>
+                          {selectedLesson.title}
+                      </h2>
+                      <div
+                      style={{
+                      display:"inline-flex",
+                      alignItems:"center",
+                      gap:"8px",
+                      marginBottom:"1rem"
+                      }}
+                      >
+
+                      <span
+                      style={{
+                      background:"#dcfce7",
+                      padding:"4px 10px",
+                      borderRadius:"999px",
+                      fontSize:".75rem",
+                      fontWeight:"700",
+                      color:"#166534"
+                      }}
+                      >
+
+                      ⭐ Beginner Lesson
+
+                      </span>
+
+                      <span
+                      style={{
+                      fontSize:".75rem",
+                      color:"#64748b"
+                      }}
+                      >
+
+                      Estimated Time: ⏱ 3–5 minutes
+
+                      </span>
                       </div>
-                    )}
+
+                      <p style={styles.lessonIntro}>
+                          Master this lesson before entering a Playthrough.
+                      </p>
+
+                      {selectedLesson.lesson && (
+
+                      <>
+
+                      <h4 style={{ color:"#1e293b", marginBottom:"0.5rem", fontWeight:"700", fontSize:"1rem" }}>
+                      🎯 Learning Objectives
+                      </h4>
+
+                      <ul style={styles.objectiveList}>
+                      {selectedLesson.lesson.objectives.map(objective => (
+
+                      <li
+                          key={objective}
+                          style={{
+                              color:"#334155",
+                              marginBottom:"8px"
+                          }}
+                        >
+                          {objective}
+                      </li>
+
+                      ))}
+                      </ul>
+
+                      <h4 style={{ color:"#1e293b", marginBottom:"0.5rem" }}>
+                      📝 Example Problem
+                      </h4>
+
+                      <div style={styles.exampleBox}>
+                      {selectedLesson.lesson.example}
+                      </div>
+
+                      <h4 style={{ color:"#1e293b", marginBottom:"0.5rem" }}>
+                      💡 Remember
+                      </h4>
+
+                      <div style={styles.tipBox}>
+                      {selectedLesson.lesson.tip}
+                      </div>
+
+                      </>
+
+                      )}
+
+                      <h4
+                      style={{
+                      marginTop:"1.5rem",
+                      marginBottom:"0.75rem",
+                      color:"#1e293b"
+                      }}
+                      >
+                      📚 Learning Resources
+                      </h4>
+
+                      <div style={styles.resourceCards}>
+
+                      {resources.map(resource=>(
+
+                      <a
+                      key={resource.id}
+                      href={resource.embed_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={styles.resourceCardMini}
+                      >
+
+                      <strong style={{color:"#1e293b"}}>{resource.title}</strong>
+
+                      <small
+                      style={{
+                      marginTop:"4px",
+                      color:"#64748b"
+                      }}
+                      >
+                      📘 Open Resource →
+                      </small>
+
+                      <span
+                      style={{
+                          color:"#64748b",
+                          fontSize:".75rem",
+                          marginTop:"4px"
+                      }}
+                      >
+                      {resource.type}
+                      </span>
+
+                      </a>
+
+                      ))}
+
+                      </div>
+
+                      </div>
+
+                      )}
+
+                    </div>
+
                   </div>
                   
                   {/* Action buttons */}
@@ -350,19 +613,17 @@ const styles = {
     flex: 1,
   },
   coverTitle: {
-    fontFamily: "'Georgia', 'Times New Roman', serif",
-    fontSize: '1.3rem',
+    fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif",
+    fontSize: '1.6rem',
     fontWeight: 'bold',
     color: '#60a5fa',
-    fontStyle: 'italic',
     margin: 0,
     letterSpacing: '0.02em',
   },
   coverSubtitle: {
-    fontFamily: "'Georgia', 'Times New Roman', serif",
-    fontSize: '0.75rem',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+    fontSize: '0.85rem',
     color: '#94a3b8',
-    fontStyle: 'italic',
     margin: 0,
   },
 
@@ -392,6 +653,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '1.5rem',
+    color: '#1e293b',
   },
 
   descriptionRow: {
@@ -403,8 +665,8 @@ const styles = {
   },
 
   description: {
-    fontFamily: "'Georgia', 'Times New Roman', serif",
-    fontSize: '0.95rem',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+    fontSize: '1rem',
     color: '#475569',
     lineHeight: '1.6',
     margin: 0,
@@ -424,149 +686,139 @@ const styles = {
     textTransform: 'uppercase',
   },
 
-  resourcesSection: {
+  workspace: {
+    display: 'flex',
+    gap: '1.5rem',
+  },
+
+  lessonSidebar: {
+    flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    gap: '1rem',
+    gap: '0.75rem',
   },
+
   sectionTitle: {
-    fontFamily: "'Georgia', 'Times New Roman', serif",
-    fontSize: '1.1rem',
+    fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif",
+    fontSize: '1.4rem',
     fontWeight: 'bold',
     color: '#1e293b',
     margin: 0,
   },
-  loadingText: {
-    textAlign: 'center',
-    color: '#64748b',
-    fontFamily: "'Georgia', 'Times New Roman', serif",
-    fontStyle: 'italic',
-    padding: '2rem',
-  },
-  resourcesList: {
+
+  progressBox: {
+    backgroundColor: '#f1f5f9',
+    borderRadius: '6px',
+    padding: '0.75rem',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+    fontSize: '0.95rem',
+    color: '#475569',
     display: 'flex',
     flexDirection: 'column',
-    gap: '1.25rem',
+    gap: '4px',
   },
-  resourceCard: {
-    backgroundColor: '#fff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '4px',
-    padding: '1.25rem',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+
+  progressBar: {
+    width: '100%',
+    height: '8px',
+    backgroundColor: '#cbd5e1',
+    borderRadius: '999px',
+    overflow: 'hidden',
   },
-  resourceHeader: {
+
+  progressFill: {
+    width: '33%',
+    height: '100%',
+    backgroundColor: '#3b82f6',
+    borderRadius: '999px',
+  },
+
+  lessonButton: {
+    width: '100%',
+    padding: '0.6rem 0.75rem',
+    textAlign: 'left',
+    borderRadius: '6px',
+    fontSize: '0.95rem',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     display: 'flex',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: '8px',
+    transition: 'all 0.15s ease',
+    color: '#1e293b',
+  },
+
+  lessonPreview: {
+    flex: 1.5,
+  },
+
+  lessonCard: {
+    backgroundColor: '#fff',
+    borderRadius: '8px',
+    padding: '1.25rem',
+    border: '1px solid #e2e8f0',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+  },
+
+  lessonTitle: {
+    fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif",
+    fontSize: '1.5rem',
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginTop: 0,
     marginBottom: '0.5rem',
-    flexWrap: 'wrap',
+  },
+
+  lessonIntro: {
+    color: '#64748b',
+    fontSize: '0.95rem',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+    marginBottom: '1rem',
+  },
+
+  objectiveList: {
+    listStyle: 'none',
+    padding: 0,
+    margin: 0,
+  },
+
+  exampleBox: {
+    backgroundColor: '#f8fafc',
+    border: '1px solid #e2e8f0',
+    borderRadius: '6px',
+    padding: '1rem',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+    fontSize: '1.1rem',
+    color: '#1e293b',
+    marginBottom: '1rem',
+  },
+
+  tipBox: {
+    backgroundColor: '#fffbeb',
+    border: '1px solid #fde68a',
+    borderRadius: '6px',
+    padding: '0.75rem 1rem',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+    fontSize: '0.95rem',
+    color: '#92400e',
+    marginBottom: '1rem',
+  },
+
+  resourceCards: {
+    display: 'flex',
+    flexDirection: 'column',
     gap: '0.5rem',
   },
-  resourceTitle: {
-    margin: 0,
-    fontFamily: "'Georgia', 'Times New Roman', serif",
-    fontSize: '1rem',
-    fontWeight: 'bold',
-    color: '#1e293b',
-    flex: 1,
-  },
-  resourceTypeBadge: {
-    backgroundColor: '#e2e8f0',
-    color: '#475569',
-    padding: '0.2rem 0.5rem',
-    borderRadius: '3px',
-    fontSize: '0.6rem',
-    fontFamily: "'Courier New', monospace",
-    fontWeight: 'bold',
-    letterSpacing: '0.05em',
-    whiteSpace: 'nowrap',
-  },
-  resourceDescription: {
-    color: '#64748b',
-    fontFamily: "'Georgia', 'Times New Roman', serif",
-    fontSize: '0.85rem',
-    lineHeight: '1.5',
-    marginBottom: '0.75rem',
-  },
-  iframeContainer: {
-    borderRadius: '4px',
-    overflow: 'hidden',
-    border: '1px solid #e2e8f0',
-  },
-  iframe: {
-    display: 'block',
-  },
-  externalLink: {
+
+  resourceCardMini: {
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '2rem',
+    padding: '0.6rem 0.75rem',
     backgroundColor: '#f8fafc',
-    border: '2px solid #e2e8f0',
-    borderRadius: '4px',
-    textAlign: 'center',
-  },
-  externalLinkText: {
-    color: '#64748b',
-    fontFamily: "'Georgia', 'Times New Roman', serif",
-    fontSize: '0.9rem',
-    marginBottom: '1rem',
-  },
-  externalLinkButton: {
-    padding: '0.6rem 1.2rem',
-    backgroundColor: '#93c5fd',
-    color: '#1e293b',
-    border: 'none',
-    borderRadius: '2px',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    fontSize: '0.85rem',
-    textDecoration: 'none',
-    display: 'inline-block',
-    fontFamily: "'Georgia', 'Times New Roman', serif",
-    fontStyle: 'italic',
-  },
-  fallbackLink: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '2rem',
-    backgroundColor: '#fff',
-    border: '2px dashed #cbd5e1',
-    borderRadius: '4px',
-    textAlign: 'center',
-  },
-  fallbackText: {
-    color: '#64748b',
-    fontFamily: "'Georgia', 'Times New Roman', serif",
-    fontSize: '0.85rem',
-    marginBottom: '1rem',
-  },
-  fallbackButton: {
-    padding: '0.6rem 1.2rem',
-    backgroundColor: '#e2e8f0',
-    color: '#1e293b',
-    border: 'none',
-    borderRadius: '2px',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    fontSize: '0.85rem',
-    textDecoration: 'none',
-    display: 'inline-block',
-    fontFamily: "'Georgia', 'Times New Roman', serif",
-  },
-  noResources: {
-    textAlign: 'center',
-    padding: '1.5rem',
-    color: '#64748b',
-    fontFamily: "'Georgia', 'Times New Roman', serif",
-    fontStyle: 'italic',
-    backgroundColor: '#fff',
-    borderRadius: '4px',
+    borderRadius: '6px',
     border: '1px solid #e2e8f0',
+    textDecoration: 'none',
+    transition: 'all 0.15s ease',
+    color: '#1e293b',
   },
 
   actionsPanel: {
@@ -589,12 +841,11 @@ const styles = {
     border: 'none',
     borderRadius: '2px',
     cursor: 'pointer',
-    fontFamily: "'Georgia', 'Times New Roman', serif",
-    fontSize: '0.9rem',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+    fontSize: '1rem',
     fontWeight: 'bold',
     backgroundColor: '#86efac',
     color: '#1e293b',
-    fontStyle: 'italic',
     letterSpacing: '0.02em',
     transform: 'rotate(-0.4deg)',
     boxShadow: '2px 3px 8px rgba(0,0,0,0.12), -1px -1px 0 rgba(255,255,255,0.4) inset',
@@ -611,12 +862,11 @@ const styles = {
     border: 'none',
     borderRadius: '2px',
     cursor: 'pointer',
-    fontFamily: "'Georgia', 'Times New Roman', serif",
-    fontSize: '0.9rem',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+    fontSize: '1rem',
     fontWeight: 'bold',
     backgroundColor: '#fde68a',
     color: '#92400e',
-    fontStyle: 'italic',
     letterSpacing: '0.02em',
     transform: 'rotate(0.3deg)',
     boxShadow: '2px 3px 8px rgba(0,0,0,0.12), -1px -1px 0 rgba(255,255,255,0.4) inset',
@@ -633,12 +883,11 @@ const styles = {
     border: 'none',
     borderRadius: '2px',
     cursor: 'pointer',
-    fontFamily: "'Georgia', 'Times New Roman', serif",
-    fontSize: '0.85rem',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+    fontSize: '1rem',
     fontWeight: '500',
     backgroundColor: '#e2e8f0',
     color: '#475569',
-    fontStyle: 'italic',
     letterSpacing: '0.02em',
     transform: 'rotate(-0.2deg)',
     boxShadow: '2px 3px 8px rgba(0,0,0,0.1), -1px -1px 0 rgba(255,255,255,0.3) inset',
