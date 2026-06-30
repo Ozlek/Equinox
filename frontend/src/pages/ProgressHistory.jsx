@@ -1,13 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
 
-const MOD_LABELS = {
-  'timed': '⏱️ Timed',
-  'disable_adjuster': '🔒 Locked DDA',
-  'one_life': '❤️‍🔥 One Life',
-  'easy_going': '🍃 Easy'
-};
-
 const getTierColor = (tier) => {
   const colors = {
     'Novice': '#58ec84',
@@ -15,7 +8,6 @@ const getTierColor = (tier) => {
     'Advanced': '#f6ad55',
     'Expert': '#f56565',    
   };
-
   return colors[tier] || '#a0aec0';
 };
 
@@ -41,13 +33,14 @@ const getRecommendationIcon = (type) => {
 export default function ProgressHistory({ onNavigate }) {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null); // Tracks network or parsing errors safely
+  const [error, setError] = useState(null);
   const [adaptiveAnalysis, setAdaptiveAnalysis] = useState(null);
   const [showAnalysis, setShowAnalysis] = useState(false);
 
   useEffect(() => {
     api.get('/progress/')
       .then((res) => {
+        setRecords(res.data || []);
         setRecords(res.data || []);
         setLoading(false);
       })
