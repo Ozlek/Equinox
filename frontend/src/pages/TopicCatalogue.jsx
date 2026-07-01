@@ -207,13 +207,6 @@ export default function TopicCatalogue({ onSelectTopic, userGrade }) {
             </>
           )}
 
-          {/* Divider */}
-          {recommendedTopics.length > 0 && exploreTopics.length > 0 && (
-            <div style={styles.divider}>
-              <span style={styles.dividerText}>— Explore Other Topics —</span>
-            </div>
-          )}
-
           {/* Explore Other Topics Section */}
           {exploreTopics.length > 0 && (
             <>
@@ -270,7 +263,7 @@ const styles = {
     padding: '0.5rem 0',
   },
   mainTitle: {
-    fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontSize: '2.5rem',
     fontWeight: 'bold',
     color: '#1e293b',
@@ -336,7 +329,7 @@ const styles = {
 
   stickyNoteTitle: {
     margin: 0,
-    fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontSize: '1.4rem',
     fontWeight: 'bold',
     opacity: 0.9,
@@ -425,7 +418,7 @@ const styles = {
     fontSize: '1.5rem',
   },
   sectionTitle: {
-    fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontSize: '1.5rem',
     fontWeight: 'bold',
     color: '#1e293b',

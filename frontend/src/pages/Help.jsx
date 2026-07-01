@@ -415,7 +415,7 @@ const styles = {
     fontSize: '1.8rem',
     fontWeight: 'bold',
     color: '#f8fafc',
-    fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
   },
   closeBtn: {
     backgroundColor: 'rgba(245, 101, 101, 0.15)',

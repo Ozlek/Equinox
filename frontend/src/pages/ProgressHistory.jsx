@@ -41,7 +41,6 @@ export default function ProgressHistory({ onNavigate }) {
     api.get('/progress/')
       .then((res) => {
         setRecords(res.data || []);
-        setRecords(res.data || []);
         setLoading(false);
       })
       .catch((err) => {
@@ -389,7 +388,7 @@ const styles = {
     fontSize: '1.8rem',
     fontWeight: 'bold',
     color: '#f8fafc',
-    fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
   },
   closeBtn: {
     backgroundColor: 'rgba(245, 101, 101, 0.15)',
@@ -471,7 +470,7 @@ const styles = {
     margin: '0 0 1rem 0',
     fontSize: '1.2rem',
     color: '#1e293b',
-    fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontWeight: 'bold',
   },
   table: {
@@ -532,7 +531,7 @@ const styles = {
     color: '#1e293b',
     marginBottom: '1.5rem',
     textAlign: 'center',
-    fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontWeight: 'bold',
   },
   analysisSubtitle: {
@@ -540,7 +539,7 @@ const styles = {
     color: '#1e293b',
     marginBottom: '1rem',
     marginTop: 0,
-    fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontWeight: 'bold',
   },
   reportCard: {
@@ -582,7 +581,7 @@ const styles = {
     fontSize: '1rem',
     color: '#1e293b',
     marginBottom: '1rem',
-    fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontWeight: 'bold',
   },
   domainItem: {
@@ -678,7 +677,7 @@ const styles = {
     fontWeight: 'bold',
     color: '#1e293b',
     marginBottom: '0.5rem',
-    fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
   },
   recommendationTopic: {
     fontSize: '0.85rem',

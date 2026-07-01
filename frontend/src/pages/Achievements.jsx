@@ -366,14 +366,14 @@ const styles = {
     gap: '1px',
   },
   handwrittenPageTitle: {
-    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontSize: '1.5rem',
     fontWeight: 700,
     color: '#1e293b',
     lineHeight: 1.2,
   },
   handwrittenPageSub: {
-    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontSize: '0.85rem',
     color: '#64748b',
   },
@@ -384,7 +384,7 @@ const styles = {
     gap: '4px',
   },
   handwrittenStats: {
-    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontSize: '0.85rem',
     color: '#475569',
   },
@@ -407,7 +407,7 @@ const styles = {
     textAlign: 'center',
   },
   scrollHintText: {
-    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontSize: '0.8rem',
     color: '#94a3b8',
   },
@@ -499,14 +499,14 @@ const styles = {
     textAlign: 'center',
   },
   handwrittenName: {
-    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontSize: '1.1rem',
     fontWeight: 600,
     margin: 0,
     lineHeight: 1.3,
   },
   handwrittenDetail: {
-    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontSize: '0.8rem',
     color: '#64748b',
     margin: 0,
@@ -520,7 +520,7 @@ const styles = {
     justifyContent: 'center',
   },
   collectedStamp: {
-    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontSize: '0.75rem',
     fontWeight: 600,
     color: '#22c55e',
@@ -529,7 +529,7 @@ const styles = {
     borderRadius: '2px',
   },
   lockedStamp: {
-    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontSize: '0.75rem',
     fontWeight: 600,
     color: '#94a3b8',
@@ -563,14 +563,14 @@ const styles = {
     paddingTop: '0.25rem',
   },
   handwrittenFooter: {
-    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontSize: '0.8rem',
     color: '#94a3b8',
   },
 
   // ── Loading & Error ──
   loadingText: {
-    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontSize: '1rem',
     color: '#64748b',
     textAlign: 'center',
@@ -578,7 +578,7 @@ const styles = {
     padding: '1rem',
   },
   errorText: {
-    fontFamily: "'Caveat', 'Comic Sans MS', cursive",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontSize: '0.95rem',
     color: '#dc2626',
     textAlign: 'center',

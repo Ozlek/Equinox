@@ -260,7 +260,7 @@ const styles = {
     fontSize: '1.5rem',
     fontWeight: 'bold',
     color: '#f8fafc',
-    fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
   },
   subtitle: {
     margin: 0,

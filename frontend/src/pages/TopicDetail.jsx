@@ -154,10 +154,6 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
     }
   }, [topicId, selectedGrade]);
 
-  const handleIframeError = (resourceId) => {
-    setFailedEmbeds(prev => ({ ...prev, [resourceId]: true }));
-  };
-
   if (error) return (
     <div style={styles.graphingPaper}>
       <div style={{ ...styles.message, color: '#dc2626' }}>⚠️ {error}</div>
@@ -613,7 +609,7 @@ const styles = {
     flex: 1,
   },
   coverTitle: {
-    fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontSize: '1.6rem',
     fontWeight: 'bold',
     color: '#60a5fa',
@@ -699,7 +695,7 @@ const styles = {
   },
 
   sectionTitle: {
-    fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontSize: '1.4rem',
     fontWeight: 'bold',
     color: '#1e293b',
@@ -760,7 +756,7 @@ const styles = {
   },
 
   lessonTitle: {
-    fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontSize: '1.5rem',
     fontWeight: 'bold',
     color: '#1e293b',
@@ -819,6 +815,7 @@ const styles = {
     textDecoration: 'none',
     transition: 'all 0.15s ease',
     color: '#1e293b',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
   },
 
   actionsPanel: {

@@ -220,8 +220,8 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
 
   useEffect(() => {
     if (timeLeft === null || timeLeft <= 0 || feedback || gameState?.is_completed) return;
-    timerRef.current = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
-    return () => clearInterval(timerRef.current);
+    timerRef.current = setTimeout(() => setTimeLeft(prev => prev - 1), 1000);
+    return () => clearTimeout(timerRef.current);
   }, [timeLeft, feedback, gameState]);
 
   useEffect(() => {
@@ -656,7 +656,7 @@ const styles = {
     fontSize: '1.5rem',
     fontWeight: 'bold',
     color: '#f8fafc',
-    fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
   },
   quitBtnHeader: {
     backgroundColor: 'rgba(245, 101, 101, 0.15)',

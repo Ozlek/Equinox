@@ -17,6 +17,71 @@ import Help from './pages/Help';
 import api from './api/axios';
 import { getCookie } from './utils';
 
+const styles = {
+  sidebarInner: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+    padding: '1rem 0',
+    alignItems: 'stretch',
+  },
+  tabMarker: {
+    display: 'flex',
+    alignItems: 'center',
+    width: '100%',
+    padding: '12px 16px',
+    boxSizing: 'border-box',
+    borderRadius: '0 24px 24px 0',
+    border: '2px solid transparent',
+    borderLeft: 'none',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    position: 'relative',
+    backgroundColor: '#1f2937',
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    fontSize: '1.1rem',
+  },
+  tabBtn: {
+    background: 'none',
+    border: 'none',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '40px',
+    height: '40px',
+    borderRadius: '12px',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    flexShrink: 0,
+    padding: 0,
+    color: '#f8fafc',
+    fontSize: '1.2rem',
+  },
+  tabLabel: {
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+    fontSize: '1.1rem',
+    whiteSpace: 'nowrap',
+    transition: 'opacity 0.15s ease',
+    letterSpacing: '0.05em',
+    fontWeight: 'bold',
+  },
+};
+
+const appLayoutStyles = {
+  appContainer: { display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', backgroundColor: '#1a202c', color: '#f7fafc' },
+  topbar: { height: '60px', backgroundColor: '#111827', borderBottom: '1px solid #1f2937', zIndex: 1030, display: 'flex', alignItems: 'center', flexShrink: 0 },
+  mainGrid: { display: 'flex', flex: 1, height: 'calc(100vh - 60px)', overflow: 'hidden', position: 'relative' },
+  sidebar: { backgroundColor: '#111827', borderRight: '1px solid #1f2937', transition: 'transform 0.2s ease-in-out', zIndex: 1020, left: 0, padding: '0', width: '280px' },
+  sidebarTooltip: { position: 'absolute', left: '100%', top: '50%', transform: 'translateY(-50%)', marginLeft: '12px', backgroundColor: '#1f2937', color: '#f7fafc', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '500', whiteSpace: 'nowrap', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)', border: '1px solid #374151', pointerEvents: 'none', zIndex: 1050 },
+  topbarTooltip: { position: 'absolute', top: '100%', right: '0', marginTop: '8px', backgroundColor: '#1f2937', color: '#f7fafc', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '500', whiteSpace: 'nowrap', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)', border: '1px solid #374151', pointerEvents: 'none', zIndex: 1050 },
+  mobileBackdrop: { position: 'fixed', top: '60px', left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(3px)', zIndex: 1010 },
+  contentContainer: { flex: 1, overflowY: 'auto', height: '100%', backgroundColor: '#1a202c', marginLeft: '280px' }
+};
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [currentView, setCurrentView] = useState('home'); 
@@ -35,8 +100,14 @@ export default function App() {
   const [sessionItem, setSessionItem] = useState('');
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+      setIsMobile(window.innerWidth < 768);
+  }, []);
+
   const [hoveredLink, setHoveredLink] = useState(null);
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
 
   // ─── NEW EFFECT: INTERCEPT EMAIL DEEP-LINKS ON APP START ───
   useEffect(() => {
@@ -110,7 +181,15 @@ export default function App() {
         setCurrentView('home');
         setMobileSidebarOpen(false);
       })
-      .catch(err => console.error("Logout failed", err));
+
+      .finally(() => {
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('access_token');
+
+          setUser(null);
+
+          navigateTo("home");
+      });
   };
 
   const navigateTo = (view) => {
@@ -134,7 +213,7 @@ export default function App() {
   }
 
   const sidebarNavItems = [
-    { view: 'dashboard', icon: 'grid-1x2-fill', label: 'Dashboard' },
+    { view: 'dashboard', icon: 'grid-1x2-fill', label: 'Dashboard', },
     { view: 'catalogue', icon: 'book-half', label: 'Topic Catalogue' },
     { view: 'progress', icon: 'graph-up-arrow', label: 'Progress History' },
     { view: 'help', icon: 'question-circle-fill', label: 'Help' },
@@ -151,33 +230,42 @@ export default function App() {
       <div style={{ position: 'relative', width: '100%' }} onMouseEnter={() => setHoveredLink(view)} onMouseLeave={() => setHoveredLink(null)}>
         <div style={{
           ...styles.tabMarker,
+          justifyContent: sidebarExpanded
+          ? 'flex-start'
+          : 'center',
+          gap: sidebarExpanded
+          ? '8px'
+          : '0px',
           backgroundColor: isActive ? tabColor : 'transparent',
-          borderColor: isActive ? tabColor : '#1f2937',
+          border: isActive ? `2px solid ${tabColor}` : '2px solid transparent',
           boxShadow: isActive ? `2px 2px 8px rgba(0,0,0,0.3)` : 'none',
           cursor: 'pointer',
         }} onClick={() => navigateTo(view)}>
           <button 
             style={{
               ...styles.tabBtn,
-              color: isActive ? '#1e293b' : '#64748b',
+              color: isActive ? '#1e293b' : '#f8fafc',
             }}
           >
             <i className={`bi bi-${icon}`} style={{ fontSize: '1.2rem' }}></i>
           </button>
           
           {/* Tab label - visible on hover / always when active */}
-          {(isActive || isThisHovered) && (
-            <span style={{
-              ...styles.tabLabel,
-              color: isActive ? '#1e293b' : '#f8fafc',
-              fontWeight: isActive ? '700' : '500',
-            }}>
+            <span
+              style={{
+                  ...styles.tabLabel,
+                  color: isActive ? '#1e293b' : '#f8fafc',
+                  opacity: sidebarExpanded ? 1 : 0,
+                  width: sidebarExpanded ? 'auto' : 0,
+                  overflow: 'hidden',
+                  transition: 'opacity .2s ease',
+              }}
+            >
               {label}
             </span>
-          )}
         </div>
 
-        {!isMobile && isThisHovered && (
+        {!isMobile && !sidebarExpanded && isThisHovered && (
           <div style={appLayoutStyles.sidebarTooltip}>
             {label}
           </div>
@@ -206,7 +294,7 @@ export default function App() {
           <i className={`bi bi-${icon} ${colorClass}`} style={{ fontSize: '1.3rem' }}></i>
         </button>
 
-        {!isMobile && isThisHovered && (
+        {!isMobile && !sidebarExpanded && isThisHovered && (
           <div style={appLayoutStyles.topbarTooltip}>
             {label}
           </div>
@@ -219,7 +307,9 @@ export default function App() {
     ...appLayoutStyles.sidebar,
     position: isMobile ? 'fixed' : 'absolute',
     transform: (isMobile && !mobileSidebarOpen) ? 'translateX(-100%)' : 'translateX(0)',
-    width: isMobile ? '240px' : '280px',
+    width: sidebarExpanded ? '280px' : '64px',
+    transition: 'width 0.25s ease',
+    overflow: 'hidden',
     top: isMobile ? '60px' : '0',
     height: isMobile ? 'calc(100vh - 60px)' : '100%',
     padding: '0',
@@ -324,7 +414,10 @@ export default function App() {
       <div style={appLayoutStyles.mainGrid}>
         {user && (
           <>
-            <div style={dynamicSidebarStyle}>
+            <div
+                style={dynamicSidebarStyle}
+                onMouseEnter={() => !isMobile && setSidebarExpanded(true)}
+                onMouseLeave={() => !isMobile && setSidebarExpanded(false)}>
               <div style={styles.sidebarInner}>
                 {sidebarNavItems.map((item, index) => (
                   <SidebarLink key={item.view} view={item.view} icon={item.icon} label={item.label} index={index} />
@@ -339,7 +432,18 @@ export default function App() {
         )}
 
         {/* WORKSPACE CONTENT PANEL */}
-        <div style={appLayoutStyles.contentContainer}>
+        <div style={{
+          ...appLayoutStyles.contentContainer,
+
+              marginLeft:
+                  isMobile
+                      ? '0'
+                      : sidebarExpanded
+                          ? '280px'
+                          : '64px',
+
+              transition: 'margin-left .25s ease',
+        }}>
           <div className="container-fluid py-4 px-md-4 px-2" style={{ maxWidth: '1200px', margin: '0 auto' }}>
             
             {/* UNAUTHENTICATED ROUTER CORE SWITCHES */}
@@ -406,70 +510,3 @@ export default function App() {
     </div>
   );
 }
-
-  const styles = {
-    sidebarInner: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '8px',
-      padding: '1rem 0',
-      alignItems: 'center',
-    },
-    tabMarker: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px',
-      width: '100%',
-      padding: '12px 16px',
-      borderRadius: '0 24px 24px 0',
-      border: '2px solid transparent',
-      borderLeft: 'none',
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
-      marginLeft: '-2px',
-      position: 'relative',
-      backgroundColor: '#1f2937',
-      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-      fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
-      fontWeight: 'bold',
-      textTransform: 'uppercase',
-      letterSpacing: '0.05em',
-      fontSize: '1.1rem',
-      marginRight: '0',
-    },
-    tabBtn: {
-      background: 'none',
-      border: 'none',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: '40px',
-      height: '40px',
-      borderRadius: '12px',
-      cursor: 'pointer',
-      transition: 'all 0.15s ease',
-      flexShrink: 0,
-      padding: 0,
-      color: '#f8fafc',
-      fontSize: '1.2rem',
-    },
-    tabLabel: {
-      fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
-      fontSize: '1.1rem',
-      whiteSpace: 'nowrap',
-      transition: 'opacity 0.15s ease',
-      letterSpacing: '0.05em',
-      fontWeight: 'bold',
-    },
-  };
-
-  const appLayoutStyles = {
-    appContainer: { display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', backgroundColor: '#1a202c', color: '#f7fafc' },
-    topbar: { height: '60px', backgroundColor: '#111827', borderBottom: '1px solid #1f2937', zIndex: 1030, display: 'flex', alignItems: 'center', flexShrink: 0 },
-    mainGrid: { display: 'flex', flex: 1, height: 'calc(100vh - 60px)', overflow: 'hidden', position: 'relative' },
-    sidebar: { backgroundColor: '#111827', borderRight: '1px solid #1f2937', transition: 'transform 0.2s ease-in-out', zIndex: 1020, left: 0, padding: '0', width: '280px' },
-    sidebarTooltip: { position: 'absolute', left: '100%', top: '50%', transform: 'translateY(-50%)', marginLeft: '12px', backgroundColor: '#1f2937', color: '#f7fafc', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '500', whiteSpace: 'nowrap', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)', border: '1px solid #374151', pointerEvents: 'none', zIndex: 1050 },
-    topbarTooltip: { position: 'absolute', top: '100%', right: '0', marginTop: '8px', backgroundColor: '#1f2937', color: '#f7fafc', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '500', whiteSpace: 'nowrap', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)', border: '1px solid #374151', pointerEvents: 'none', zIndex: 1050 },
-    mobileBackdrop: { position: 'fixed', top: '60px', left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(3px)', zIndex: 1010 },
-    contentContainer: { flex: 1, overflowY: 'auto', height: '100%', backgroundColor: '#1a202c', marginLeft: '280px' }
-  };

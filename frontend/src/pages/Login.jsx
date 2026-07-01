@@ -51,7 +51,10 @@ export default function Login({ onNavigate, onLoginSuccess }) {
         extractedErrors.push("Could not establish server authentication response link.");
       }
 
-      if (extractedErrors.length === 0 || extractedErrors.includes("undefined")) {
+      // Filter out any undefined or null values from the array
+      extractedErrors = extractedErrors.filter(msg => msg != null && msg !== undefined);
+
+      if (extractedErrors.length === 0) {
         extractedErrors = ["The username or password you entered is incorrect."];
       }
 
