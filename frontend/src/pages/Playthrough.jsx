@@ -149,11 +149,14 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
   const [showAchievementsPopup, setShowAchievementsPopup] = useState(false);
   const [analysisData, setAnalysisData] = useState(null);
   const [newAchievements, setNewAchievements] = useState([]);
+  const [showSolution, setShowSolution] = useState(false);
   
   const [timeLeft, setTimeLeft] = useState(null);
   const isTimed = activeMods.includes('timed');
   const isSubmitting = useRef(false);
   const timerRef = useRef(null);
+  const currentSolutionRef = useRef(null);
+  const currentChoicesRef = useRef(null);
 
   const getRequestParams = (isFirstLoad = false) => {
     const modQuery = activeMods.length > 0 ? `&mods=${activeMods.join(',')}` : '';
@@ -189,6 +192,8 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
         });
       } else {
         setGameState(data);
+        currentSolutionRef.current = data.question_solution || null;
+        currentChoicesRef.current = data.choices || null;
         if (isTimed) setTimeLeft(getTimerLimit(data.current_tier));
       }
       setFeedback(null);
@@ -196,6 +201,7 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
       setShowKeypad(false);
       setShowAdminAnswer(false);
       setShowStreakPopup(false);
+      setShowSolution(false);
     } catch (error) {
       console.error("Failed to submit answer:", error);
       
@@ -306,6 +312,17 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
+  // Resolve MCQ letter to full text
+  const resolveAnswerText = (answerLetter) => {
+    if (!answerLetter || !currentChoicesRef.current) return answerLetter;
+    const choices = currentChoicesRef.current;
+    const letter = answerLetter.trim().toUpperCase();
+    if (choices[letter]) {
+      return `${letter}. ${choices[letter]}`;
+    }
+    return answerLetter;
+  };
+
   if (gameState?.is_completed) {
     return (
       <div style={styles.container}>
@@ -388,7 +405,7 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
           <div style={styles.headerContent}>
             <div>
               <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif" }}>Total Score</div>
-              <h3 style={{ margin: '0', color: '#2563eb', fontSize: '1.5rem', fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif" }}>{displayScore.toLocaleString()}</h3>
+              <h3 style={{ margin: '0', color: '#53a0f8', fontSize: '1.5rem', fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif" }}>{displayScore.toLocaleString()}</h3>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
               <button onClick={handleQuitChallenge} style={styles.quitBtnHeader}>✕ Quit</button>
@@ -504,8 +521,49 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
 
                 {!feedback.is_correct && (
                   <p style={{ color: '#64748b', fontSize: '0.9rem', margin: '8px 0', fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif" }}>
-                    Correct Answer was: <strong style={{ color: '#1e293b' }}>{feedback.correct_answer}</strong>
+                    Correct Answer was: <strong style={{ color: '#1e293b' }}>{resolveAnswerText(feedback.correct_answer)}</strong>
                   </p>
+                )}
+
+                {/* Show Solution toggle - available for both correct and incorrect answers */}
+                {currentSolutionRef.current && (
+                  <div style={{ margin: '12px 0' }}>
+                    <button 
+                      type="button"
+                      onClick={() => setShowSolution(!showSolution)}
+                      style={{
+                        background: 'none',
+                        border: '1px solid #3b82f6',
+                        color: '#3b82f6',
+                        borderRadius: '6px',
+                        padding: '0.4rem 1rem',
+                        cursor: 'pointer',
+                        fontSize: '0.85rem',
+                        fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+                        fontWeight: 'bold',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      {showSolution ? '🙈 Hide Solution' : '💡 Show Solution'}
+                    </button>
+                    {showSolution && (
+                      <div style={{
+                        marginTop: '10px',
+                        padding: '0.85rem',
+                        backgroundColor: '#f8fafc',
+                        borderRadius: '6px',
+                        border: '1px solid #e2e8f0',
+                        color: '#1e293b',
+                        fontSize: '0.95rem',
+                        lineHeight: '1.5',
+                        fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+                        textAlign: 'left',
+                      }}>
+                        <strong style={{ color: '#2563eb' }}>Solution:</strong>
+                        <div style={{ marginTop: '4px' }}>{currentSolutionRef.current}</div>
+                      </div>
+                    )}
+                  </div>
                 )}
                 
                 <button 
@@ -610,7 +668,7 @@ const styles = {
     position: 'relative',
     zIndex: 1,
     width: '100%',
-    maxWidth: '500px',
+    maxWidth: '800px',
     backgroundColor: '#fefdfb',
     borderRadius: '4px',
     boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)',

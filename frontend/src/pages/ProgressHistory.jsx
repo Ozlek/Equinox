@@ -101,84 +101,7 @@ export default function ProgressHistory({ onNavigate }) {
           <p style={styles.reportSubtitle}>Student Achievement & Mastery Record</p>
         </div>
 
-        {/* ── Analysis Button ── */}
-        {!showAnalysis ? (
-          <div style={styles.actionArea}>
-            <button style={styles.analyzeBtn} onClick={loadAdaptiveAnalysis}>
-              🧠 Generate Learning Analysis Report
-            </button>
-          </div>
-        ) : null}
-
-        {/* ── Records Table ── */}
-        {records.length === 0 ? (
-          <div style={styles.emptyState}>
-            <span style={{ fontSize: '2rem' }}>📝</span>
-            <p>No completions recorded yet! Jump into a challenge playthrough to log metrics.</p>
-          </div>
-        ) : (
-          <div style={styles.ruledTableWrapper}>
-            <div style={styles.redMargin} />
-            <div style={styles.tableContent}>
-              <h3 style={styles.tableHeading}>Session History</h3>
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={styles.th}>Topic</th>
-                    <th style={styles.th}>Grade</th>
-                    <th style={styles.th}>Accuracy</th>
-                    <th style={styles.th}>Score</th>
-                    <th style={styles.th}>Tier</th>
-                    <th style={styles.th}>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {records.map((r) => {
-                    const tierColor = getTierColor(r.difficulty_achieved);
-                    const accuracyPercentage = r.total_questions > 0 ? (r.score / r.total_questions) * 100 : 0;
-                    const accuracyColor = accuracyPercentage >= 75 ? '#16a34a' : accuracyPercentage >= 50 ? '#ca8a04' : '#dc2626';
-                    const localDate = new Date(r.completed_at).toLocaleString(undefined, {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    });
-
-                    return (
-                      <tr key={r.id} style={styles.tr}>
-                        <td style={{ ...styles.td, fontWeight: 'bold', color: '#1e293b' }}>
-                          {r.topic_name}
-                        </td>
-                        <td style={styles.td}>
-                          <span style={styles.gradeBadge}>Grade {r.grade_level}</span>
-                        </td>
-                        <td style={styles.td}>
-                          <span style={{ color: accuracyColor, fontWeight: 'bold' }}>
-                            {r.score} / {r.total_questions}
-                          </span>
-                        </td>
-                        <td style={{ ...styles.td, color: '#2563eb', fontWeight: 'bold' }}>
-                          {r.gamified_score?.toLocaleString() || 0}
-                        </td>
-                        <td style={styles.td}>
-                          <span style={{ ...styles.tierBadge, borderColor: tierColor, color: tierColor }}>
-                            {r.difficulty_achieved}
-                          </span>
-                        </td>
-                        <td style={{ ...styles.td, color: '#64748b', fontSize: '0.85rem' }}>
-                          {localDate}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* ── Analysis Section ── */}
+        {/* ── Analysis Section (shown on top when active) ── */}
         {showAnalysis && adaptiveAnalysis && (
           <div style={styles.analysisSection}>
             <div style={styles.analysisPaper}>
@@ -273,6 +196,83 @@ export default function ProgressHistory({ onNavigate }) {
               >
                 Hide Analysis
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Analysis Button (when not showing analysis) ── */}
+        {!showAnalysis ? (
+          <div style={styles.actionArea}>
+            <button style={styles.analyzeBtn} onClick={loadAdaptiveAnalysis}>
+              🧠 Generate Learning Analysis Report
+            </button>
+          </div>
+        ) : null}
+
+        {/* ── Records Table ── */}
+        {records.length === 0 ? (
+          <div style={styles.emptyState}>
+            <span style={{ fontSize: '2rem' }}>📝</span>
+            <p>No completions recorded yet! Jump into a challenge playthrough to log metrics.</p>
+          </div>
+        ) : (
+          <div style={styles.ruledTableWrapper}>
+            <div style={styles.redMargin} />
+            <div style={styles.tableContent}>
+              <h3 style={styles.tableHeading}>Session History</h3>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>Topic</th>
+                    <th style={styles.th}>Grade</th>
+                    <th style={styles.th}>Accuracy</th>
+                    <th style={styles.th}>Score</th>
+                    <th style={styles.th}>Tier</th>
+                    <th style={styles.th}>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {records.map((r) => {
+                    const tierColor = getTierColor(r.difficulty_achieved);
+                    const accuracyPercentage = r.total_questions > 0 ? (r.score / r.total_questions) * 100 : 0;
+                    const accuracyColor = accuracyPercentage >= 75 ? '#16a34a' : accuracyPercentage >= 50 ? '#ca8a04' : '#dc2626';
+                    const localDate = new Date(r.completed_at).toLocaleString(undefined, {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    });
+
+                    return (
+                      <tr key={r.id} style={styles.tr}>
+                        <td style={{ ...styles.td, fontWeight: 'bold', color: '#1e293b' }}>
+                          {r.topic_name}
+                        </td>
+                        <td style={styles.td}>
+                          <span style={styles.gradeBadge}>Grade {r.grade_level}</span>
+                        </td>
+                        <td style={styles.td}>
+                          <span style={{ color: accuracyColor, fontWeight: 'bold' }}>
+                            {r.score} / {r.total_questions}
+                          </span>
+                        </td>
+                        <td style={{ ...styles.td, color: '#2563eb', fontWeight: 'bold' }}>
+                          {r.gamified_score?.toLocaleString() || 0}
+                        </td>
+                        <td style={styles.td}>
+                          <span style={{ ...styles.tierBadge, borderColor: tierColor, color: tierColor }}>
+                            {r.difficulty_achieved}
+                          </span>
+                        </td>
+                        <td style={{ ...styles.td, color: '#64748b', fontSize: '0.85rem' }}>
+                          {localDate}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
@@ -524,7 +524,7 @@ const styles = {
   },
   analysisPaper: {
     padding: '1.5rem 2rem',
-    borderTop: '2px dashed #d6d3d1',
+    borderBottom: '2px dashed #d6d3d1',
   },
   analysisTitle: {
     fontSize: '1.5rem',

@@ -517,7 +517,7 @@ def playthrough_api_view(request, topic_id):
         request: DRF ``Request``. Relevant fields:
             - GET ``difficulty`` (str): Starting difficulty tier for new sessions.
             - GET/POST ``equipped_modifier`` or ``mods`` (str): Modifier slug.
-            - POST ``answer`` (str): The player's answer (``"A"``–``"D"`` for
+            - POST ``answer`` (str): The player's answer (``"A"``--``"D"`` for
               MCQ, or the answer text for open-ended questions).
             - POST ``active_mods`` (list[str]): Additional modifier slugs active
               client-side (used for DDA-lock detection).
@@ -584,6 +584,7 @@ def playthrough_api_view(request, topic_id):
             return Response({
                 "is_correct": False,
                 "correct_answer": question.correct_answer,
+                "question_solution": question.question_solution,
                 "session_complete": True,
                 "status": "completed",
                 "is_finished": True,
@@ -620,6 +621,7 @@ def playthrough_api_view(request, topic_id):
             return Response({
                 "is_correct": result['is_correct'],
                 "correct_answer": question.correct_answer,
+                "question_solution": question.question_solution,
                 "score": session.score,
                 "current_score": session.score,
                 "questions_served": session.questions_served,
@@ -638,6 +640,7 @@ def playthrough_api_view(request, topic_id):
         return Response({
             "is_correct": result['is_correct'],
             "correct_answer": question.correct_answer,
+            "question_solution": question.question_solution,
             "score": session.score,
             "current_score": session.score,
             "questions_served": session.questions_served,
@@ -712,6 +715,7 @@ def playthrough_api_view(request, topic_id):
         "current_tier": current_tier,
         "current_rating": current_rating,
         "question_text": question.question_text,
+        "question_solution": question.question_solution,
         "choices": {
             "A": question.choice_a,
             "B": question.choice_b,

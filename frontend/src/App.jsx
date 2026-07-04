@@ -444,7 +444,7 @@ export default function App() {
 
               transition: 'margin-left .25s ease',
         }}>
-          <div className="container-fluid py-4 px-md-4 px-2" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <div className="container-fluid py-4 px-md-4 px-2" style={{ maxWidth: '100%', margin: '0 auto', paddingLeft: '1rem', paddingRight: '1rem' }}>
             
             {/* UNAUTHENTICATED ROUTER CORE SWITCHES */}
             {!user && currentView === 'home' && <Home onNavigate={navigateTo} />}

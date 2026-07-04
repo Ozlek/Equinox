@@ -61,7 +61,7 @@ export default function Help({ onNavigate }) {
       question: 'What is Equinox?',
       answer: (
         <span>
-          Equinox is an adaptive math learning platform designed for K–12 students. It uses a Dynamic Difficulty Adjustment (DDA) engine to tailor quiz difficulty in real time based on your performance, ensuring you're always challenged at the right level — never too easy, never overwhelming. Equinox also features a gamified scoring system, achievements, leaderboards, and progress tracking to keep learning engaging.
+          Equinox is an adaptive math learning platform designed for Grades 1–10 students. It uses a Dynamic Difficulty Adjustment (DDA) engine to tailor quiz difficulty in real time based on your performance, ensuring you're always challenged at the right level — never too easy, never overwhelming. Equinox also features a gamified scoring system, achievements, leaderboards, and progress tracking to keep learning engaging.
         </span>
       ),
     },
@@ -139,7 +139,7 @@ export default function Help({ onNavigate }) {
     {
       number: 3,
       title: 'Browse the Topic Catalogue',
-      description: 'Navigate to the Topic Catalogue from the sidebar or Dashboard. Topics are organized by K–12 math areas. Select a topic to view its details, difficulty tiers, and leaderboard.',
+      description: 'Navigate to the Topic Catalogue from the sidebar or Dashboard. Topics are organized by Grades 1-10 math areas. Select a topic to view its details, difficulty tiers, and leaderboard.',
     },
     {
       number: 4,
@@ -299,7 +299,7 @@ export default function Help({ onNavigate }) {
                   </div>
                 </a>
                 <a
-                  href="https://github.com/equinox-platform"
+                  href="https://github.com/Ozlek/Equinox"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={styles.supportCard}

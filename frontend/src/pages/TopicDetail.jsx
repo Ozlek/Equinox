@@ -108,6 +108,8 @@ const LESSONS = {
     }
   };
 
+const STORAGE_KEY_PREFIX = 'lessonProgress_';
+
 export default function TopicDetail({ topicId, selectedGrade, onBack, onStartChallenge }) {
   const [topic, setTopic] = useState(null);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
@@ -117,18 +119,19 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
   const [loadingResources, setLoadingResources] = useState(false);
   const [failedEmbeds, setFailedEmbeds] = useState({});
   const [selectedLesson, setSelectedLesson] = useState(null);
+  const [lessonProgress, setLessonProgress] = useState({});
+  const [currentGrade, setCurrentGrade] = useState(selectedGrade || 1);
 
+  // Load topic data
   useEffect(() => {
-    // Guard against invalid topicId
     if (!topicId) {
       setError("No topic selected.");
       return;
     }
 
-    // Axios resolves relative routing paths using your centralized base domain rules
     api.get(`/topics/${topicId}/`)
       .then((res) => {
-        setTopic(res.data); // Content payload unpacked automatically
+        setTopic(res.data);
       })
       .catch((err) => {
         console.error(`Error compiling learning module metadata for ID ${topicId}:`, err);
@@ -136,12 +139,12 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
       });
   }, [topicId]);
 
-  // Fetch learning resources when grade changes
+  // Load resources when grade changes
   useEffect(() => {
-    if (topicId && selectedGrade) {
+    if (topicId && currentGrade) {
       setLoadingResources(true);
       setFailedEmbeds({});
-      api.get(`/playthrough/topics/${topicId}/resources/?grade_level=${selectedGrade}`)
+      api.get(`/playthrough/topics/${topicId}/resources/?grade_level=${currentGrade}`)
         .then((res) => {
           setResources(res.data.resources);
           setLoadingResources(false);
@@ -152,7 +155,60 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
           setLoadingResources(false);
         });
     }
-  }, [topicId, selectedGrade]);
+  }, [topicId, currentGrade]);
+
+  // Initialize lesson progress from localStorage or LESSONS defaults
+  useEffect(() => {
+    const lessons = LESSONS[topic?.name]?.[currentGrade] || [];
+    if (lessons.length === 0) return;
+
+    const storageKey = `${STORAGE_KEY_PREFIX}${topicId}_${currentGrade}`;
+    const saved = localStorage.getItem(storageKey);
+
+    let initial = {};
+    if (saved) {
+      try {
+        initial = JSON.parse(saved);
+      } catch (e) {
+        initial = {};
+      }
+    } else {
+      lessons.forEach(lesson => {
+        initial[lesson.id] = lesson.completed || false;
+      });
+    }
+    setLessonProgress(initial);
+
+    // Auto-select the first unchecked, unlocked lesson
+    const firstUnchecked = lessons.find(l => !initial[l.id] && !l.locked);
+    if (firstUnchecked) {
+      setSelectedLesson(firstUnchecked);
+    } else if (lessons.length > 0) {
+      setSelectedLesson(lessons[0]);
+    }
+  }, [topic, currentGrade, topicId]);
+
+  // Persist lessonProgress to localStorage whenever it changes
+  // Only save when lessonProgress has actual data (not the empty initial state)
+  useEffect(() => {
+    if (topic && topicId && Object.keys(lessonProgress).length > 0) {
+      const storageKey = `${STORAGE_KEY_PREFIX}${topicId}_${currentGrade}`;
+      localStorage.setItem(storageKey, JSON.stringify(lessonProgress));
+    }
+  }, [lessonProgress, topic, topicId, currentGrade]);
+
+  const toggleLessonComplete = (lessonId) => {
+    setLessonProgress(prev => ({
+      ...prev,
+      [lessonId]: !prev[lessonId]
+    }));
+  };
+
+  const handleGradeChange = (e) => {
+    const newGrade = parseInt(e.target.value, 10);
+    setCurrentGrade(newGrade);
+    setSelectedLesson(null);
+  };
 
   if (error) return (
     <div style={styles.graphingPaper}>
@@ -165,6 +221,19 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
       <div style={styles.message}>Compiling Learning Module Properties...</div>
     </div>
   );
+
+  const lessons = LESSONS[topic.name]?.[currentGrade] || [];
+  const totalLessons = lessons.length;
+  const completedCount = lessons.filter(l => lessonProgress[l.id]).length;
+  const progressPercent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+
+  // Generate grade options from topic range
+  const gradeOptions = [];
+  if (topic) {
+    for (let g = topic.grade_level_min; g <= topic.grade_level_max; g++) {
+      gradeOptions.push(g);
+    }
+  }
 
   return (
     <>
@@ -206,10 +275,18 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
               <div style={styles.ruledPage}>
                 <div style={styles.redMargin} />
                 <div style={styles.pageInner}>
-                  {/* Description */}
+                  {/* Description with grade dropdown */}
                   <div style={styles.descriptionRow}>
                     <p style={styles.description}>{topic.description}</p>
-                    <span style={styles.gradeBadge}>Grade {selectedGrade}</span>
+                    <select
+                      value={currentGrade}
+                      onChange={handleGradeChange}
+                      style={styles.gradeDropdown}
+                    >
+                      {gradeOptions.map(g => (
+                        <option key={g} value={g}>Grade {g}</option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* Learning Workspace */}
@@ -225,58 +302,60 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
                       <div style={styles.progressBox}>
                         <span>📖 Learning Progress</span>
                         <div style={styles.progressBar}>
-                          <div style={styles.progressFill} />
+                          <div style={{ ...styles.progressFill, width: `${progressPercent}%` }} />
                         </div>
-                        <small>2 of 6 Lessons Mastered</small>
+                        <small>{completedCount} of {totalLessons} Lessons Mastered</small>
                       </div>
 
-                      {(LESSONS[topic.name]?.[selectedGrade] || []).map((lesson) => {
+                      {lessons.map((lesson) => {
 
-                        const isSelected =
-                          selectedLesson?.id === lesson.id;
+                        const isSelected = selectedLesson?.id === lesson.id;
+                        const isCompleted = lessonProgress[lesson.id] || false;
 
                         return (
 
-                          <button
-                            key={lesson.id}
-                            disabled={lesson.locked}
-                            onClick={() => setSelectedLesson(lesson)}
-                            style={{
-                              ...styles.lessonButton,
+                          <div key={lesson.id} style={styles.lessonRow}>
+                            {/* Checkbox for toggling completion */}
+                            <button
+                              onClick={() => toggleLessonComplete(lesson.id)}
+                              disabled={lesson.locked}
+                              style={{
+                                ...styles.checkboxBtn,
+                                opacity: lesson.locked ? 0.4 : 1,
+                                cursor: lesson.locked ? 'not-allowed' : 'pointer',
+                              }}
+                              title={isCompleted ? 'Mark as incomplete' : 'Mark as complete'}
+                            >
+                              {isCompleted ? '✅' : '⬜'}
+                            </button>
 
-                              backgroundColor: isSelected ? "#dbeafe" : "#fffefb",
-                              border: isSelected
-                                ? "2px solid #3b82f6"
-                                : "1px solid #d6d3d1",
-                              fontWeight: isSelected ? "700" : "500",
-
-                              opacity:
-                                lesson.locked
-                                  ? 0.55
-                                  : 1,
-
-                              cursor:
-                                lesson.locked
-                                  ? "not-allowed"
-                                  : "pointer",
-                            }}
-                          >
-
-                            <span>
-
-                              {lesson.locked
-                                ? "🔒"
-                                : lesson.completed
-                                  ? "✅"
-                                  : isSelected
-                                    ? "⭐"
-                                    : "📖"}
-
-                            </span>
-
-                            <span>{lesson.title}</span>
-
-                          </button>
+                            <button
+                              disabled={lesson.locked}
+                              onClick={() => setSelectedLesson(lesson)}
+                              style={{
+                                ...styles.lessonButton,
+                                flex: 1,
+                                backgroundColor: isSelected ? "#dbeafe" : "#fffefb",
+                                border: isSelected
+                                  ? "2px solid #3b82f6"
+                                  : "1px solid #d6d3d1",
+                                fontWeight: isSelected ? "700" : "500",
+                                opacity: lesson.locked ? 0.55 : 1,
+                                cursor: lesson.locked ? "not-allowed" : "pointer",
+                              }}
+                            >
+                              <span>
+                                {lesson.locked
+                                  ? "🔒"
+                                  : isCompleted
+                                    ? "✅"
+                                    : isSelected
+                                      ? "⭐"
+                                      : "📖"}
+                              </span>
+                              <span>{lesson.title}</span>
+                            </button>
+                          </div>
 
                         );
 
@@ -669,7 +748,7 @@ const styles = {
     flex: 1,
   },
 
-  gradeBadge: {
+  gradeDropdown: {
     backgroundColor: '#e2e8f0',
     color: '#475569',
     padding: '0.3rem 0.6rem',
@@ -677,9 +756,12 @@ const styles = {
     fontSize: '0.65rem',
     fontFamily: "'Courier New', monospace",
     fontWeight: 'bold',
-    whiteSpace: 'nowrap',
     letterSpacing: '0.05em',
     textTransform: 'uppercase',
+    border: '1px solid #cbd5e1',
+    cursor: 'pointer',
+    outline: 'none',
+    whiteSpace: 'nowrap',
   },
 
   workspace: {
@@ -723,10 +805,30 @@ const styles = {
   },
 
   progressFill: {
-    width: '33%',
     height: '100%',
     backgroundColor: '#3b82f6',
     borderRadius: '999px',
+    transition: 'width 0.3s ease',
+  },
+
+  lessonRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+  },
+
+  checkboxBtn: {
+    background: 'none',
+    border: 'none',
+    fontSize: '1.1rem',
+    padding: '4px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '4px',
+    transition: 'all 0.15s ease',
+    flexShrink: 0,
+    lineHeight: 1,
   },
 
   lessonButton: {
