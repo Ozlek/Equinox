@@ -386,7 +386,7 @@ const styles = {
     fontSize: '1rem',
     fontWeight: 'bold',
     color: '#f8fafc',
-    fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
   },
 
   // ── Card Ruled Body ──
