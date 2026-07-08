@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Question, DomainRating, UserSkillProfile, ResponseLog, ResponseLogArchive, GamifiedModifier, UserInventory, PlaythroughSession
+from .models import Question, DomainRating, UserSkillProfile, ResponseLog, ResponseLogArchive, GamifiedModifier, UserInventory, PlaythroughSession, ShopItem
 
 
 @admin.register(DomainRating)
@@ -21,6 +21,13 @@ class UserInventoryAdmin(admin.ModelAdmin):
     list_display = ('user', 'modifier', 'quantity')
     list_filter = ('modifier',)
     search_fields = ('user__username',)
+
+
+@admin.register(ShopItem)
+class ShopItemAdmin(admin.ModelAdmin):
+    list_display = ('modifier', 'price', 'is_available')
+    list_filter = ('is_available',)
+    search_fields = ('modifier__name',)
 
 
 @admin.register(PlaythroughSession)

@@ -15,7 +15,8 @@ from django.db.models import F, Min, Max
 from django.db import IntegrityError
 
 from topics.models import Topic
-from .models import Question, DomainRating, GamifiedModifier, UserInventory, PlaythroughSession, LearningResource
+from .models import Question, DomainRating, GamifiedModifier, UserInventory, PlaythroughSession, LearningResource, ShopItem
+from accounts.models import UserStars
 from .dda_engine import EquinoxDDAEngine
 from users_progress.models import UserProgress
 from users_progress.achievements import AchievementRegistry
@@ -477,6 +478,19 @@ def end_session(session, topic, current_tier, new_badges=None):
             quantity__gt=0
         ).update(quantity=F('quantity') - 1)
 
+    # Award Stars based on gamified score (1 Star per 5000 points)
+    stars_earned = final_gamified_score // 5000
+    if stars_earned > 0:
+        try:
+            user_stars, _ = UserStars.objects.get_or_create(user=session.user)
+            user_stars.add_stars(stars_earned)
+            logger.info(
+                "Awarded %d stars to user=%s for gamified_score=%d",
+                stars_earned, session.user.username, final_gamified_score
+            )
+        except Exception as e:
+            logger.error(f"Failed to award stars: {e}")
+
     session_id = session.id
     session.end_session()
     logger.info(f"Session {session_id} deleted from database")
@@ -821,12 +835,24 @@ def learning_resources_api(request, topic_id):
         topic_id (int): PK of the Topic
     
     Query Parameters:
-        grade_level (str): Grade level filter (Elementary, Junior High, Senior High)
+        grade_level (int): Grade level filter (1-10)
     
     Returns:
         Response: {"resources": list[dict]}
     """
-    grade_level = request.query_params.get('grade_level', 'Elementary')
+    # Convert numeric grade level (1-10) to string format expected by LearningResource model
+    # Elementary: grades 1-6, Junior High: grades 7-10
+    grade_level_int = request.query_params.get('grade_level', 1)
+    try:
+        grade_level_int = int(grade_level_int)
+    except (ValueError, TypeError):
+        grade_level_int = 1
+    
+    # Map numeric grade to string format
+    if grade_level_int <= 6:
+        grade_level = 'Elementary'
+    else:
+        grade_level = 'Junior High'
     
     resources = LearningResource.objects.filter(
         topic_id=topic_id,
@@ -872,3 +898,150 @@ def user_inventory_api_view(request):
     } for item in inventory]
 
     return Response({"available_modifiers": data}, status=status.HTTP_200_OK)
+
+
+# ---------------------------------------------------------------------------
+# Stars & Shop Views
+# ---------------------------------------------------------------------------
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_stars_api_view(request):
+    """
+    Return the authenticated user's current Stars balance.
+
+    Returns:
+        Response: ``{"balance": int, "total_earned": int}``
+    """
+    stars, _ = UserStars.objects.get_or_create(user=request.user)
+    return Response({
+        "balance": stars.balance,
+        "total_earned": stars.total_earned,
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def shop_list_api_view(request):
+    """
+    List all available items in the shop with their prices.
+
+    Returns:
+        Response: ``{"items": list[dict]}`` where each dict contains
+        ``id``, ``modifier_id``, ``name``, ``slug``, ``type``, ``value``,
+        ``description``, and ``price``.
+    """
+    items = ShopItem.objects.filter(is_available=True).select_related('modifier')
+    data = [{
+        "id": item.id,
+        "modifier_id": item.modifier.id,
+        "name": item.modifier.name,
+        "slug": item.modifier.slug,
+        "type": item.modifier.modifier_type,
+        "value": item.modifier.multiplier_value,
+        "description": item.modifier.description or item.modifier.name,
+        "price": item.price,
+    } for item in items]
+
+    return Response({"items": data}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def shop_buy_api_view(request):
+    """
+    Purchase an item from the shop using Stars.
+
+    Request body:
+        ``item_id`` (int): The ID of the ShopItem to purchase.
+
+    Returns:
+        Response: Success or error message with updated balance.
+    """
+    item_id = request.data.get('item_id')
+    if not item_id:
+        return Response({"error": "item_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    shop_item = get_object_or_404(ShopItem, id=item_id, is_available=True)
+
+    stars, _ = UserStars.objects.get_or_create(user=request.user)
+
+    if stars.balance < shop_item.price:
+        return Response({
+            "error": "Insufficient stars.",
+            "balance": stars.balance,
+            "price": shop_item.price,
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    # Deduct stars
+    stars.spend_stars(shop_item.price)
+
+    # Add to user inventory
+    inv_item, created = UserInventory.objects.get_or_create(
+        user=request.user,
+        modifier=shop_item.modifier,
+        defaults={'quantity': 1}
+    )
+    if not created:
+        inv_item.quantity += 1
+        inv_item.save()
+
+    logger.info(
+        "Purchase: user=%s item=%s price=%d new_balance=%d",
+        request.user.username, shop_item.modifier.name, shop_item.price, stars.balance
+    )
+
+    return Response({
+        "success": True,
+        "message": f"Purchased {shop_item.modifier.name}!",
+        "balance": stars.balance,
+        "quantity": inv_item.quantity,
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def shop_admin_grant_api_view(request):
+    """
+    Admin-only endpoint to grant shop items for free (testing purposes).
+
+    Request body:
+        ``item_id`` (int): The ID of the ShopItem to grant.
+
+    Returns:
+        Response: Success or error message with updated balance.
+    """
+    if not request.user.is_superuser:
+        return Response({
+            "error": "Admin access required."
+        }, status=status.HTTP_403_FORBIDDEN)
+
+    item_id = request.data.get('item_id')
+    if not item_id:
+        return Response({"error": "item_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    shop_item = get_object_or_404(ShopItem, id=item_id, is_available=True)
+
+    # Add to user inventory without spending stars
+    inv_item, created = UserInventory.objects.get_or_create(
+        user=request.user,
+        modifier=shop_item.modifier,
+        defaults={'quantity': 1}
+    )
+    if not created:
+        inv_item.quantity += 1
+        inv_item.save()
+
+    stars, _ = UserStars.objects.get_or_create(user=request.user)
+
+    logger.info(
+        "Admin grant: user=%s item=%s",
+        request.user.username, shop_item.modifier.name
+    )
+
+    return Response({
+        "success": True,
+        "message": f"Granted {shop_item.modifier.name} for free!",
+        "balance": stars.balance,
+        "quantity": inv_item.quantity,
+    }, status=status.HTTP_200_OK)

@@ -15,12 +15,12 @@ export default function Login({ onNavigate, onLoginSuccess }) {
 
     try {
       const response = await api.post('/accounts/login/', { username, password });
-      const { access, refresh, needs_onboarding, username: returnedName } = response.data;
+      const { access, refresh, needs_onboarding, username: returnedName, is_staff, is_superuser } = response.data;
       
       localStorage.setItem('access_token', access);
       localStorage.setItem('refresh_token', refresh);
       
-      onLoginSuccess(returnedName || username, needs_onboarding || false);
+      onLoginSuccess(returnedName || username, needs_onboarding || false, is_staff || false, is_superuser || false);
       
     } catch (err) {
       console.error("Axios Auth Error Object:", err);

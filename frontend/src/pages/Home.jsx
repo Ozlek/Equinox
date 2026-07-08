@@ -43,7 +43,7 @@ export default function Home({ onNavigate }) {
               onClick={() => onNavigate('register')}
             >
               <span style={styles.stickyNotePin}>📌</span>
-              <span style={styles.stickyNoteLabel}>Create Student Profile</span>
+              <span style={styles.stickyNoteLabel}>Create Profile</span>
             </button>
           </div>
         </div>

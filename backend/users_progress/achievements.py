@@ -41,8 +41,12 @@ class AchievementRegistry:
         """
         Scans all available badges. If the user meets the condition and 
         doesn't have the badge yet, it unlocks it and returns a list of new unlocks.
+        Also awards 10 Stars per newly unlocked achievement.
         """
+        from accounts.models import UserStars
+        
         newly_unlocked = []
+        stars_awarded = 0
         
         # Get a list of IDs the user already owns to skip redundant checks
         # Convert QuerySet to list for proper 'in' operator support
@@ -61,5 +65,17 @@ class AchievementRegistry:
                     "description": badge_data["description"],
                     "icon": badge_data["icon"]
                 })
+                # Award 10 Stars for unlocking an achievement
+                user_stars, _ = UserStars.objects.get_or_create(user=user)
+                user_stars.add_stars(10)
+                stars_awarded += 10
+                
+        if stars_awarded > 0:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(
+                "Awarded %d stars to user=%s for %d new achievement(s)",
+                stars_awarded, user.username, len(newly_unlocked)
+            )
                 
         return newly_unlocked

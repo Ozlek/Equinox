@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import api from '../api/axios';
 
 export default function Register({ onNavigate, onRegisterSuccess }) {
-  const [formData, setFormData] = useState({ username: '', email: '', password1: '', password2: '' });
+  const [formData, setFormData] = useState({ username: '', email: '', password1: '', password2: '', user_type: 'student' });
   const [fieldErrors, setFieldErrors] = useState(null);
 
   const handleRegisterSubmit = async (e) => {
@@ -23,7 +23,7 @@ export default function Register({ onNavigate, onRegisterSuccess }) {
           localStorage.setItem('access_token', tokenResponse.data.access);
           localStorage.setItem('refresh_token', tokenResponse.data.refresh);
 
-          setTimeout(() => onRegisterSuccess(formData.username), 100);
+          setTimeout(() => onRegisterSuccess(formData.username, response.data), 100);
 
         } catch (tokenErr) {
           console.error("Auto-login after registration failed", tokenErr);
@@ -127,6 +127,21 @@ export default function Register({ onNavigate, onRegisterSuccess }) {
                         onChange={e => setFormData({...formData, password2: e.target.value})} 
                         required 
                       />
+                    </div>
+
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Account Type</label>
+                      <select
+                        style={{
+                          ...styles.inputField,
+                          cursor: 'pointer',
+                        }}
+                        value={formData.user_type}
+                        onChange={e => setFormData({...formData, user_type: e.target.value})}
+                      >
+                        <option value="student">Student</option>
+                        <option value="instructor">Instructor</option>
+                      </select>
                     </div>
 
                     <button type="submit" style={styles.stickyNoteBtn}>

@@ -14,6 +14,10 @@ import PlaythroughChallenge from './pages/Playthrough';
 import Questionnaire from './pages/Questionnaire';
 import Settings from './pages/Settings';
 import Help from './pages/Help';
+import AdminPage from './pages/AdminPage';
+import InstructorPage from './pages/InstructorPage';
+import Profile from './pages/Profile';
+import Shop from './pages/Shop';
 import api from './api/axios';
 import { getCookie } from './utils';
 
@@ -69,6 +73,13 @@ const styles = {
     letterSpacing: '0.05em',
     fontWeight: 'bold',
   },
+  sidebarSeparator: {
+    width: '80%',
+    height: '1px',
+    backgroundColor: '#374151',
+    margin: '8px auto',
+    opacity: 0.5,
+  },
 };
 
 const appLayoutStyles = {
@@ -91,6 +102,9 @@ export default function App() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [sessionDifficulty, setSessionDifficulty] = useState('Intermediate');
+  const [isStaff, setIsStaff] = useState(false);
+  const [isSuperuser, setIsSuperuser] = useState(false);
+  const [userStars, setUserStars] = useState(0);
   
   // ─── NEW PASSWORD RESET ARGUMENT STATES ───
   const [resetParams, setResetParams] = useState({ uid: null, token: null });
@@ -134,17 +148,25 @@ export default function App() {
         if (res.data.authenticated) {
           setUser(res.data.username);
           setNeedsOnboarding(res.data.needs_onboarding);
+          setIsStaff(res.data.is_staff || false);
+          setIsSuperuser(res.data.is_superuser || false);
           setCurrentView('dashboard');
           
-          // Fetch user's grade level
-          return api.get('/accounts/grade/');
+          // Fetch user's grade level and stars balance
+          return Promise.all([
+            api.get('/accounts/grade/'),
+            api.get('/playthrough/stars/')
+          ]);
         } else {
           setCurrentView('home');
         }
       })
       .then(res => {
-        if (res && res.data && res.data.grade_level) {
-          setUserGrade(res.data.grade_level);
+        if (res && res[0] && res[0].data && res[0].data.grade_level) {
+          setUserGrade(res[0].data.grade_level);
+        }
+        if (res && res[1] && res[1].data && res[1].data.balance !== undefined) {
+          setUserStars(res[1].data.balance);
         }
       })
       .catch(() => {
@@ -212,15 +234,34 @@ export default function App() {
     );
   }
 
+  // Sidebar structure:
+  // Main: Dashboard, Catalogue, Progress, Shop
+  // Separator
+  // Role: Instructor, Admin
+  // Separator
+  // Help, Settings (at bottom)
   const sidebarNavItems = [
     { view: 'dashboard', icon: 'grid-1x2-fill', label: 'Dashboard', },
     { view: 'catalogue', icon: 'book-half', label: 'Topic Catalogue' },
     { view: 'progress', icon: 'graph-up-arrow', label: 'Progress History' },
+    { view: 'shop', icon: 'shop', label: 'Shop' },
+    { isSeparator: true },
+    ...(isStaff || isSuperuser ? [{ view: 'instructor', icon: 'easel-fill', label: 'Instructor Portal' }] : []),
+    ...(isSuperuser ? [{ view: 'admin', icon: 'shield-fill-check', label: 'Admin Panel' }] : []),
+    { isSeparator: true },
     { view: 'help', icon: 'question-circle-fill', label: 'Help' },
     { view: 'settings', icon: 'gear-fill', label: 'Settings' },
   ];
 
-  const SidebarLink = ({ view, icon, label, index }) => {
+  const SidebarSeparator = () => (
+    <div style={styles.sidebarSeparator} />
+  );
+
+  const SidebarLink = ({ view, icon, label, index, isSeparator }) => {
+    if (isSeparator) {
+      return <SidebarSeparator />;
+    }
+    
     const isActive = currentView === view;
     const isThisHovered = hoveredLink === view;
     const tabColors = ['#93c5fd', '#86efac', '#fde68a', '#f9a8d4', '#c4b5fd'];
@@ -395,7 +436,11 @@ export default function App() {
           <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '12px' }}>
             {user ? (
               <>
-                <TopbarAction id="profile-status" icon="person-circle" label={`Signed in as: ${user}`} colorClass="text-warning" onClick={() => navigateTo('dashboard')} />
+                <TopbarAction id="profile-status" icon="person-circle" label={`Signed in as: ${user}`} colorClass="text-warning" onClick={() => navigateTo('profile')} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', backgroundColor: '#1f2937', borderRadius: '6px', border: '1px solid #374151' }}>
+                  <span style={{ color: '#fbbf24', fontSize: '1.1rem' }}>⭐</span>
+                  <span style={{ color: '#f7fafc', fontSize: '0.9rem', fontWeight: 'bold', fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif" }}>{userStars.toLocaleString()}</span>
+                </div>
                 <TopbarAction id="logout-trigger" icon="box-arrow-right" label="Logout" colorClass="text-danger" onClick={handleLogout} />
               </>
             ) : (
@@ -419,9 +464,12 @@ export default function App() {
                 onMouseEnter={() => !isMobile && setSidebarExpanded(true)}
                 onMouseLeave={() => !isMobile && setSidebarExpanded(false)}>
               <div style={styles.sidebarInner}>
-                {sidebarNavItems.map((item, index) => (
-                  <SidebarLink key={item.view} view={item.view} icon={item.icon} label={item.label} index={index} />
-                ))}
+                {sidebarNavItems.map((item, index) => {
+                  if (item.isSeparator) {
+                    return <SidebarSeparator key={`sep-${index}`} />;
+                  }
+                  return <SidebarLink key={item.view} view={item.view} icon={item.icon} label={item.label} index={index} />;
+                })}
               </div>
             </div>
 
@@ -448,8 +496,8 @@ export default function App() {
             
             {/* UNAUTHENTICATED ROUTER CORE SWITCHES */}
             {!user && currentView === 'home' && <Home onNavigate={navigateTo} />}
-            {!user && currentView === 'login' && <Login onNavigate={navigateTo} onLoginSuccess={(name, needsOnboard) => { setUser(name); setNeedsOnboarding(needsOnboard); setCurrentView('dashboard'); }} />}
-            {!user && currentView === 'register' && <Register onNavigate={navigateTo} onRegisterSuccess={(name) => { setUser(name); setNeedsOnboarding(true); setCurrentView('dashboard'); }} />}
+            {!user && currentView === 'login' && <Login onNavigate={navigateTo} onLoginSuccess={(name, needsOnboard, isStaff, isSuperuser) => { setUser(name); setNeedsOnboarding(needsOnboard); setIsStaff(isStaff); setIsSuperuser(isSuperuser); setCurrentView('dashboard'); }} />}
+            {!user && currentView === 'register' && <Register onNavigate={navigateTo} onRegisterSuccess={(name, data) => { setUser(name); setNeedsOnboarding(true); setIsStaff(data?.is_staff || false); setIsSuperuser(data?.is_superuser || false); setCurrentView('dashboard'); }} />}
             
             {/* ─── ADDED RECOVERY COMPONENTS HERE ─── */}
             {!user && currentView === 'forgot-password' && <ForgotPassword onNavigate={navigateTo} />}
@@ -489,9 +537,17 @@ export default function App() {
                 
                 {currentView === 'progress' && <ProgressHistory onNavigate={navigateTo} />}
 
+                {currentView === 'profile' && <Profile onNavigate={navigateTo} />}
+
                 {currentView === 'settings' && <Settings onNavigate={navigateTo} />}
 
                 {currentView === 'help' && <Help onNavigate={navigateTo} />}
+
+                {currentView === 'shop' && <Shop onNavigate={navigateTo} isSuperuser={isSuperuser} />}
+
+                {currentView === 'instructor' && (isStaff || isSuperuser) && <InstructorPage />}
+
+                {currentView === 'admin' && isSuperuser && <AdminPage />}
                 
                 {currentView === 'playthrough' && (
                   <PlaythroughChallenge 

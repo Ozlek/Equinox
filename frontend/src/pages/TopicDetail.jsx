@@ -749,8 +749,8 @@ const styles = {
   },
 
   gradeDropdown: {
-    backgroundColor: '#e2e8f0',
-    color: '#475569',
+    backgroundColor: '#fefdfb',
+    color: '#1e293b',
     padding: '0.3rem 0.6rem',
     borderRadius: '3px',
     fontSize: '0.65rem',

@@ -376,13 +376,14 @@ const styles = {
     width: '100%',
     padding: '0.5rem',
     backgroundColor: 'rgba(255,255,255,0.5)',
-    border: '1px solid',
+    border: '1px solid #cbd5e1',
     borderRadius: '2px',
     fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontSize: '0.9rem',
     cursor: 'pointer',
     boxSizing: 'border-box',
     outline: 'none',
+    color: '#1e293b',
   },
 
   stickyNoteActionBtn: {

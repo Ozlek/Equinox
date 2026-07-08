@@ -97,7 +97,8 @@ def leaderboard_api(request, topic_id):
         topic_id (int): PK of the Topic.
 
     Returns:
-        Response: List of leaderboard entries with username, score, and gamified_score.
+        Response: Dict with ``leaderboard`` (list of entries) and
+        ``current_user_rank`` (int or None).
     """
     from topics.models import Topic
     from django.db.models import Max
@@ -123,16 +124,33 @@ def leaderboard_api(request, topic_id):
     users = User.objects.filter(id__in=user_ids)
     user_map = {u.id: u.username for u in users}
 
-    data = [{
-        "user_id": entry['user'],
-        "username": user_map.get(entry['user'], 'Unknown'),
-        "score": entry['best_score'],
-        "gamified_score": entry['best_gamified'],
-        "total_questions": entry['total_questions'],
-        "completed_at": entry['latest_completed'].isoformat() if entry['latest_completed'] else None,
-    } for entry in best_progress]
+    current_user_id = request.user.id
+    current_user_rank = None
 
-    return Response(data)
+    leaderboard = []
+    for idx, entry in enumerate(best_progress):
+        user_id = entry['user']
+        username = user_map.get(user_id, 'Unknown')
+        is_current_user = user_id == current_user_id
+
+        if is_current_user:
+            current_user_rank = idx + 1
+
+        leaderboard.append({
+            "user_id": user_id,
+            "username": username,
+            "is_current_user": is_current_user,
+            "score": entry['best_score'],
+            "best_score": entry['best_score'],     # alias for frontend consistency
+            "gamified_score": entry['best_gamified'],
+            "total_questions": entry['total_questions'],
+            "completed_at": entry['latest_completed'].isoformat() if entry['latest_completed'] else None,
+        })
+
+    return Response({
+        "leaderboard": leaderboard,
+        "current_user_rank": current_user_rank,
+    })
 
 
 @api_view(['GET'])

@@ -30,12 +30,15 @@ const getRecommendationIcon = (type) => {
   return icons[type] || '💡';
 };
 
+const ITEMS_PER_PAGE = 10;
+
 export default function ProgressHistory({ onNavigate }) {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [adaptiveAnalysis, setAdaptiveAnalysis] = useState(null);
   const [showAnalysis, setShowAnalysis] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     api.get('/progress/')
@@ -219,6 +222,11 @@ export default function ProgressHistory({ onNavigate }) {
           <div style={styles.ruledTableWrapper}>
             <div style={styles.redMargin} />
             <div style={styles.tableContent}>
+              <div style={styles.pagination}>
+                <button style={{...styles.paginationBtn, opacity: currentPage <= 1 ? 0.4 : 1}} disabled={currentPage <= 1} onClick={() => setCurrentPage(p => p - 1)}>◀ Previous</button>
+                <span style={styles.paginationText}>Page {currentPage} of {Math.max(1, Math.ceil(records.length / ITEMS_PER_PAGE))}</span>
+                <button style={{...styles.paginationBtn, opacity: currentPage >= Math.ceil(records.length / ITEMS_PER_PAGE) ? 0.4 : 1}} disabled={currentPage >= Math.ceil(records.length / ITEMS_PER_PAGE)} onClick={() => setCurrentPage(p => p + 1)}>Next ▶</button>
+              </div>
               <h3 style={styles.tableHeading}>Session History</h3>
               <table style={styles.table}>
                 <thead>
@@ -232,7 +240,7 @@ export default function ProgressHistory({ onNavigate }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {records.map((r) => {
+                  {records.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((r) => {
                     const tierColor = getTierColor(r.difficulty_achieved);
                     const accuracyPercentage = r.total_questions > 0 ? (r.score / r.total_questions) * 100 : 0;
                     const accuracyColor = accuracyPercentage >= 75 ? '#16a34a' : accuracyPercentage >= 50 ? '#ca8a04' : '#dc2626';
@@ -710,6 +718,34 @@ const styles = {
     display: 'block',
     margin: '1.5rem auto 0',
     transition: 'all 0.15s ease',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+  },
+
+  // ── Pagination ──
+  pagination: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: "12px",
+    padding: "0.75rem 0",
+    flexWrap: "wrap",
+  },
+  paginationBtn: {
+    backgroundColor: "#3b82f6",
+    color: "#fff",
+    border: "none",
+    padding: "0.4rem 0.9rem",
+    borderRadius: "6px",
+    fontSize: "0.8rem",
+    fontWeight: "bold",
+    cursor: "pointer",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+    transition: "all 0.15s ease",
+  },
+  paginationText: {
+    color: "#475569",
+    fontSize: "0.8rem",
+    fontWeight: "600",
     fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
   },
 

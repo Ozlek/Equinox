@@ -233,6 +233,19 @@ class UserInventory(models.Model):
         return f"{self.user.username} owns {self.quantity}x {self.modifier.name}"
 
 
+class ShopItem(models.Model):
+    """Defines an item available for purchase in the shop with Stars currency."""
+    modifier = models.ForeignKey(GamifiedModifier, on_delete=models.CASCADE, related_name='shop_items')
+    price = models.IntegerField(help_text="Cost in Stars")
+    is_available = models.BooleanField(default=True, help_text="Whether this item is currently available in the shop")
+
+    class Meta:
+        verbose_name_plural = "Shop Items"
+
+    def __str__(self):
+        return f"{self.modifier.name} - {self.price}⭐"
+
+
 # ==========================================
 # PLAYTHROUGH SESSION MODEL
 # ==========================================
