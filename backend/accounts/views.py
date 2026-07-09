@@ -6,9 +6,10 @@ from rest_framework import status
 from django.contrib.auth import login, logout, authenticate
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from .forms import RegisterForm
 from .models import UserProfile
-from playthrough.models import Question, Topic
+from playthrough.models import Question, Topic, QuestionChangeRequest
 
 
 # ---------------------------------------------------------------------------
@@ -319,13 +320,35 @@ def admin_topics_list(request):
     return Response(data)
 
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def admin_questions_list(request):
     """
-    List questions with optional filters: ?topic_id=&grade_level=
+    List questions or create a new question (admin, direct).
+    GET:  List questions with optional filters: ?topic_id=&grade_level=
+    POST: Create a new question directly (bypasses approval system)
     """
     _require_admin(request)
+
+    if request.method == 'POST':
+        data = request.data
+        topic = get_object_or_404(Topic, id=data.get('topic_id'))
+        question = Question.objects.create(
+            topic=topic,
+            question_text=data.get('question_text', ''),
+            question_solution=data.get('question_solution', ''),
+            choice_a=data.get('choice_a'),
+            choice_b=data.get('choice_b'),
+            choice_c=data.get('choice_c'),
+            choice_d=data.get('choice_d'),
+            correct_answer=data.get('correct_answer', ''),
+            grade_level=data.get('grade_level', 1),
+            difficulty=data.get('difficulty', 1.0),
+            source=data.get('source', 'seed'),
+            is_word_problem=data.get('is_word_problem', True),
+            is_verified=data.get('is_verified', False),
+        )
+        return Response({"id": question.id, "message": "Question created"}, status=status.HTTP_201_CREATED)
 
     qs = Question.objects.select_related('topic').all().order_by('id')
 
@@ -352,36 +375,17 @@ def admin_questions_list(request):
         "difficulty": q.difficulty,
         "source": q.source,
         "is_word_problem": q.is_word_problem,
+        "is_verified": q.is_verified,
     } for q in qs]
 
     return Response(data)
 
 
-@api_view(['POST', 'PUT', 'DELETE'])
+@api_view(['PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
-def admin_question_detail(request, question_id=None):
-    """Create (POST), update (PUT), or delete (DELETE) a question."""
+def admin_question_detail(request, question_id):
+    """Update (PUT) or delete (DELETE) a question (admin, direct)."""
     _require_admin(request)
-
-    if request.method == 'POST':
-        # Create
-        data = request.data
-        topic = get_object_or_404(Topic, id=data.get('topic_id'))
-        question = Question.objects.create(
-            topic=topic,
-            question_text=data.get('question_text', ''),
-            question_solution=data.get('question_solution', ''),
-            choice_a=data.get('choice_a'),
-            choice_b=data.get('choice_b'),
-            choice_c=data.get('choice_c'),
-            choice_d=data.get('choice_d'),
-            correct_answer=data.get('correct_answer', ''),
-            grade_level=data.get('grade_level', 1),
-            difficulty=data.get('difficulty', 1.0),
-            source=data.get('source', 'seed'),
-            is_word_problem=data.get('is_word_problem', True),
-        )
-        return Response({"id": question.id, "message": "Question created"}, status=status.HTTP_201_CREATED)
 
     question = get_object_or_404(Question, id=question_id)
 
@@ -411,6 +415,8 @@ def admin_question_detail(request, question_id=None):
             question.source = data['source']
         if 'is_word_problem' in data:
             question.is_word_problem = data['is_word_problem']
+        if 'is_verified' in data:
+            question.is_verified = data['is_verified']
         question.save()
         return Response({"message": "Question updated"})
 
@@ -454,20 +460,199 @@ def admin_topic_detail(request, topic_id=None):
     return Response({"message": "Topic deleted"}, status=status.HTTP_200_OK)
 
 
+# ---------------------------------------------------------------------------
+# Admin — Change Request Management
+# ---------------------------------------------------------------------------
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_change_requests_list(request):
+    """List all change requests, optionally filtered by status."""
+    _require_admin(request)
+
+    qs = QuestionChangeRequest.objects.select_related(
+        'submitted_by', 'reviewed_by', 'question'
+    ).all()
+
+    status_filter = request.query_params.get('status')
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+
+    data = [{
+        "id": cr.id,
+        "change_type": cr.change_type,
+        "proposed_data": cr.proposed_data,
+        "submitted_by": cr.submitted_by.username,
+        "submitted_by_id": cr.submitted_by.id,
+        "status": cr.status,
+        "reviewed_by": cr.reviewed_by.username if cr.reviewed_by else None,
+        "reviewed_at": cr.reviewed_at.isoformat() if cr.reviewed_at else None,
+        "review_notes": cr.review_notes,
+        "question_id": cr.question_id,
+        "created_at": cr.created_at.isoformat(),
+    } for cr in qs]
+
+    return Response(data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def admin_change_request_review(request, request_id):
+    """Approve or reject a change request."""
+    _require_admin(request)
+
+    change_request = get_object_or_404(QuestionChangeRequest, id=request_id)
+
+    if change_request.status != 'pending':
+        return Response({
+            "error": f"This request has already been {change_request.status}."
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    action = request.data.get('action')  # 'approve' or 'reject'
+    review_notes = request.data.get('review_notes', '')
+
+    if action not in ('approve', 'reject'):
+        return Response({"error": "action must be 'approve' or 'reject'"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if action == 'approve':
+        try:
+            _apply_change_request(change_request)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    change_request.status = 'approved' if action == 'approve' else 'rejected'
+    change_request.reviewed_by = request.user
+    change_request.reviewed_at = timezone.now()
+    change_request.review_notes = review_notes
+    change_request.save()
+
+    return Response({
+        "message": f"Change request {change_request.status}.",
+        "request_id": change_request.id,
+        "status": change_request.status,
+    })
+
+
+def _apply_change_request(change_request):
+    """Apply the approved change request to the Question table."""
+    data = change_request.proposed_data
+
+    if change_request.change_type == 'add':
+        topic = get_object_or_404(Topic, id=data.get('topic_id'))
+        question = Question.objects.create(
+            topic=topic,
+            question_text=data.get('question_text', ''),
+            question_solution=data.get('question_solution', ''),
+            choice_a=data.get('choice_a'),
+            choice_b=data.get('choice_b'),
+            choice_c=data.get('choice_c'),
+            choice_d=data.get('choice_d'),
+            correct_answer=data.get('correct_answer', ''),
+            grade_level=data.get('grade_level', 1),
+            difficulty=data.get('difficulty', 1.0),
+            source='seed',
+            is_word_problem=data.get('is_word_problem', True),
+            is_verified=False,
+        )
+        change_request.question = question
+
+    elif change_request.change_type == 'edit':
+        question = change_request.question
+        if not question:
+            raise ValueError("Cannot edit: the original question no longer exists.")
+        if 'question_text' in data:
+            question.question_text = data['question_text']
+        if 'question_solution' in data:
+            question.question_solution = data['question_solution']
+        if 'choice_a' in data:
+            question.choice_a = data['choice_a']
+        if 'choice_b' in data:
+            question.choice_b = data['choice_b']
+        if 'choice_c' in data:
+            question.choice_c = data['choice_c']
+        if 'choice_d' in data:
+            question.choice_d = data['choice_d']
+        if 'correct_answer' in data:
+            question.correct_answer = data['correct_answer']
+        if 'grade_level' in data:
+            question.grade_level = data['grade_level']
+        if 'difficulty' in data:
+            question.difficulty = data['difficulty']
+        if 'is_word_problem' in data:
+            question.is_word_problem = data['is_word_problem']
+        question.save()
+
+    elif change_request.change_type == 'delete':
+        question = change_request.question
+        if not question:
+            raise ValueError("Cannot delete: the question no longer exists.")
+        question.delete()
+
+    else:
+        raise ValueError(f"Unknown change type: {change_request.change_type}")
+
+
+# ---------------------------------------------------------------------------
+# Admin — Verification Toggle
+# ---------------------------------------------------------------------------
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def admin_toggle_verification(request, question_id):
+    """Toggle the is_verified flag on a question (admin)."""
+    _require_admin(request)
+
+    question = get_object_or_404(Question, id=question_id)
+    question.is_verified = not question.is_verified
+    question.save()
+
+    return Response({
+        "id": question.id,
+        "is_verified": question.is_verified,
+        "message": f"Question verification set to {question.is_verified}.",
+    })
+
+
 # ===========================================================================
 # INSTRUCTOR ENDPOINTS — instructors & admins only
 # ===========================================================================
 
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def instructor_questions_list(request):
     """
-    List questions (same as admin but available to instructors).
-    Filters: ?topic_id=&grade_level=
+    List questions or create a change request (instructor).
+    GET:  List questions (filters: ?topic_id=&grade_level=)
+    POST: Submit a change request to add a new question
     """
     _require_instructor(request)
 
+    if request.method == 'POST':
+        data = request.data
+        change_request = QuestionChangeRequest.objects.create(
+            change_type='add',
+            proposed_data={
+                'topic_id': data.get('topic_id'),
+                'question_text': data.get('question_text', ''),
+                'question_solution': data.get('question_solution', ''),
+                'choice_a': data.get('choice_a'),
+                'choice_b': data.get('choice_b'),
+                'choice_c': data.get('choice_c'),
+                'choice_d': data.get('choice_d'),
+                'correct_answer': data.get('correct_answer', ''),
+                'grade_level': data.get('grade_level', 1),
+                'difficulty': data.get('difficulty', 1.0),
+                'is_word_problem': data.get('is_word_problem', True),
+            },
+            submitted_by=request.user,
+        )
+        return Response({
+            "request_id": change_request.id,
+            "message": "Question addition request submitted for admin review.",
+        }, status=status.HTTP_201_CREATED)
+
+    # GET - list questions
     qs = Question.objects.select_related('topic').all().order_by('id')
 
     topic_id = request.query_params.get('topic_id')
@@ -493,62 +678,120 @@ def instructor_questions_list(request):
         "difficulty": q.difficulty,
         "source": q.source,
         "is_word_problem": q.is_word_problem,
+        "is_verified": q.is_verified,
     } for q in qs]
 
     return Response(data)
 
 
-@api_view(['POST', 'PUT', 'DELETE'])
+@api_view(['PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
-def instructor_question_detail(request, question_id=None):
-    """Create (POST), update (PUT), or delete (DELETE) a question (instructor)."""
+def instructor_question_detail(request, question_id):
+    """
+    Update (PUT) or delete (DELETE) a question (instructor).
+    
+    Instead of applying changes directly, this creates a QuestionChangeRequest
+    that an admin must approve.
+    """
     _require_instructor(request)
-
-    if request.method == 'POST':
-        data = request.data
-        topic = get_object_or_404(Topic, id=data.get('topic_id'))
-        question = Question.objects.create(
-            topic=topic,
-            question_text=data.get('question_text', ''),
-            question_solution=data.get('question_solution', ''),
-            choice_a=data.get('choice_a'),
-            choice_b=data.get('choice_b'),
-            choice_c=data.get('choice_c'),
-            choice_d=data.get('choice_d'),
-            correct_answer=data.get('correct_answer', ''),
-            grade_level=data.get('grade_level', 1),
-            difficulty=data.get('difficulty', 1.0),
-            source='seed',
-            is_word_problem=data.get('is_word_problem', True),
-        )
-        return Response({"id": question.id, "message": "Question created"}, status=status.HTTP_201_CREATED)
 
     question = get_object_or_404(Question, id=question_id)
 
     if request.method == 'PUT':
         data = request.data
-        if 'question_text' in data:
-            question.question_text = data['question_text']
-        if 'question_solution' in data:
-            question.question_solution = data['question_solution']
-        if 'choice_a' in data:
-            question.choice_a = data['choice_a']
-        if 'choice_b' in data:
-            question.choice_b = data['choice_b']
-        if 'choice_c' in data:
-            question.choice_c = data['choice_c']
-        if 'choice_d' in data:
-            question.choice_d = data['choice_d']
-        if 'correct_answer' in data:
-            question.correct_answer = data['correct_answer']
-        if 'grade_level' in data:
-            question.grade_level = data['grade_level']
-        if 'difficulty' in data:
-            question.difficulty = data['difficulty']
-        if 'is_word_problem' in data:
-            question.is_word_problem = data['is_word_problem']
-        question.save()
-        return Response({"message": "Question updated"})
+        # Build proposed changes (only include what's being changed)
+        proposed_data = {}
+        for field in ['question_text', 'question_solution', 'choice_a', 'choice_b',
+                       'choice_c', 'choice_d', 'correct_answer', 'grade_level',
+                       'difficulty', 'is_word_problem', 'topic_id']:
+            if field in data:
+                proposed_data[field] = data[field]
+        proposed_data['id'] = question_id
 
-    question.delete()
-    return Response({"message": "Question deleted"}, status=status.HTTP_200_OK)
+        change_request = QuestionChangeRequest.objects.create(
+            question=question,
+            change_type='edit',
+            proposed_data=proposed_data,
+            submitted_by=request.user,
+        )
+        return Response({
+            "request_id": change_request.id,
+            "message": "Question edit request submitted for admin review.",
+        })
+
+    # DELETE
+    change_request = QuestionChangeRequest.objects.create(
+        question=question,
+        change_type='delete',
+        proposed_data={"id": question_id},
+        submitted_by=request.user,
+    )
+    return Response({
+        "request_id": change_request.id,
+        "message": "Question deletion request submitted for admin review.",
+    }, status=status.HTTP_200_OK)
+
+
+# ---------------------------------------------------------------------------
+# Instructor — View their own change requests
+# ---------------------------------------------------------------------------
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def instructor_my_change_requests(request):
+    """List the current user's own change requests."""
+    _require_instructor(request)
+
+    qs = QuestionChangeRequest.objects.filter(
+        submitted_by=request.user
+    ).select_related('question', 'reviewed_by')
+
+    data = [{
+        "id": cr.id,
+        "change_type": cr.change_type,
+        "proposed_data": cr.proposed_data,
+        "status": cr.status,
+        "reviewed_by": cr.reviewed_by.username if cr.reviewed_by else None,
+        "reviewed_at": cr.reviewed_at.isoformat() if cr.reviewed_at else None,
+        "review_notes": cr.review_notes,
+        "question_id": cr.question_id,
+        "created_at": cr.created_at.isoformat(),
+    } for cr in qs]
+
+    return Response(data)
+
+
+# ---------------------------------------------------------------------------
+# Instructor — Verification Toggle
+# ---------------------------------------------------------------------------
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def instructor_toggle_verification(request, question_id):
+    """Toggle the is_verified flag on a question (instructor/admin)."""
+    _require_instructor(request)
+
+    question = get_object_or_404(Question, id=question_id)
+    question.is_verified = not question.is_verified
+    question.save()
+
+    return Response({
+        "id": question.id,
+        "is_verified": question.is_verified,
+        "message": f"Question verification set to {question.is_verified}.",
+    })
+
+
+# ---------------------------------------------------------------------------
+# Admin — Pending Requests Count (for badge/notification)
+# ---------------------------------------------------------------------------
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_pending_count(request):
+    """Return the count of pending change requests."""
+    _require_admin(request)
+
+    count = QuestionChangeRequest.objects.filter(status='pending').count()
+
+    return Response({"pending_count": count})

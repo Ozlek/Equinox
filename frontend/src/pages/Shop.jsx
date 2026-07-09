@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "../api/axios";
+import { useConfirmDialog } from "../components/ConfirmDialog";
 
 export default function Shop({ onNavigate, isSuperuser }) {
   const [items, setItems] = useState([]);
@@ -8,6 +9,7 @@ export default function Shop({ onNavigate, isSuperuser }) {
   const [purchasing, setPurchasing] = useState(null);
   const [granting, setGranting] = useState(null);
   const [message, setMessage] = useState(null);
+  const { confirm, ConfirmDialogComponent } = useConfirmDialog();
 
   useEffect(() => {
     fetchShopData();
@@ -33,7 +35,11 @@ export default function Shop({ onNavigate, isSuperuser }) {
       setMessage({ type: "error", text: "Not enough stars!" });
       return;
     }
-    if (!window.confirm(`Purchase ${item.name} for ${item.price} ⭐?`)) return;
+    const ok = await confirm(`Purchase ${item.name} for ${item.price} ⭐?`, {
+      title: "Confirm Purchase",
+      confirmText: "Buy",
+    });
+    if (!ok) return;
 
     setPurchasing(item.id);
     try {
@@ -48,7 +54,11 @@ export default function Shop({ onNavigate, isSuperuser }) {
   };
 
   const handleAdminGrant = async (item) => {
-    if (!window.confirm(`Grant ${item.name} to yourself for free?`)) return;
+    const ok = await confirm(`Grant ${item.name} to yourself for free?`, {
+      title: "Grant Item",
+      confirmText: "Grant",
+    });
+    if (!ok) return;
 
     setGranting(item.id);
     try {
@@ -85,6 +95,7 @@ export default function Shop({ onNavigate, isSuperuser }) {
   return (
     <div style={styles.container}>
       <style>{`@keyframes diagonalSlide { 0% { background-position: 0 0, 0 0, 0 0; } 100% { background-position: -400px 400px, 0 0, 0 0; } }`}</style>
+      <ConfirmDialogComponent />
       <div style={styles.notebookCover}>
         <div style={styles.spiralBinding}>
           {[...Array(8)].map((_, i) => (

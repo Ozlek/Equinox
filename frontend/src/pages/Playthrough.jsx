@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import MathKeypad from './MathKeypad';
 import api from '../api/axios';
+import { useConfirmDialog } from '../components/ConfirmDialog';
 
 const getTierColor = (tier) => {
   const colors = { 'Novice': '#16a34a', 'Intermediate': '#2563eb', 'Advanced': '#d97706', 'Expert': '#dc2626' };
@@ -157,6 +158,7 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
   const timerRef = useRef(null);
   const currentSolutionRef = useRef(null);
   const currentChoicesRef = useRef(null);
+  const { confirm, ConfirmDialogComponent } = useConfirmDialog();
 
   const getRequestParams = (isFirstLoad = false) => {
     const modQuery = activeMods.length > 0 ? `&mods=${activeMods.join(',')}` : '';
@@ -240,13 +242,17 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
   const handleInsertSymbol = (symbol) => setSelectedAnswer(prev => prev + symbol);
 
   const handleQuitChallenge = async () => {
-    if (window.confirm("Are you sure? Progress will be lost if you quit now.")) {
-      try {
-        await api.post('/playthrough/quit/');
-        window.location.href = '/';
-      } catch (error) {
-        console.error("Failed to quit challenge:", error);
-      }
+    const ok = await confirm("Are you sure? Progress will be lost if you quit now.", {
+      title: "Quit Challenge",
+      confirmText: "Quit",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await api.post('/playthrough/quit/');
+      window.location.href = '/';
+    } catch (error) {
+      console.error("Failed to quit challenge:", error);
     }
   };
 
@@ -326,6 +332,7 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
   if (gameState?.is_completed) {
     return (
       <div style={styles.container}>
+        <ConfirmDialogComponent />
         <div style={styles.reportPaper}>
           <div style={styles.reportHeader}>
             <div style={styles.punchedHoles}>
@@ -393,6 +400,7 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
 
   return (
     <div style={styles.container}>
+      <ConfirmDialogComponent />
       <div style={styles.reportPaper}>
 
         {/* ── Header with punched holes ── */}

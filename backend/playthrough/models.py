@@ -44,6 +44,11 @@ class Question(models.Model):
         help_text="Whether this is a word problem (story-based) or direct math problem"
     )
 
+    is_verified = models.BooleanField(
+        default=False,
+        help_text="Whether this question has been verified as correct by an instructor or admin"
+    )
+
     class Meta:
         indexes = [
             models.Index(fields=['topic', 'difficulty']),
@@ -51,6 +56,63 @@ class Question(models.Model):
 
     def __str__(self):
         return self.question_text
+
+
+# ==========================================
+# QUESTION CHANGE REQUEST MODEL
+# ==========================================
+
+class QuestionChangeRequest(models.Model):
+    """
+    Stores change requests submitted by instructors for admin review.
+    
+    Acts like a pull request system — instructors propose changes
+    (add/edit/delete), and admins approve or reject them before
+    they take effect on the Question table.
+    """
+    CHANGE_TYPES = [
+        ('add', 'Add Question'),
+        ('edit', 'Edit Question'),
+        ('delete', 'Delete Question'),
+    ]
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
+    question = models.ForeignKey(
+        Question, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='change_requests'
+    )
+    change_type = models.CharField(max_length=10, choices=CHANGE_TYPES)
+    proposed_data = models.JSONField(
+        help_text="The proposed question data as a JSON object"
+    )
+    submitted_by = models.ForeignKey(
+        User, on_delete=models.CASCADE,
+        related_name='submitted_change_requests'
+    )
+    status = models.CharField(
+        max_length=10, choices=STATUS_CHOICES,
+        default='pending'
+    )
+    reviewed_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='reviewed_change_requests'
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_notes = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.get_change_type_display()} request by {self.submitted_by.username} ({self.status})"
 
 
 # ==========================================

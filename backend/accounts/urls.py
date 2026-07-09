@@ -19,8 +19,14 @@ urlpatterns = [
     path('admin/topics/<int:topic_id>/', views.admin_topic_detail, name='admin_topic_detail'),
     path('admin/questions/', views.admin_questions_list, name='admin_questions_list'),
     path('admin/questions/<int:question_id>/', views.admin_question_detail, name='admin_question_detail'),
+    path('admin/change-requests/pending-count/', views.admin_pending_count, name='admin_pending_count'),
+    path('admin/change-requests/', views.admin_change_requests_list, name='admin_change_requests_list'),
+    path('admin/change-requests/<int:request_id>/review/', views.admin_change_request_review, name='admin_change_request_review'),
+    path('admin/questions/<int:question_id>/toggle-verify/', views.admin_toggle_verification, name='admin_toggle_verification'),
 
     # ── Instructor endpoints ──
     path('instructor/questions/', views.instructor_questions_list, name='instructor_questions_list'),
     path('instructor/questions/<int:question_id>/', views.instructor_question_detail, name='instructor_question_detail'),
+    path('instructor/my-change-requests/', views.instructor_my_change_requests, name='instructor_my_change_requests'),
+    path('instructor/questions/<int:question_id>/toggle-verify/', views.instructor_toggle_verification, name='instructor_toggle_verification'),
 ]

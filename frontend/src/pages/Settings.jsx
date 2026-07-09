@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
+import { useConfirmDialog } from '../components/ConfirmDialog';
 
 export default function Settings({ onNavigate }) {
   const [userInfo, setUserInfo] = useState(null);
@@ -25,6 +26,8 @@ export default function Settings({ onNavigate }) {
   // Inline feedback states
   const [savedSound, setSavedSound] = useState(false);
   const [savedNotifications, setSavedNotifications] = useState(false);
+
+  const { confirm, ConfirmDialogComponent } = useConfirmDialog();
 
   useEffect(() => {
     api.get('/accounts/check-auth/')
@@ -82,8 +85,13 @@ export default function Settings({ onNavigate }) {
       });
   };
 
-  const handleResetAchievements = () => {
-    if (!window.confirm('This will reset all your achievements. Are you sure?')) return;
+  const handleResetAchievements = async () => {
+    const ok = await confirm('This will reset all your achievements. Are you sure?', {
+      title: "Reset Achievements",
+      confirmText: "Reset",
+      danger: true,
+    });
+    if (!ok) return;
     
     api.post('/accounts/reset-achievements/')
       .then(res => {
@@ -134,6 +142,8 @@ export default function Settings({ onNavigate }) {
 
   return (
     <div style={styles.container}>
+      <style>{`@keyframes diagonalSlide { 0% { background-position: 0 0, 0 0, 0 0; } 100% { background-position: -400px 400px, 0 0, 0 0; } }`}</style>
+      <ConfirmDialogComponent />
       <div style={styles.reportPaper}>
 
         {/* ── Header with punched holes ── */}
@@ -156,7 +166,6 @@ export default function Settings({ onNavigate }) {
               ✕
             </button>
           </div>
-          <p style={styles.reportSubtitle}>Account Configuration & Preferences</p>
         </div>
 
         {/* ── Ruled Content Area ── */}
@@ -512,13 +521,6 @@ const styles = {
     fontWeight: 'bold',
     flexShrink: 0,
     fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
-  },
-  reportSubtitle: {
-    margin: '0.5rem 0 0 28px',
-    color: '#94a3b8',
-    fontSize: '0.85rem',
-    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
-    fontStyle: 'italic',
   },
 
   // ── Ruled Content ──
