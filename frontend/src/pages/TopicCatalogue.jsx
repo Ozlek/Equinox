@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
+import { playClick, playTopicSelect } from '../utils/sounds';
 
 export default function TopicCatalogue({ onSelectTopic, userGrade }) {
   const [topics, setTopics] = useState([]);
@@ -156,13 +157,16 @@ export default function TopicCatalogue({ onSelectTopic, userGrade }) {
             </select>
           </div>
 
-          <button 
+<button 
             style={{
               ...styles.stickyNoteActionBtn,
               backgroundColor: color.text,
               color: color.bg,
             }}
-            onClick={() => onSelectTopic(topic.id, currentGrade)}
+            onClick={() => {
+              playTopicSelect();
+              onSelectTopic(topic.id, currentGrade);
+            }}
           >
             Review Topic ➔
           </button>

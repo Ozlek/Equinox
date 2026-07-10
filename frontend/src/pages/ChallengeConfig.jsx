@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
+import { playBegin, playClick, playCheck } from '../utils/sounds';
 
 export default function ChallengeConfigModal({ isOpen, onClose, onLaunch, topicTitle = "Selected Topic" }) {
   const [selectedDifficulty, setSelectedDifficulty] = useState('Intermediate');
@@ -37,7 +38,8 @@ export default function ChallengeConfigModal({ isOpen, onClose, onLaunch, topicT
     }
   }, [isOpen]);
 
-  const toggleModifier = (key) => {
+const toggleModifier = (key) => {
+    playCheck();
     setActiveModifiers(prev => {
       const next = { ...prev, [key]: !prev[key] };
       if (key === 'easy_going' && next.easy_going) {
@@ -81,7 +83,7 @@ export default function ChallengeConfigModal({ isOpen, onClose, onLaunch, topicT
             {/* SECTION 1: DIFFICULTY */}
             <section style={styles.section}>
               <label style={styles.sectionLabel}>1. SELECT BASELINE DIFFICULTY</label>
-              <div style={styles.difficultyGrid}>
+<div style={styles.difficultyGrid}>
                 {difficulties.map((diff) => {
                   const isActive = selectedDifficulty === diff.id;
                   return (
@@ -92,7 +94,10 @@ export default function ChallengeConfigModal({ isOpen, onClose, onLaunch, topicT
                         borderColor: isActive ? diff.color : '#e2e8f0',
                         backgroundColor: isActive ? `${diff.color}10` : '#fefdfb',
                       }}
-                      onClick={() => setSelectedDifficulty(diff.id)}
+                      onClick={() => {
+                        playClick();
+                        setSelectedDifficulty(diff.id);
+                      }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                         <h4 style={{ ...styles.diffTitle, color: isActive ? diff.color : '#1e293b' }}>{diff.label}</h4>
@@ -163,13 +168,17 @@ export default function ChallengeConfigModal({ isOpen, onClose, onLaunch, topicT
           </div>
         </div>
 
-        {/* ── Footer ── */}
+{/* ── Footer ── */}
         <div style={styles.reportFooter}>
           <span>Equinox Challenge Configuration</span>
-          <button style={styles.cancelBtn} onClick={onClose}>Cancel</button>
+          <button style={styles.cancelBtn} onClick={() => {
+            playClick();
+            onClose();
+          }}>Cancel</button>
           <button 
             style={styles.launchBtn} 
             onClick={() => {
+              playBegin();
               const activeModsList = Object.keys(activeModifiers).filter(k => activeModifiers[k]);
               onLaunch(selectedDifficulty, activeModsList, equippedModifierSlug);
             }}

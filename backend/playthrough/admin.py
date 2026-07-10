@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Question, DomainRating, UserSkillProfile, ResponseLog, ResponseLogArchive, GamifiedModifier, UserInventory, PlaythroughSession, ShopItem
+from .models import Question, DomainRating, UserSkillProfile, ResponseLog, ResponseLogArchive, GamifiedModifier, UserInventory, PlaythroughSession, ShopItem, Lesson
 
 
 @admin.register(DomainRating)
@@ -52,6 +52,14 @@ class ResponseLogArchiveAdmin(admin.ModelAdmin):
     list_filter = ('domain', 'date')
     search_fields = ('user__username',)
     date_hierarchy = 'date'
+
+
+@admin.register(Lesson)
+class LessonAdmin(admin.ModelAdmin):
+    list_display = ('title', 'topic', 'grade_level', 'order')
+    list_filter = ('topic', 'grade_level')
+    search_fields = ('title', 'topic__name')
+    ordering = ('topic', 'grade_level', 'order')
 
 
 admin.site.register(Question)

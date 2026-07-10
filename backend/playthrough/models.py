@@ -59,6 +59,47 @@ class Question(models.Model):
 
 
 # ==========================================
+# LESSON MODEL
+# ==========================================
+
+class Lesson(models.Model):
+    """
+    Modular lessons/subtopics for each topic and grade level.
+    
+    Each lesson contains learning objectives, an example problem, and a tip.
+    Lessons are ordered within a topic/grade combination.
+    """
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='lessons')
+    grade_level = models.IntegerField(
+        help_text="Grade level (1-10) this lesson is designed for"
+    )
+    order = models.IntegerField(
+        default=0,
+        help_text="Display order within the topic/grade"
+    )
+    title = models.CharField(max_length=200)
+    objectives = models.JSONField(
+        help_text="List of learning objectives (array of strings)"
+    )
+    example = models.TextField(
+        help_text="Example problem for this lesson"
+    )
+    tip = models.TextField(
+        help_text="Helpful tip for students"
+    )
+
+    class Meta:
+        ordering = ['grade_level', 'order']
+        indexes = [
+            models.Index(fields=['topic', 'grade_level', 'order']),
+        ]
+        unique_together = ('topic', 'grade_level', 'order')
+
+    def __str__(self):
+        return f"{self.topic.name} (Grade {self.grade_level}) - {self.title}"
+
+
+# ==========================================
 # QUESTION CHANGE REQUEST MODEL
 # ==========================================
 
@@ -102,6 +143,63 @@ class QuestionChangeRequest(models.Model):
         User, on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='reviewed_change_requests'
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_notes = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.get_change_type_display()} request by {self.submitted_by.username} ({self.status})"
+
+
+# ==========================================
+# LESSON CHANGE REQUEST MODEL
+# ==========================================
+
+class LessonChangeRequest(models.Model):
+    """
+    Stores change requests submitted by instructors for lesson modifications.
+    
+    Acts like a pull request system — instructors propose changes
+    (add/edit/delete), and admins approve or reject them before
+    they take effect on the Lesson table.
+    """
+    CHANGE_TYPES = [
+        ('add', 'Add Lesson'),
+        ('edit', 'Edit Lesson'),
+        ('delete', 'Delete Lesson'),
+    ]
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
+    lesson = models.ForeignKey(
+        Lesson, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='change_requests'
+    )
+    change_type = models.CharField(max_length=10, choices=CHANGE_TYPES)
+    proposed_data = models.JSONField(
+        help_text="The proposed lesson data as a JSON object"
+    )
+    submitted_by = models.ForeignKey(
+        User, on_delete=models.CASCADE,
+        related_name='submitted_lesson_change_requests'
+    )
+    status = models.CharField(
+        max_length=10, choices=STATUS_CHOICES,
+        default='pending'
+    )
+    reviewed_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='reviewed_lesson_change_requests'
     )
     reviewed_at = models.DateTimeField(null=True, blank=True)
     review_notes = models.TextField(null=True, blank=True)

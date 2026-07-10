@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import MathKeypad from './MathKeypad';
 import api from '../api/axios';
 import { useConfirmDialog } from '../components/ConfirmDialog';
+import { playCorrect, playWrong, playLevelUp, playNotification, playNext, playClick, playCheck, startPlaythroughMusic, stopPlaythroughMusic, useSounds } from '../utils/sounds';
 
 const getTierColor = (tier) => {
   const colors = { 'Novice': '#16a34a', 'Intermediate': '#2563eb', 'Advanced': '#d97706', 'Expert': '#dc2626' };
@@ -138,7 +139,7 @@ const AnalysisPopup = ({ analysis, onClose }) => {
   );
 };
 
-export default function PlaythroughChallenge({ topicId, initialDifficulty, activeMods = [], equippedModifier = '', onNavigate }) {
+export default function PlaythroughChallenge({ topicId, initialDifficulty, activeMods = [], equippedModifier = '', onNavigate, onStarsUpdate }) {
   const [gameState, setGameState] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState('');
   const [feedback, setFeedback] = useState(null);
@@ -152,6 +153,11 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
   const [newAchievements, setNewAchievements] = useState([]);
   const [showSolution, setShowSolution] = useState(false);
   
+  // Track question statistics
+  const [questionsCorrect, setQuestionsCorrect] = useState(0);
+  const [questionsIncorrect, setQuestionsIncorrect] = useState(0);
+  const [starsGained, setStarsGained] = useState(0);
+  
   const [timeLeft, setTimeLeft] = useState(null);
   const isTimed = activeMods.includes('timed');
   const isSubmitting = useRef(false);
@@ -159,6 +165,21 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
   const currentSolutionRef = useRef(null);
   const currentChoicesRef = useRef(null);
   const { confirm, ConfirmDialogComponent } = useConfirmDialog();
+  const musicStartedRef = useRef(false);
+  
+  // Start background music when playthrough begins (only once)
+  useEffect(() => {
+    if (gameState && !gameState.is_completed && !musicStartedRef.current) {
+      musicStartedRef.current = true;
+      startPlaythroughMusic();
+    }
+    return () => {
+      if (gameState?.is_completed) {
+        stopPlaythroughMusic();
+        musicStartedRef.current = false;
+      }
+    };
+  }, [gameState]);
 
   const getRequestParams = (isFirstLoad = false) => {
     const modQuery = activeMods.length > 0 ? `&mods=${activeMods.join(',')}` : '';
@@ -174,7 +195,7 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
       const response = await api.get(`/playthrough/sessions/${topicId}/${getRequestParams(isFirstLoad)}`);
       const data = response.data;
 
-      if (data.session_complete || data.status === 'completed' || data.is_finished) {
+if (data.session_complete || data.status === 'completed' || data.is_finished) {
         if (data.new_achievements && data.new_achievements.length > 0) {
           console.log('Session complete - showing achievements:', data.new_achievements);
           setNewAchievements(data.new_achievements);
@@ -187,11 +208,21 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
           setTimeout(() => setShowAnalysisPopup(true), 1500);
         }
         
+        // Capture stars gained from session completion
+        if (data.stars_gained) {
+          setStarsGained(data.stars_gained);
+        }
+        
         setGameState({ 
-          is_completed: false,
+          is_completed: true,
           final_score: data.final_gamified_score || 0,
-          waiting_for_popups: true
+          stars_gained: data.stars_gained || 0
         });
+        
+        // Update stars in parent component
+        if (onStarsUpdate && data.stars_gained) {
+          onStarsUpdate(data.stars_gained);
+        }
       } else {
         setGameState(data);
         currentSolutionRef.current = data.question_solution || null;
@@ -256,7 +287,7 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
     }
   };
 
-  const submitAnswer = async (overrideAnswer = null, isTimeout = false) => {
+const submitAnswer = async (overrideAnswer = null, isTimeout = false) => {
     const finalAnswer = isTimeout ? 'TIMEOUT_NO_ANSWER' : (overrideAnswer || selectedAnswer);
     setSubmissionError(null);
 
@@ -272,9 +303,32 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
       console.log('Submit answer response:', data);
       setFeedback(data);
       
-      if (data.new_achievements && data.new_achievements.length > 0) {
+      // Track question statistics
+      if (data.is_correct) {
+        setQuestionsCorrect(prev => prev + 1);
+      } else if (!data.timeout) {
+        setQuestionsIncorrect(prev => prev + 1);
+      }
+      
+      // Track stars gained
+      if (data.stars_gained) {
+        setStarsGained(prev => prev + data.stars_gained);
+      }
+      
+      // Play sound effects based on answer result
+      if (data.is_correct) {
+        playCorrect();
+        if (data.new_achievements && data.new_achievements.length > 0) {
+          playLevelUp();
+        }
+      } else if (!data.timeout) {
+        playWrong();
+      }
+      
+if (data.new_achievements && data.new_achievements.length > 0) {
         console.log('Showing achievements popup:', data.new_achievements);
         setNewAchievements(data.new_achievements);
+        playNotification();
         setShowAchievementsPopup(true);
       } else {
         console.log('No new achievements in response');
@@ -283,6 +337,7 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
       if (data.adaptive_analysis && data.adaptive_analysis.recommendations) {
         console.log('Showing analysis popup');
         setAnalysisData(data.adaptive_analysis);
+        playNotification();
         if (data.session_complete || data.is_finished) {
           setTimeout(() => setShowAnalysisPopup(true), 500);
         }
@@ -290,14 +345,22 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
         console.log('No adaptive analysis in response');
       }
       
-      if (data.is_correct && data.current_streak > 4) setShowStreakPopup(true);
+if (data.is_correct && data.current_streak > 4) {
+        playNotification();
+        setShowStreakPopup(true);
+      }
       
       if (data.session_complete || data.is_finished) {
         console.log('Session complete - not fetching next question');
         setGameState({ 
           is_completed: true, 
-          final_score: data.final_gamified_score || data.gamified_score || 0 
+          final_score: data.final_gamified_score || data.gamified_score || 0,
+          stars_gained: data.stars_gained || 0
         });
+        // Update stars in parent component
+        if (onStarsUpdate && data.stars_gained) {
+          onStarsUpdate(data.stars_gained);
+        }
         return;
       }
     } catch (error) {
@@ -329,7 +392,12 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
     return answerLetter;
   };
 
-  if (gameState?.is_completed) {
+if (gameState?.is_completed) {
+    const totalQuestions = questionsCorrect + questionsIncorrect;
+    const accuracy = totalQuestions > 0 ? Math.round((questionsCorrect / totalQuestions) * 100) : 0;
+    // Calculate stars gained from final score (1 star per 5000 points)
+    const calculatedStarsGained = Math.floor(gameState.final_score / 5000);
+    
     return (
       <div style={styles.container}>
         <ConfirmDialogComponent />
@@ -351,10 +419,54 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
               <p style={{ textAlign: 'center', color: '#64748b', margin: '0 0 1rem 0', fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif", fontSize: '1rem' }}>
                 Your performance data has been safely recorded.
               </p>
+              
+              {/* Final Score */}
               <div style={{ padding: '1.5rem', backgroundColor: '#f8fafc', borderRadius: '8px', textAlign: 'center', margin: '1rem 0', border: '1px solid #e2e8f0' }}>
                 <span style={{ fontSize: '0.8rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif" }}>Final Score</span>
                 <h1 style={{ color: '#16a34a', margin: '0.5rem 0', fontFamily: "'Caveat', 'Segoe UI', system-ui, sans-serif", fontSize: '2.5rem' }}>{gameState.final_score.toLocaleString()} PTS</h1>
               </div>
+              
+              {/* Question Statistics */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', margin: '1.5rem 0' }}>
+                <div style={{ backgroundColor: '#f0fdf4', padding: '1rem', borderRadius: '8px', textAlign: 'center', border: '1px solid #86efac' }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#16a34a', fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif" }}>{questionsCorrect}</div>
+                  <div style={{ fontSize: '0.8rem', color: '#64748b', fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif" }}>Correct</div>
+                </div>
+                <div style={{ backgroundColor: '#fef2f2', padding: '1rem', borderRadius: '8px', textAlign: 'center', border: '1px solid #fca5a5' }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#dc2626', fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif" }}>{questionsIncorrect}</div>
+                  <div style={{ fontSize: '0.8rem', color: '#64748b', fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif" }}>Incorrect</div>
+                </div>
+              </div>
+              
+              {/* Accuracy and Stars */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '1rem 0', padding: '1rem', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <div>
+                  <span style={{ fontSize: '0.85rem', color: '#64748b', fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif" }}>Accuracy: </span>
+                  <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#2563eb', fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif" }}>{accuracy}%</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ color: '#fbbf24', fontSize: '1.2rem' }}>⭐</span>
+                  <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#1e293b', fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif" }}>+{calculatedStarsGained} Stars Gained</span>
+                </div>
+              </div>
+              
+              {/* Achievements Earned */}
+              {newAchievements && newAchievements.length > 0 && (
+                <div style={{ margin: '1.5rem 0' }}>
+                  <h3 style={{ color: '#1e293b', marginBottom: '0.75rem', fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif", fontSize: '1rem' }}>
+                    🏆 Achievements Earned
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {newAchievements.map((ach, idx) => (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.5rem', backgroundColor: '#fef3c7', borderRadius: '6px', border: '1px solid #fde68a' }}>
+                        <span style={{ fontSize: '1.2rem' }}>{ach.icon || '🏆'}</span>
+                        <span style={{ fontSize: '0.9rem', color: '#92400e', fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif" }}>{ach.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               <button style={styles.primaryBtn} onClick={() => onNavigate ? onNavigate('dashboard') : window.location.href = '/'}>Return to Dashboard</button>
             </div>
           </div>
@@ -574,14 +686,23 @@ export default function PlaythroughChallenge({ topicId, initialDifficulty, activ
                   </div>
                 )}
                 
-                <button 
+<button 
                   style={styles.primaryBtn} 
                   onClick={() => {
                     if (isGameOver) {
+                      // Calculate stars gained from final score (1 star per 5000 points)
+                      const finalScore = feedback.final_gamified_score || feedback.gamified_score || 0;
+                      const calculatedStars = Math.floor(finalScore / 5000);
+                      setStarsGained(calculatedStars);
                       setGameState({ 
                         is_completed: true, 
-                        final_score: feedback.final_gamified_score || feedback.gamified_score || 0 
+                        final_score: finalScore,
+                        stars_gained: calculatedStars
                       });
+                      // Update stars in parent component
+                      if (onStarsUpdate && calculatedStars > 0) {
+                        onStarsUpdate(calculatedStars);
+                      }
                     } else {
                       fetchNextQuestion();
                     }

@@ -17,7 +17,7 @@ export default function Home({ onNavigate }) {
           {/* Title area */}
           <div style={styles.titleSection}>
             <div style={styles.titleGlow} />
-            <h1 style={styles.mainTitle}>Equinox</h1>
+            <h1 style={styles.mainTitle}>EQUINOX</h1>
             <div style={styles.titleUnderline}>
               <span style={styles.underlineDot} />
               <span style={styles.underlineLine} />
@@ -114,7 +114,7 @@ const styles = {
   },
 
   mainTitle: {
-    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontFamily: "'Patrick Hand', 'Times New Roman', serif",
     fontSize: '4rem',
     fontWeight: 'bold',
     color: '#1e293b',
@@ -145,7 +145,7 @@ const styles = {
   },
 
   subtitle: {
-    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontFamily: "'Patrick Hand', 'Times New Roman', serif",
     fontSize: '1rem',
     color: '#64748b',
     fontStyle: 'italic',
@@ -170,7 +170,7 @@ const styles = {
     border: 'none',
     borderRadius: '2px',
     cursor: 'pointer',
-    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontFamily: "'Patrick Hand', 'Times New Roman', serif",
     fontSize: '0.95rem',
     fontWeight: 'bold',
     backgroundColor: '#93c5fd',
@@ -193,7 +193,7 @@ const styles = {
     border: 'none',
     borderRadius: '2px',
     cursor: 'pointer',
-    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontFamily: "'Patrick Hand', 'Times New Roman', serif",
     fontSize: '0.95rem',
     fontWeight: 'bold',
     backgroundColor: '#86efac',

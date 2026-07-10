@@ -6,17 +6,20 @@ import { useConfirmDialog } from "../components/ConfirmDialog";
 const ITEMS_PER_PAGE = 10;
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState("accounts"); // 'accounts' | 'topics' | 'change-requests'
+  const [activeTab, setActiveTab] = useState("accounts"); // 'accounts' | 'topics' | 'lessons' | 'change-requests' | 'lesson-change-requests'
   const [users, setUsers] = useState([]);
   const [topics, setTopics] = useState([]);
   const [questions, setQuestions] = useState([]);
+  const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTopicId, setSelectedTopicId] = useState(null);
   const [selectedGrade, setSelectedGrade] = useState(null);
   const [editModal, setEditModal] = useState(null);
   const [pendingCount, setPendingCount] = useState(0);
+  const [lessonPendingCount, setLessonPendingCount] = useState(0);
   const [rejectModal, setRejectModal] = useState(null); // { requestId, request } or null
+  const [lessonRejectModal, setLessonRejectModal] = useState(null); // { requestId, request } or null
 
   // Pagination state for accounts tab
   const [accountsPage, setAccountsPage] = useState(1);
@@ -26,8 +29,10 @@ export default function AdminPage() {
 
   // Change requests state
   const [changeRequests, setChangeRequests] = useState([]);
+  const [lessonChangeRequests, setLessonChangeRequests] = useState([]);
   const [requestsLoading, setRequestsLoading] = useState(false);
   const [requestFilter, setRequestFilter] = useState("pending");
+  const [lessonRequestFilter, setLessonRequestFilter] = useState("pending");
 
   const { showToast, ToastContainer } = useToast();
   const { confirm, ConfirmDialogComponent } = useConfirmDialog();
@@ -72,7 +77,16 @@ export default function AdminPage() {
     }
   }, []);
 
-  const fetchChangeRequests = useCallback(async () => {
+  const fetchLessonPendingCount = useCallback(async () => {
+    try {
+      const res = await api.get("/accounts/admin/lesson-change-requests/pending-count/");
+      setLessonPendingCount(res.data.lesson_pending_count);
+    } catch (err) {
+      console.error("Failed to fetch lesson pending count", err);
+    }
+  }, []);
+
+const fetchChangeRequests = useCallback(async () => {
     setRequestsLoading(true);
     try {
       const params = {};
@@ -86,10 +100,36 @@ export default function AdminPage() {
     }
   }, [requestFilter]);
 
+  const fetchLessons = useCallback(async () => {
+    try {
+      const params = {};
+      if (selectedTopicId) params.topic_id = selectedTopicId;
+      if (selectedGrade) params.grade_level = selectedGrade;
+      const res = await api.get("/accounts/admin/lessons/", { params });
+      setLessons(res.data);
+    } catch (err) {
+      console.error("Failed to load lessons", err);
+    }
+  }, [selectedTopicId, selectedGrade]);
+
+  const fetchLessonChangeRequests = useCallback(async () => {
+    setRequestsLoading(true);
+    try {
+      const params = {};
+      if (lessonRequestFilter) params.status = lessonRequestFilter;
+      const res = await api.get("/accounts/admin/lesson-change-requests/", { params });
+      setLessonChangeRequests(res.data);
+    } catch (err) {
+      console.error("Failed to load lesson change requests", err);
+    } finally {
+      setRequestsLoading(false);
+    }
+  }, [lessonRequestFilter]);
+
   useEffect(() => {
     setLoading(true);
-    Promise.all([fetchUsers(), fetchTopics(), fetchPendingCount()]).finally(() => setLoading(false));
-  }, [fetchUsers, fetchTopics, fetchPendingCount]);
+    Promise.all([fetchUsers(), fetchTopics(), fetchPendingCount(), fetchLessonPendingCount()]).finally(() => setLoading(false));
+  }, [fetchUsers, fetchTopics, fetchPendingCount, fetchLessonPendingCount]);
 
   useEffect(() => {
     if (activeTab === "topics") fetchQuestions();
@@ -98,6 +138,14 @@ export default function AdminPage() {
   useEffect(() => {
     if (activeTab === "change-requests") fetchChangeRequests();
   }, [activeTab, fetchChangeRequests, requestFilter]);
+
+  useEffect(() => {
+    if (activeTab === "lessons") fetchLessons();
+  }, [activeTab, fetchLessons, selectedTopicId, selectedGrade]);
+
+  useEffect(() => {
+    if (activeTab === "lesson-change-requests") fetchLessonChangeRequests();
+  }, [activeTab, fetchLessonChangeRequests, lessonRequestFilter]);
 
   // Filter users by search
   const filteredUsers = users.filter(
@@ -202,6 +250,60 @@ export default function AdminPage() {
     } catch (err) {
       console.error("Save failed", err);
       showToast("Failed to save topic", "error");
+    }
+  };
+
+  // ── Lesson CRUD handlers ──
+  const handleDeleteLesson = async (id) => {
+    const ok = await confirm("Are you sure you want to delete this lesson? This action cannot be undone.", {
+      title: "Delete Lesson",
+      confirmText: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await api.delete(`/accounts/admin/lessons/${id}/`);
+      showToast("Lesson deleted successfully", "success");
+      fetchLessons();
+    } catch (err) {
+      console.error("Delete failed", err);
+      showToast("Failed to delete lesson", "error");
+    }
+  };
+
+  const handleSaveLesson = async (data) => {
+    try {
+      if (data.id) {
+        await api.put(`/accounts/admin/lessons/${data.id}/`, data);
+        showToast("Lesson updated successfully", "success");
+      } else {
+        await api.post("/accounts/admin/lessons/", data);
+        showToast("Lesson created successfully", "success");
+      }
+      setEditModal(null);
+      fetchLessons();
+    } catch (err) {
+      console.error("Save failed", err);
+      showToast("Failed to save lesson", "error");
+    }
+  };
+
+  // ── Lesson Change Request handlers ──
+  const handleReviewLessonRequest = async (requestId, action, reviewNotes = "") => {
+    try {
+      const res = await api.post(`/accounts/admin/lesson-change-requests/${requestId}/review/`, {
+        action,
+        review_notes: reviewNotes,
+      });
+      showToast(res.data.message || `Request ${action}d successfully`, action === "approve" ? "success" : "warning");
+      setLessonRejectModal(null);
+      fetchLessonChangeRequests();
+      fetchLessonPendingCount();
+      // Refresh lessons in case something was approved
+      if (activeTab === "lessons") fetchLessons();
+    } catch (err) {
+      console.error("Review failed", err);
+      showToast(err.response?.data?.error || "Failed to review request", "error");
     }
   };
 
@@ -343,6 +445,16 @@ export default function AdminPage() {
                 <button
                   style={{
                     ...styles.tabBtn,
+                    backgroundColor: activeTab === "lessons" ? "#3b82f6" : "#e2e8f0",
+                    color: activeTab === "lessons" ? "#fff" : "#475569",
+                  }}
+                  onClick={() => setActiveTab("lessons")}
+                >
+                  📖 Lessons
+                </button>
+                <button
+                  style={{
+                    ...styles.tabBtn,
                     backgroundColor: activeTab === "change-requests" ? "#3b82f6" : "#e2e8f0",
                     color: activeTab === "change-requests" ? "#fff" : "#475569",
                     position: "relative",
@@ -352,6 +464,20 @@ export default function AdminPage() {
                   📬 Change Requests
                   {pendingCount > 0 && (
                     <span style={styles.badge}>{pendingCount}</span>
+                  )}
+                </button>
+                <button
+                  style={{
+                    ...styles.tabBtn,
+                    backgroundColor: activeTab === "lesson-change-requests" ? "#3b82f6" : "#e2e8f0",
+                    color: activeTab === "lesson-change-requests" ? "#fff" : "#475569",
+                    position: "relative",
+                  }}
+                  onClick={() => setActiveTab("lesson-change-requests")}
+                >
+                  📒 Lesson Requests
+                  {lessonPendingCount > 0 && (
+                    <span style={styles.badge}>{lessonPendingCount}</span>
                   )}
                 </button>
               </div>
@@ -583,7 +709,7 @@ export default function AdminPage() {
                           </div>
                         )}
 
-                        {selectedTopicId !== topic.id && (
+{selectedTopicId !== topic.id && (
                           <button
                             style={styles.expandBtn}
                             onClick={() => {
@@ -606,7 +732,123 @@ export default function AdminPage() {
                     + Add Topic
                   </button>
                 </div>
-              ) : (
+              ) : activeTab === "lessons" ? (
+                /* ── LESSONS TAB ── */
+                <div>
+                  <div style={{ display: "flex", gap: "0.75rem", flexDirection: "column" }}>
+                    {topics.map((topic) => (
+                      <div key={topic.id} style={styles.topicCard}>
+                        <div style={styles.topicCardHeader}>
+                          <div style={{ flex: 1 }}>
+                            <strong style={{ color: "#1e293b", fontSize: "1rem" }}>{topic.name}</strong>
+                            <span style={styles.topicMeta}>
+                              Grades {topic.grade_level_min}–{topic.grade_level_max}
+                            </span>
+                          </div>
+                          <button
+                            style={styles.addQBtn}
+                            onClick={() => {
+                              setSelectedTopicId(topic.id);
+                              setSelectedGrade(null);
+                              setEditModal({
+                                type: "lesson",
+                                mode: "add",
+                                data: { topic_id: topic.id, topic_name: topic.name },
+                              });
+                            }}
+                          >
+                            + Add Lesson
+                          </button>
+                        </div>
+
+                        {/* Grade-level lesson browser */}
+                        {selectedTopicId === topic.id && (
+                          <div style={styles.gradeSection}>
+                            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "0.5rem" }}>
+                              {Array.from(
+                                { length: topic.grade_level_max - topic.grade_level_min + 1 },
+                                (_, i) => topic.grade_level_min + i
+                              ).map((g) => (
+                                <button
+                                  key={g}
+                                  style={{
+                                    ...styles.gradeChip,
+                                    backgroundColor: selectedGrade === g ? "#3b82f6" : "#e2e8f0",
+                                    color: selectedGrade === g ? "#fff" : "#475569",
+                                  }}
+                                  onClick={() => { setSelectedGrade(selectedGrade === g ? null : g); }}
+                                >
+                                  Grade {g}
+                                </button>
+                              ))}
+                            </div>
+
+                            {(() => {
+                              const filteredLessons = lessons
+                                .filter((l) => l.topic_id === topic.id && (!selectedGrade || l.grade_level === selectedGrade));
+                              return (
+                                <>
+                                  {filteredLessons.length === 0 ? (
+                                    <p style={{ fontSize: "0.8rem", color: "#64748b", padding: "0.5rem" }}>
+                                      No lessons for this grade level.
+                                    </p>
+                                  ) : (
+                                    filteredLessons.map((l) => (
+                                      <div key={l.id} style={styles.questionRow}>
+                                        <div style={{ flex: 1 }}>
+                                          <p style={styles.qText}>
+                                            <strong>{l.title}</strong>
+                                          </p>
+                                          <p style={styles.qMeta}>
+                                            Grade {l.grade_level} · Order: {l.order}
+                                          </p>
+                                          {l.objectives && l.objectives.length > 0 && (
+                                            <p style={styles.qSolution}>
+                                              Objectives: {l.objectives.slice(0, 2).join(", ")}{l.objectives.length > 2 ? "..." : ""}
+                                            </p>
+                                          )}
+                                        </div>
+                                        <div style={{ display: "flex", gap: "4px" }}>
+                                          <button
+                                            style={styles.editBtn}
+                                            onClick={() =>
+                                              setEditModal({ type: "lesson", mode: "edit", data: l })
+                                            }
+                                          >
+                                            ✏️
+                                          </button>
+                                          <button
+                                            style={styles.deleteBtn}
+                                            onClick={() => handleDeleteLesson(l.id)}
+                                          >
+                                            🗑️
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ))
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </div>
+                        )}
+
+                        {selectedTopicId !== topic.id && (
+                          <button
+                            style={styles.expandBtn}
+                            onClick={() => {
+                              setSelectedTopicId(topic.id);
+                              setSelectedGrade(null);
+                            }}
+                          >
+                            ▶ View Lessons
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : activeTab === "change-requests" ? (
                 /* ── CHANGE REQUESTS TAB ── */
                 <div>
                   {/* Filter bar */}
@@ -707,6 +949,107 @@ export default function AdminPage() {
                     </div>
                   )}
                 </div>
+              ) : (
+                /* ── LESSON CHANGE REQUESTS TAB ── */
+                <div>
+                  {/* Filter bar */}
+                  <div style={{ display: "flex", gap: "8px", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+                    {["pending", "approved", "rejected", ""].map((f) => (
+                      <button
+                        key={f}
+                        style={{
+                          ...styles.filterChip,
+                          backgroundColor: lessonRequestFilter === f ? "#3b82f6" : "#e2e8f0",
+                          color: lessonRequestFilter === f ? "#fff" : "#475569",
+                        }}
+                        onClick={() => setLessonRequestFilter(f)}
+                      >
+                        {f === "" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+
+                  {requestsLoading ? (
+                    <p style={styles.message}>Loading lesson change requests...</p>
+                  ) : lessonChangeRequests.length === 0 ? (
+                    <p style={styles.message}>No lesson change requests found.</p>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                      {lessonChangeRequests.map((req) => {
+                        const pd = req.proposed_data || {};
+                        return (
+                          <div key={req.id} style={styles.requestCard}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem", flexWrap: "wrap" }}>
+                              <div style={{ flex: 1, minWidth: "200px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                                  <strong style={{ color: "#1e293b", fontSize: "0.85rem", textTransform: "uppercase" }}>
+                                    {req.change_type === "add" ? "➕ Add" : req.change_type === "edit" ? "✏️ Edit" : "🗑️ Delete"} Lesson
+                                  </strong>
+                                  {getStatusBadge(req.status)}
+                                </div>
+                                <p style={{ margin: "2px 0 0", fontSize: "0.7rem", color: "#64748b" }}>
+                                  By: <strong>{req.submitted_by}</strong> · {new Date(req.created_at).toLocaleString()}
+                                </p>
+                                {req.reviewed_by && (
+                                  <p style={{ margin: "2px 0 0", fontSize: "0.7rem", color: "#64748b" }}>
+                                    Reviewed by: {req.reviewed_by}
+                                  </p>
+                                )}
+                                {req.review_notes && (
+                                  <p style={{ margin: "2px 0 0", fontSize: "0.7rem", color: "#64748b", fontStyle: "italic" }}>
+                                    Notes: {req.review_notes}
+                                  </p>
+                                )}
+                                {/* Full proposed data preview */}
+                                <div style={{ marginTop: "6px", backgroundColor: "#f8fafc", borderRadius: "4px", padding: "6px 8px", border: "1px solid #e2e8f0" }}>
+                                  {pd.title && (
+                                    <p style={{ margin: "0 0 3px", fontSize: "0.75rem", color: "#1e293b" }}>
+                                      <strong>Title:</strong> {pd.title}
+                                    </p>
+                                  )}
+                                  {pd.example && (
+                                    <p style={{ margin: "0 0 3px", fontSize: "0.7rem", color: "#64748b", fontStyle: "italic" }}>
+                                      <strong>Example:</strong> {pd.example}
+                                    </p>
+                                  )}
+                                  {pd.tip && (
+                                    <p style={{ margin: "0 0 3px", fontSize: "0.7rem", color: "#92400e" }}>
+                                      <strong>Tip:</strong> {pd.tip}
+                                    </p>
+                                  )}
+                                  {pd.objectives && pd.objectives.length > 0 && (
+                                    <p style={{ margin: "0 0 3px", fontSize: "0.7rem", color: "#475569" }}>
+                                      <strong>Objectives:</strong> {pd.objectives.slice(0, 2).join(", ")}{pd.objectives.length > 2 ? "..." : ""}
+                                    </p>
+                                  )}
+                                  <p style={{ margin: "0", fontSize: "0.65rem", color: "#94a3b8" }}>
+                                    <strong>Grade:</strong> {pd.grade_level || "?"} · <strong>Order:</strong> {pd.order || "?"}
+                                  </p>
+                                </div>
+                              </div>
+                              {req.status === "pending" && (
+                                <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
+                                  <button
+                                    style={styles.approveBtn}
+                                    onClick={() => handleReviewLessonRequest(req.id, "approve")}
+                                  >
+                                    ✅ Accept
+                                  </button>
+                                  <button
+                                    style={styles.rejectBtn}
+                                    onClick={() => setLessonRejectModal({ requestId: req.id, request: req })}
+                                  >
+                                    ❌ Reject
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -714,7 +1057,7 @@ export default function AdminPage() {
       </div>
 
       {/* ── EDIT MODAL ── */}
-      {editModal && (
+{editModal && (
         <CrudModal
           type={editModal.type}
           mode={editModal.mode}
@@ -723,6 +1066,8 @@ export default function AdminPage() {
           onSave={
             editModal.type === "question"
               ? handleSaveQuestion
+              : editModal.type === "lesson"
+              ? handleSaveLesson
               : handleSaveTopic
           }
           onClose={() => setEditModal(null)}
@@ -735,6 +1080,15 @@ export default function AdminPage() {
           request={rejectModal.request}
           onConfirm={(notes) => handleReviewRequest(rejectModal.requestId, "reject", notes)}
           onClose={() => setRejectModal(null)}
+        />
+      )}
+
+      {/* ── LESSON REJECT MODAL ── */}
+      {lessonRejectModal && (
+        <RejectModal
+          request={lessonRejectModal.request}
+          onConfirm={(notes) => handleReviewLessonRequest(lessonRejectModal.requestId, "reject", notes)}
+          onClose={() => setLessonRejectModal(null)}
         />
       )}
     </div>
@@ -850,7 +1204,7 @@ function CrudModal({ type, mode, initialData, topics, onSave, onClose }) {
       <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div style={styles.modalHeader}>
           <h3 style={{ margin: 0, color: "#f8fafc", fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif" }}>
-            {mode === "add" ? "Add" : "Edit"} {type === "question" ? "Question" : "Topic"}
+            {mode === "add" ? "Add" : "Edit"} {type === "question" ? "Question" : type === "lesson" ? "Lesson" : "Topic"}
           </h3>
           <button onClick={onClose} style={styles.closeBtn}>✕</button>
         </div>
@@ -971,6 +1325,85 @@ function CrudModal({ type, mode, initialData, topics, onSave, onClose }) {
                       <option value="false">No</option>
                     </select>
                   </div>
+                </div>
+              </>
+            ) : type === "lesson" ? (
+              <>
+                <div>
+                  <label style={labelStyle}>Topic</label>
+                  <select
+                    style={inputStyle}
+                    value={form.topic_id || ""}
+                    onChange={(e) => handleChange("topic_id", parseInt(e.target.value))}
+                    required
+                  >
+                    <option value="">Select topic...</option>
+                    {topics.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Lesson Title</label>
+                  <input
+                    style={inputStyle}
+                    type="text"
+                    placeholder="Enter lesson title..."
+                    value={form.title || ""}
+                    onChange={(e) => handleChange("title", e.target.value)}
+                    required
+                  />
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+                  <div>
+                    <label style={labelStyle}>Grade Level</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="10"
+                      style={inputStyle}
+                      value={form.grade_level || ""}
+                      onChange={(e) => handleChange("grade_level", parseInt(e.target.value))}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Order</label>
+                    <input
+                      type="number"
+                      min="0"
+                      style={inputStyle}
+                      value={form.order || 0}
+                      onChange={(e) => handleChange("order", parseInt(e.target.value))}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label style={labelStyle}>Learning Objectives (one per line)</label>
+                  <textarea
+                    style={{ ...inputStyle, minHeight: "60px", resize: "vertical" }}
+                    value={Array.isArray(form.objectives) ? form.objectives.join("\n") : ""}
+                    onChange={(e) => handleChange("objectives", e.target.value.split("\n").filter(l => l.trim()))}
+                    placeholder="Enter one objective per line..."
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Example Problem</label>
+                  <textarea
+                    style={{ ...inputStyle, minHeight: "50px", resize: "vertical" }}
+                    value={form.example || ""}
+                    onChange={(e) => handleChange("example", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Tip/Hint</label>
+                  <textarea
+                    style={{ ...inputStyle, minHeight: "40px", resize: "vertical" }}
+                    value={form.tip || ""}
+                    onChange={(e) => handleChange("tip", e.target.value)}
+                  />
                 </div>
               </>
             ) : (

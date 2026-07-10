@@ -2,111 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Leaderboard from './Leaderboard';
 import ChallengeConfigModal from './ChallengeConfig';
 import api from '../api/axios';
-
-const LESSONS = {
-    Arithmetic: {
-      1: [
-        {
-          id: 1,
-          title: "Counting Numbers",
-          completed: true,
-          locked: false,
-          lesson: {
-            objectives: [
-              "Count numbers from 1 to 20",
-              "Count objects correctly",
-              "Recognize increasing number order"
-            ],
-            example: "🍎🍎🍎🍎 = 4",
-            tip: "Point to each object while counting."
-          }
-        },
-        {
-          id:2,
-
-          title:"Number Recognition",
-
-          completed:true,
-
-          locked:false,
-
-          lesson:{
-              objectives:[
-
-                  "Recognize numbers from 0 to 20",
-
-                  "Identify missing numbers",
-
-                  "Read numbers correctly"
-
-              ],
-              example:"15",
-              tip:"Practice reading numbers aloud."
-          }
-        },
-        {
-          id: 3,
-          title: "Addition within 10",
-          completed: false,
-          locked: false,
-          lesson: {
-            objectives: [
-              "Add two numbers within 10",
-              "Represent addition using objects",
-              "Solve simple addition problems"
-            ],
-            example: "3 + 2 = 5",
-            tip: "Start counting from the bigger number."
-          }
-        },
-        {
-          id: 4,
-          title: "Addition within 20",
-          completed: false,
-          locked: false,
-          lesson: {
-            objectives: [
-              "Add numbers within 20",
-              "Use counting strategies",
-              "Solve simple equations"
-            ],
-            example: "13 + 5 = 18",
-            tip: "Break the second number into smaller parts."
-          }
-        },
-        {
-          id: 5,
-          title: "Subtraction within 10",
-          completed: false,
-          locked: false,
-          lesson: {
-            objectives: [
-              "Subtract numbers within 10",
-              "Understand taking away",
-              "Solve subtraction problems"
-            ],
-            example: "9 − 4 = 5",
-            tip: "Count backwards carefully."
-          }
-        },
-        {
-          id: 6,
-          title: "Word Problems",
-          completed: false,
-          locked: true,
-          lesson: {
-            objectives: [
-              "Read mathematical situations",
-              "Identify important numbers",
-              "Choose the correct operation"
-            ],
-            example: "Anna has 5 apples and buys 3 more.",
-            tip: "Underline important numbers before solving."
-          }
-        }
-      ]
-    }
-  };
+import { playClick, playCheck, playNext } from '../utils/sounds';
 
 const STORAGE_KEY_PREFIX = 'lessonProgress_';
 
@@ -118,6 +14,8 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
   const [resources, setResources] = useState([]);
   const [loadingResources, setLoadingResources] = useState(false);
   const [failedEmbeds, setFailedEmbeds] = useState({});
+  const [lessons, setLessons] = useState([]);
+  const [loadingLessons, setLoadingLessons] = useState(false);
   const [selectedLesson, setSelectedLesson] = useState(null);
   const [lessonProgress, setLessonProgress] = useState({});
   const [currentGrade, setCurrentGrade] = useState(selectedGrade || 1);
@@ -157,9 +55,25 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
     }
   }, [topicId, currentGrade]);
 
-  // Initialize lesson progress from localStorage or LESSONS defaults
+  // Load lessons when topic or grade changes
   useEffect(() => {
-    const lessons = LESSONS[topic?.name]?.[currentGrade] || [];
+    if (topicId && currentGrade) {
+      setLoadingLessons(true);
+      api.get(`/topics/${topicId}/lessons/?grade_level=${currentGrade}`)
+        .then((res) => {
+          setLessons(res.data.lessons || []);
+          setLoadingLessons(false);
+        })
+        .catch((err) => {
+          console.error("Error loading lessons:", err);
+          setLessons([]);
+          setLoadingLessons(false);
+        });
+    }
+  }, [topicId, currentGrade]);
+
+  // Initialize lesson progress from localStorage
+  useEffect(() => {
     if (lessons.length === 0) return;
 
     const storageKey = `${STORAGE_KEY_PREFIX}${topicId}_${currentGrade}`;
@@ -172,21 +86,17 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
       } catch (e) {
         initial = {};
       }
-    } else {
-      lessons.forEach(lesson => {
-        initial[lesson.id] = lesson.completed || false;
-      });
     }
     setLessonProgress(initial);
 
-    // Auto-select the first unchecked, unlocked lesson
-    const firstUnchecked = lessons.find(l => !initial[l.id] && !l.locked);
+    // Auto-select the first unchecked lesson
+    const firstUnchecked = lessons.find(l => !initial[l.id]);
     if (firstUnchecked) {
       setSelectedLesson(firstUnchecked);
     } else if (lessons.length > 0) {
       setSelectedLesson(lessons[0]);
     }
-  }, [topic, currentGrade, topicId]);
+  }, [lessons, topicId, currentGrade]);
 
   // Persist lessonProgress to localStorage whenever it changes
   // Only save when lessonProgress has actual data (not the empty initial state)
@@ -197,7 +107,8 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
     }
   }, [lessonProgress, topic, topicId, currentGrade]);
 
-  const toggleLessonComplete = (lessonId) => {
+const toggleLessonComplete = (lessonId) => {
+    playCheck();
     setLessonProgress(prev => ({
       ...prev,
       [lessonId]: !prev[lessonId]
@@ -222,7 +133,6 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
     </div>
   );
 
-  const lessons = LESSONS[topic.name]?.[currentGrade] || [];
   const totalLessons = lessons.length;
   const completedCount = lessons.filter(l => lessonProgress[l.id]).length;
   const progressPercent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
@@ -307,7 +217,12 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
                         <small>{completedCount} of {totalLessons} Lessons Mastered</small>
                       </div>
 
-                      {lessons.map((lesson) => {
+{loadingLessons ? (
+                        <div style={styles.message}>Loading lessons...</div>
+                      ) : lessons.length === 0 ? (
+                        <div style={styles.message}>No lessons available for this grade level.</div>
+                      ) : (
+                        lessons.map((lesson) => {
 
                         const isSelected = selectedLesson?.id === lesson.id;
                         const isCompleted = lessonProgress[lesson.id] || false;
@@ -318,11 +233,10 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
                             {/* Checkbox for toggling completion */}
                             <button
                               onClick={() => toggleLessonComplete(lesson.id)}
-                              disabled={lesson.locked}
                               style={{
                                 ...styles.checkboxBtn,
-                                opacity: lesson.locked ? 0.4 : 1,
-                                cursor: lesson.locked ? 'not-allowed' : 'pointer',
+                                opacity: 1,
+                                cursor: 'pointer',
                               }}
                               title={isCompleted ? 'Mark as incomplete' : 'Mark as complete'}
                             >
@@ -330,7 +244,6 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
                             </button>
 
                             <button
-                              disabled={lesson.locked}
                               onClick={() => setSelectedLesson(lesson)}
                               style={{
                                 ...styles.lessonButton,
@@ -340,14 +253,12 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
                                   ? "2px solid #3b82f6"
                                   : "1px solid #d6d3d1",
                                 fontWeight: isSelected ? "700" : "500",
-                                opacity: lesson.locked ? 0.55 : 1,
-                                cursor: lesson.locked ? "not-allowed" : "pointer",
+                                opacity: 1,
+                                cursor: "pointer",
                               }}
                             >
                               <span>
-                                {lesson.locked
-                                  ? "🔒"
-                                  : isCompleted
+                                {isCompleted
                                     ? "✅"
                                     : isSelected
                                       ? "⭐"
@@ -359,7 +270,8 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
 
                         );
 
-                      })}
+                      })
+                      )}
 
                     </div>
 
@@ -367,7 +279,7 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
 
                     <div style={styles.lessonPreview}>
 
-                      {selectedLesson && (
+{selectedLesson && (
 
                       <div style={styles.lessonCard}>
 
@@ -414,7 +326,7 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
                           Master this lesson before entering a Playthrough.
                       </p>
 
-                      {selectedLesson.lesson && (
+                      {selectedLesson.objectives && (
 
                       <>
 
@@ -423,7 +335,7 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
                       </h4>
 
                       <ul style={styles.objectiveList}>
-                      {selectedLesson.lesson.objectives.map(objective => (
+                      {selectedLesson.objectives.map(objective => (
 
                       <li
                           key={objective}
@@ -443,7 +355,7 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
                       </h4>
 
                       <div style={styles.exampleBox}>
-                      {selectedLesson.lesson.example}
+                      {selectedLesson.example}
                       </div>
 
                       <h4 style={{ color:"#1e293b", marginBottom:"0.5rem" }}>
@@ -451,7 +363,7 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
                       </h4>
 
                       <div style={styles.tipBox}>
-                      {selectedLesson.lesson.tip}
+                      {selectedLesson.tip}
                       </div>
 
                       </>
@@ -515,24 +427,33 @@ export default function TopicDetail({ topicId, selectedGrade, onBack, onStartCha
 
                   </div>
                   
-                  {/* Action buttons */}
+{/* Action buttons */}
                   <div style={styles.actionsPanel}>
                     <div style={styles.stickyNoteWrapper}>
-                      <button style={styles.stickyNoteStartBtn} onClick={() => setIsConfigModalOpen(true)}>
+                      <button style={styles.stickyNoteStartBtn} onClick={() => {
+                        playClick();
+                        setIsConfigModalOpen(true);
+                      }}>
                         <span style={styles.stickyNotePin}>📌</span>
                         <span style={styles.stickyNoteLabel}>Start Challenge</span>
                       </button>
                     </div>
 
                     <div style={styles.stickyNoteWrapper}>
-                      <button style={styles.stickyNoteLeaderBtn} onClick={() => setShowLeaderboard(true)}>
+                      <button style={styles.stickyNoteLeaderBtn} onClick={() => {
+                        playNext();
+                        setShowLeaderboard(true);
+                      }}>
                         <span style={styles.stickyNotePin}>📌</span>
                         <span style={styles.stickyNoteLabel}>View Leaderboard</span>
                       </button>
                     </div>
 
                     <div style={styles.stickyNoteWrapper}>
-                      <button style={styles.stickyNoteBackBtn} onClick={onBack}>
+                      <button style={styles.stickyNoteBackBtn} onClick={() => {
+                        playNext();
+                        onBack();
+                      }}>
                         <span style={styles.stickyNotePin}>📌</span>
                         <span style={styles.stickyNoteLabel}>Back to Catalogue</span>
                       </button>

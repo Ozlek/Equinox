@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { playNotification } from "../utils/sounds";
 
 /**
  * Toast notification system.
@@ -13,8 +14,9 @@ import { useState, useEffect, useCallback } from "react";
 export function useToast() {
   const [toasts, setToasts] = useState([]);
 
-  const showToast = useCallback((message, type = "info", duration = 4000) => {
+const showToast = useCallback((message, type = "info", duration = 4000) => {
     const id = Date.now() + Math.random();
+    playNotification();
     setToasts((prev) => [...prev, { id, message, type, duration }]);
   }, []);
 

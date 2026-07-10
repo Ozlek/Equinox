@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { playNotification, playClick } from "../utils/sounds";
 
 /**
  * ConfirmDialog hook — replaces window.confirm() with a themed modal.
@@ -63,13 +64,19 @@ export function useConfirmDialog() {
             <div style={styles.actions}>
               <button
                 style={{ ...styles.btn, backgroundColor: "#e2e8f0", color: "#475569" }}
-                onClick={handleCancel}
+                onClick={() => {
+                  playClick();
+                  handleCancel();
+                }}
               >
                 {cancelText}
               </button>
               <button
                 style={{ ...styles.btn, backgroundColor: btnColor, color: "#fff" }}
-                onClick={handleConfirm}
+                onClick={() => {
+                  playClick();
+                  handleConfirm();
+                }}
               >
                 {confirmText}
               </button>

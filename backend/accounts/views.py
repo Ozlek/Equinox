@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from .forms import RegisterForm
 from .models import UserProfile
-from playthrough.models import Question, Topic, QuestionChangeRequest
+from playthrough.models import Question, Topic, QuestionChangeRequest, Lesson, LessonChangeRequest
 
 
 # ---------------------------------------------------------------------------
@@ -795,3 +795,354 @@ def admin_pending_count(request):
     count = QuestionChangeRequest.objects.filter(status='pending').count()
 
     return Response({"pending_count": count})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_lesson_pending_count(request):
+    """Return the count of pending lesson change requests."""
+    _require_admin(request)
+
+    count = LessonChangeRequest.objects.filter(status='pending').count()
+
+    return Response({"lesson_pending_count": count})
+
+
+# ===========================================================================
+# LESSON MANAGEMENT ENDPOINTS
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# Admin — Direct Lesson CRUD
+# ---------------------------------------------------------------------------
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def admin_lessons_list(request):
+    """
+    List lessons or create a new lesson (admin, direct).
+    GET:  List lessons with optional filters: ?topic_id=&grade_level=
+    POST: Create a new lesson directly (bypasses approval system)
+    """
+    _require_admin(request)
+
+    if request.method == 'POST':
+        data = request.data
+        topic = get_object_or_404(Topic, id=data.get('topic_id'))
+        lesson = Lesson.objects.create(
+            topic=topic,
+            title=data.get('title', ''),
+            grade_level=data.get('grade_level', 1),
+            order=data.get('order', 0),
+            objectives=data.get('objectives', []),
+            example=data.get('example', ''),
+            tip=data.get('tip', ''),
+        )
+        return Response({"id": lesson.id, "message": "Lesson created"}, status=status.HTTP_201_CREATED)
+
+    qs = Lesson.objects.select_related('topic').all().order_by('topic__name', 'grade_level', 'order')
+
+    topic_id = request.query_params.get('topic_id')
+    grade_level = request.query_params.get('grade_level')
+
+    if topic_id:
+        qs = qs.filter(topic_id=topic_id)
+    if grade_level:
+        qs = qs.filter(grade_level=grade_level)
+
+    data = [{
+        "id": l.id,
+        "topic_id": l.topic_id,
+        "topic_name": l.topic.name,
+        "title": l.title,
+        "grade_level": l.grade_level,
+        "order": l.order,
+        "objectives": l.objectives,
+        "example": l.example,
+        "tip": l.tip,
+    } for l in qs]
+
+    return Response(data)
+
+
+@api_view(['PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def admin_lesson_detail(request, lesson_id):
+    """Update (PUT) or delete (DELETE) a lesson (admin, direct)."""
+    _require_admin(request)
+
+    lesson = get_object_or_404(Lesson, id=lesson_id)
+
+    if request.method == 'PUT':
+        data = request.data
+        if 'topic_id' in data:
+            lesson.topic = get_object_or_404(Topic, id=data['topic_id'])
+        if 'title' in data:
+            lesson.title = data['title']
+        if 'grade_level' in data:
+            lesson.grade_level = data['grade_level']
+        if 'order' in data:
+            lesson.order = data['order']
+        if 'objectives' in data:
+            lesson.objectives = data['objectives']
+        if 'example' in data:
+            lesson.example = data['example']
+        if 'tip' in data:
+            lesson.tip = data['tip']
+        lesson.save()
+        return Response({"message": "Lesson updated"})
+
+    # DELETE
+    lesson.delete()
+    return Response({"message": "Lesson deleted"}, status=status.HTTP_200_OK)
+
+
+# ---------------------------------------------------------------------------
+# Admin — Lesson Change Request Management
+# ---------------------------------------------------------------------------
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_lesson_change_requests_list(request):
+    """List all lesson change requests, optionally filtered by status."""
+    _require_admin(request)
+
+    qs = LessonChangeRequest.objects.select_related(
+        'submitted_by', 'reviewed_by', 'lesson'
+    ).all()
+
+    status_filter = request.query_params.get('status')
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+
+    data = [{
+        "id": cr.id,
+        "change_type": cr.change_type,
+        "proposed_data": cr.proposed_data,
+        "submitted_by": cr.submitted_by.username,
+        "submitted_by_id": cr.submitted_by.id,
+        "status": cr.status,
+        "reviewed_by": cr.reviewed_by.username if cr.reviewed_by else None,
+        "reviewed_at": cr.reviewed_at.isoformat() if cr.reviewed_at else None,
+        "review_notes": cr.review_notes,
+        "lesson_id": cr.lesson_id,
+        "created_at": cr.created_at.isoformat(),
+    } for cr in qs]
+
+    return Response(data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def admin_lesson_change_request_review(request, request_id):
+    """Approve or reject a lesson change request."""
+    _require_admin(request)
+
+    change_request = get_object_or_404(LessonChangeRequest, id=request_id)
+
+    if change_request.status != 'pending':
+        return Response({
+            "error": f"This request has already been {change_request.status}."
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    action = request.data.get('action')  # 'approve' or 'reject'
+    review_notes = request.data.get('review_notes', '')
+
+    if action not in ('approve', 'reject'):
+        return Response({"error": "action must be 'approve' or 'reject'"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if action == 'approve':
+        try:
+            _apply_lesson_change_request(change_request)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    change_request.status = 'approved' if action == 'approve' else 'rejected'
+    change_request.reviewed_by = request.user
+    change_request.reviewed_at = timezone.now()
+    change_request.review_notes = review_notes
+    change_request.save()
+
+    return Response({
+        "message": f"Lesson change request {change_request.status}.",
+        "request_id": change_request.id,
+        "status": change_request.status,
+    })
+
+
+def _apply_lesson_change_request(change_request):
+    """Apply the approved change request to the Lesson table."""
+    data = change_request.proposed_data
+
+    if change_request.change_type == 'add':
+        topic = get_object_or_404(Topic, id=data.get('topic_id'))
+        lesson = Lesson.objects.create(
+            topic=topic,
+            title=data.get('title', ''),
+            grade_level=data.get('grade_level', 1),
+            order=data.get('order', 0),
+            objectives=data.get('objectives', []),
+            example=data.get('example', ''),
+            tip=data.get('tip', ''),
+        )
+        change_request.lesson = lesson
+
+    elif change_request.change_type == 'edit':
+        lesson = change_request.lesson
+        if not lesson:
+            raise ValueError("Cannot edit: the original lesson no longer exists.")
+        if 'topic_id' in data:
+            lesson.topic = get_object_or_404(Topic, id=data['topic_id'])
+        if 'title' in data:
+            lesson.title = data['title']
+        if 'grade_level' in data:
+            lesson.grade_level = data['grade_level']
+        if 'order' in data:
+            lesson.order = data['order']
+        if 'objectives' in data:
+            lesson.objectives = data['objectives']
+        if 'example' in data:
+            lesson.example = data['example']
+        if 'tip' in data:
+            lesson.tip = data['tip']
+        lesson.save()
+
+    elif change_request.change_type == 'delete':
+        lesson = change_request.lesson
+        if not lesson:
+            raise ValueError("Cannot delete: the lesson no longer exists.")
+        lesson.delete()
+
+    else:
+        raise ValueError(f"Unknown change type: {change_request.change_type}")
+
+
+# ---------------------------------------------------------------------------
+# Instructor — Lesson Change Requests
+# ---------------------------------------------------------------------------
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def instructor_lessons_list(request):
+    """
+    List lessons or create a change request (instructor).
+    GET:  List lessons (filters: ?topic_id=&grade_level=)
+    POST: Submit a change request to add a new lesson
+    """
+    _require_instructor(request)
+
+    if request.method == 'POST':
+        data = request.data
+        change_request = LessonChangeRequest.objects.create(
+            change_type='add',
+            proposed_data={
+                'topic_id': data.get('topic_id'),
+                'title': data.get('title', ''),
+                'grade_level': data.get('grade_level', 1),
+                'order': data.get('order', 0),
+                'objectives': data.get('objectives', []),
+                'example': data.get('example', ''),
+                'tip': data.get('tip', ''),
+            },
+            submitted_by=request.user,
+        )
+        return Response({
+            "request_id": change_request.id,
+            "message": "Lesson addition request submitted for admin review.",
+        }, status=status.HTTP_201_CREATED)
+
+    # GET - list lessons
+    qs = Lesson.objects.select_related('topic').all().order_by('topic__name', 'grade_level', 'order')
+
+    topic_id = request.query_params.get('topic_id')
+    grade_level = request.query_params.get('grade_level')
+
+    if topic_id:
+        qs = qs.filter(topic_id=topic_id)
+    if grade_level:
+        qs = qs.filter(grade_level=grade_level)
+
+    data = [{
+        "id": l.id,
+        "topic_id": l.topic_id,
+        "topic_name": l.topic.name,
+        "title": l.title,
+        "grade_level": l.grade_level,
+        "order": l.order,
+        "objectives": l.objectives,
+        "example": l.example,
+        "tip": l.tip,
+    } for l in qs]
+
+    return Response(data)
+
+
+@api_view(['PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def instructor_lesson_detail(request, lesson_id):
+    """
+    Update (PUT) or delete (DELETE) a lesson (instructor).
+    
+    Instead of applying changes directly, this creates a LessonChangeRequest
+    that an admin must approve.
+    """
+    _require_instructor(request)
+
+    lesson = get_object_or_404(Lesson, id=lesson_id)
+
+    if request.method == 'PUT':
+        data = request.data
+        # Build proposed changes (only include what's being changed)
+        proposed_data = {}
+        for field in ['title', 'grade_level', 'order', 'objectives', 'example', 'tip', 'topic_id']:
+            if field in data:
+                proposed_data[field] = data[field]
+        proposed_data['id'] = lesson_id
+
+        change_request = LessonChangeRequest.objects.create(
+            lesson=lesson,
+            change_type='edit',
+            proposed_data=proposed_data,
+            submitted_by=request.user,
+        )
+        return Response({
+            "request_id": change_request.id,
+            "message": "Lesson edit request submitted for admin review.",
+        })
+
+    # DELETE
+    change_request = LessonChangeRequest.objects.create(
+        lesson=lesson,
+        change_type='delete',
+        proposed_data={"id": lesson_id},
+        submitted_by=request.user,
+    )
+    return Response({
+        "request_id": change_request.id,
+        "message": "Lesson deletion request submitted for admin review.",
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def instructor_my_lesson_change_requests(request):
+    """List the current user's own lesson change requests."""
+    _require_instructor(request)
+
+    qs = LessonChangeRequest.objects.filter(
+        submitted_by=request.user
+    ).select_related('lesson', 'reviewed_by')
+
+    data = [{
+        "id": cr.id,
+        "change_type": cr.change_type,
+        "proposed_data": cr.proposed_data,
+        "status": cr.status,
+        "reviewed_by": cr.reviewed_by.username if cr.reviewed_by else None,
+        "reviewed_at": cr.reviewed_at.isoformat() if cr.reviewed_at else None,
+        "review_notes": cr.review_notes,
+        "lesson_id": cr.lesson_id,
+        "created_at": cr.created_at.isoformat(),
+    } for cr in qs]
+
+    return Response(data)

@@ -140,7 +140,7 @@ export default function Login({ onNavigate, onLoginSuccess }) {
                           style={styles.toggleBtn}
                           onClick={() => setShowPassword(!showPassword)}
                         >
-                          {showPassword ? "👁" : "🙈"}
+                          {showPassword ? "HIDE" : "SHOW"}
                         </button>
                       </div>
                     </div>
@@ -293,7 +293,7 @@ const styles = {
     gap: '2px',
   },
   coverTitle: {
-    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontFamily: "'Patrick Hand', 'Times New Roman', serif",
     fontSize: '1.3rem',
     fontWeight: 'bold',
     color: '#60a5fa',
@@ -302,7 +302,7 @@ const styles = {
     letterSpacing: '0.02em',
   },
   coverSubtitle: {
-    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontFamily: "'Patrick Hand', 'Times New Roman', serif",
     fontSize: '0.85rem',
     color: '#94a3b8',
     fontStyle: 'italic',
@@ -352,7 +352,7 @@ const styles = {
     width: '100%',
   },
   label: {
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Patrick Hand', 'Times New Roman', serif",
     color: '#475569',
     fontSize: '0.65rem',
     fontWeight: '700',
@@ -390,7 +390,7 @@ const styles = {
     padding: 0,
     cursor: 'pointer',
     fontSize: '0.75rem',
-    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontFamily: "'Patrick Hand', 'Times New Roman', serif",
     fontStyle: 'italic',
     textDecoration: 'underline',
     textDecorationColor: '#94a3b8',
@@ -403,7 +403,7 @@ const styles = {
     border: '1px solid #cbd5e1',
     borderRadius: '3px',
     color: '#1e293b',
-    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontFamily: "'Patrick Hand', 'Times New Roman', serif",
     fontSize: '0.9rem',
     outline: 'none',
     boxSizing: 'border-box',
@@ -418,7 +418,7 @@ const styles = {
     border: 'none',
     borderRadius: '2px',
     cursor: 'pointer',
-    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontFamily: "'Patrick Hand', 'Times New Roman', serif",
     fontSize: '0.9rem',
     fontWeight: 'bold',
     backgroundColor: '#93c5fd',
@@ -449,7 +449,7 @@ const styles = {
     border: '1px solid #fca5a5',
     borderRadius: '3px',
     padding: '0.6rem 0.8rem',
-    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontFamily: "'Patrick Hand', 'Times New Roman', serif",
     fontSize: '0.75rem',
     color: '#dc2626',
     lineHeight: '1.4',
@@ -463,7 +463,7 @@ const styles = {
     textAlign: 'center',
     color: '#64748b',
     fontSize: '0.8rem',
-    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontFamily: "'Patrick Hand', 'Times New Roman', serif",
     fontStyle: 'italic',
     margin: 0,
   },
@@ -475,7 +475,7 @@ const styles = {
     cursor: 'pointer',
     fontWeight: 'bold',
     textDecoration: 'underline',
-    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontFamily: "'Patrick Hand', 'Times New Roman', serif",
     fontSize: '0.8rem',
   },
 };

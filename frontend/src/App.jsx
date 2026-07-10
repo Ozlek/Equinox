@@ -344,6 +344,47 @@ export default function App() {
     );
   };
 
+  const TopbarTab = ({ id, icon, label, index, isActive, onClick }) => {
+    const isThisHovered = hoveredLink === id;
+    const tabColors = ['#93c5fd', '#86efac', '#fde68a', '#f9a8d4', '#c4b5fd'];
+    const tabColor = tabColors[index % tabColors.length];
+
+    return (
+      <div style={{ position: 'relative', display: 'inline-block' }} onMouseEnter={() => setHoveredLink(id)} onMouseLeave={() => setHoveredLink(null)}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          padding: '8px 12px',
+          borderRadius: '12px',
+          border: '2px solid transparent',
+          backgroundColor: isActive ? tabColor : 'transparent',
+          boxShadow: isActive ? `2px 2px 8px rgba(0,0,0,0.3)` : 'none',
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+        }} onClick={onClick}>
+          <i className={`bi bi-${icon}`} style={{ fontSize: '1.1rem', color: isActive ? '#1e293b' : '#f8fafc' }}></i>
+          <span style={{
+            fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+            fontSize: '0.95rem',
+            fontWeight: 'bold',
+            letterSpacing: '0.05em',
+            color: isActive ? '#1e293b' : '#f8fafc',
+          }}>
+            {label}
+          </span>
+        </div>
+
+        {!isMobile && !sidebarExpanded && isThisHovered && (
+          <div style={appLayoutStyles.topbarTooltip}>
+            {label}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const dynamicSidebarStyle = {
     ...appLayoutStyles.sidebar,
     position: isMobile ? 'fixed' : 'absolute',
@@ -389,12 +430,14 @@ export default function App() {
                 <i className={`bi bi-${mobileSidebarOpen ? 'x-lg' : 'list'} fs-4 text-secondary`}></i>
               </button>
             )}
-            <button 
-              className="btn btn-link text-decoration-none fw-extrabold text-white fs-4 p-0 m-0 tracking-tight" 
-              onClick={() => navigateTo(user ? 'dashboard' : 'home')}
-            >
-              🌌 Equinox
-            </button>
+            <TopbarTab 
+              id="equinox-tab" 
+              icon="star-fill" 
+              label="EQUINOX" 
+              index={0} 
+              isActive={user ? currentView === 'dashboard' : currentView === 'home'} 
+              onClick={() => navigateTo(user ? 'dashboard' : 'home')} 
+            />
             
             {/* Grade Level Selector - only show for logged-in users */}
             {user && userGrade && (
@@ -445,13 +488,12 @@ export default function App() {
               </>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'row', gap: '8px' }}>
-                <button className="btn btn-link nav-link text-white-50 py-1 px-2" onClick={() => navigateTo('home')}>Home</button>
-                <button className="btn btn-outline-light btn-sm px-3 rounded-2" onClick={() => navigateTo('login')}>Login</button>
-                <button className="btn btn-info btn-sm px-3 text-dark fw-bold rounded-2" onClick={() => navigateTo('register')}>Register</button>
+                <TopbarTab id="home-tab" icon="house-fill" label="Home" index={1} isActive={currentView === 'home'} onClick={() => navigateTo('home')} />
+                <TopbarTab id="login-tab" icon="box-arrow-in-right" label="Login" index={2} isActive={currentView === 'login'} onClick={() => navigateTo('login')} />
+                <TopbarTab id="register-tab" icon="person-plus-fill" label="Register" index={3} isActive={currentView === 'register'} onClick={() => navigateTo('register')} />
               </div>
             )}
           </div>
-
         </div>
       </nav>
 
@@ -482,15 +524,16 @@ export default function App() {
         {/* WORKSPACE CONTENT PANEL */}
         <div style={{
           ...appLayoutStyles.contentContainer,
-
-              marginLeft:
-                  isMobile
-                      ? '0'
-                      : sidebarExpanded
-                          ? '280px'
-                          : '64px',
-
-              transition: 'margin-left .25s ease',
+          backgroundColor: user ? '#1a202c' : 'transparent',
+          marginLeft:
+            user
+              ? (isMobile
+                  ? '0'
+                  : sidebarExpanded
+                    ? '280px'
+                    : '64px')
+              : '0',
+          transition: 'margin-left .25s ease',
         }}>
           <div className="container-fluid py-4 px-md-4 px-2" style={{ maxWidth: '100%', margin: '0 auto', paddingLeft: '1rem', paddingRight: '1rem' }}>
             
@@ -549,15 +592,16 @@ export default function App() {
 
                 {currentView === 'admin' && isSuperuser && <AdminPage />}
                 
-                {currentView === 'playthrough' && (
-                  <PlaythroughChallenge 
-                    topicId={selectedTopicId} 
-                    initialDifficulty={sessionDifficulty} 
-                    activeMods={sessionMods}
-                    equippedModifier={sessionItem}
-                    onNavigate={navigateTo}
-                  />
-                )}
+{currentView === 'playthrough' && (
+                   <PlaythroughChallenge 
+                     topicId={selectedTopicId} 
+                     initialDifficulty={sessionDifficulty} 
+                     activeMods={sessionMods}
+                     equippedModifier={sessionItem}
+                     onNavigate={navigateTo}
+                     onStarsUpdate={(stars) => setUserStars(prev => prev + stars)}
+                   />
+                 )}
               </>
             )}
           </div>

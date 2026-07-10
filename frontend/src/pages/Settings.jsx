@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
 import { useConfirmDialog } from '../components/ConfirmDialog';
+import { playCheck, playClick, playNext } from '../utils/sounds';
 
 export default function Settings({ onNavigate }) {
   const [userInfo, setUserInfo] = useState(null);
@@ -49,7 +50,8 @@ export default function Settings({ onNavigate }) {
       });
   }, []);
 
-  const handleSoundToggle = () => {
+const handleSoundToggle = () => {
+    playCheck();
     const next = !soundEnabled;
     setSoundEnabled(next);
     localStorage.setItem('pref_sound', String(next));
@@ -58,6 +60,7 @@ export default function Settings({ onNavigate }) {
   };
 
   const handleNotificationsToggle = () => {
+    playCheck();
     const next = !notificationsEnabled;
     setNotificationsEnabled(next);
     localStorage.setItem('pref_notifications', String(next));
@@ -158,10 +161,13 @@ export default function Settings({ onNavigate }) {
               <span style={{ fontSize: '1.5rem' }}>⚙️</span>
               <h2 style={styles.title}>Settings</h2>
             </div>
-            <button
+<button
               style={styles.closeBtn}
               title="Return to Dashboard"
-              onClick={() => onNavigate ? onNavigate('dashboard') : (window.location.href = '/')}
+              onClick={() => {
+                playClick();
+                onNavigate ? onNavigate('dashboard') : (window.location.href = '/');
+              }}
             >
               ✕
             </button>
@@ -209,9 +215,12 @@ export default function Settings({ onNavigate }) {
                     <div style={styles.actionRowTitle}>Change Password</div>
                     <div style={styles.actionRowDesc}>Reset your password via a secure email link.</div>
                   </div>
-                  <button
+<button
                     style={styles.actionBtn}
-                    onClick={handleResetPassword}
+                    onClick={() => {
+                      playClick();
+                      handleResetPassword();
+                    }}
                   >
                     Reset Password
                   </button>
@@ -221,9 +230,12 @@ export default function Settings({ onNavigate }) {
                     <div style={styles.actionRowTitle}>Reset Achievements</div>
                     <div style={styles.actionRowDesc}>Clear all achievement progress (for testing purposes).</div>
                   </div>
-                  <button
+<button
                     style={{ ...styles.actionBtn, borderColor: '#f59e0b', color: '#d97706' }}
-                    onClick={handleResetAchievements}
+                    onClick={() => {
+                      playClick();
+                      handleResetAchievements();
+                    }}
                   >
                     Reset Achievements
                   </button>
@@ -327,9 +339,14 @@ export default function Settings({ onNavigate }) {
                     Permanently remove your account and all associated data — quiz history, achievements, and scores. This action cannot be undone.
                   </div>
                 </div>
-                <button
+<button
                   style={styles.deleteBtn}
-                  onClick={() => { setShowDeleteModal(true); setDeleteConfirmText(''); setDeleteError(null); }}
+                  onClick={() => {
+                    playClick();
+                    setShowDeleteModal(true);
+                    setDeleteConfirmText('');
+                    setDeleteError(null);
+                  }}
                 >
                   Delete Account
                 </button>
