@@ -326,7 +326,7 @@ const fetchChangeRequests = useCallback(async () => {
     }
   };
 
-  // ── Verification Toggle ──
+// ── Verification Toggle ──
   const handleToggleVerify = async (id) => {
     try {
       const res = await api.post(`/accounts/admin/questions/${id}/toggle-verify/`);
@@ -335,6 +335,18 @@ const fetchChangeRequests = useCallback(async () => {
     } catch (err) {
       console.error("Toggle verify failed", err);
       showToast("Failed to toggle verification", "error");
+    }
+  };
+
+  // ── Topic Visibility Toggle ──
+  const handleToggleTopicVisibility = async (topicId) => {
+    try {
+      const res = await api.post(`/accounts/admin/topics/${topicId}/toggle-visibility/`);
+      showToast(res.data.message || "Topic visibility toggled", "success");
+      fetchTopics();
+    } catch (err) {
+      console.error("Toggle visibility failed", err);
+      showToast("Failed to toggle topic visibility", "error");
     }
   };
 
@@ -571,7 +583,17 @@ const fetchChangeRequests = useCallback(async () => {
                               Grades {topic.grade_level_min}–{topic.grade_level_max} · {topic.total_questions} questions
                             </span>
                           </div>
-                          <div style={{ display: "flex", gap: "6px" }}>
+                          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                            <button
+                              style={{
+                                ...styles.visibilityToggle,
+                                ...(topic.is_visible ? styles.visibilityToggleOn : styles.visibilityToggleOff),
+                              }}
+                              onClick={() => handleToggleTopicVisibility(topic.id)}
+                              title={topic.is_visible ? "Hide from learners" : "Show to learners"}
+                            >
+                              {topic.is_visible ? "👁️ Visible" : "🚫 Hidden"}
+                            </button>
                             <button
                               style={styles.editBtn}
                               onClick={() =>
@@ -1783,6 +1805,30 @@ const styles = {
     padding: "3px 6px",
     fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     whiteSpace: "nowrap",
+  },
+  visibilityToggle: {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    padding: "3px 8px",
+    border: "1px solid",
+    borderRadius: "999px",
+    cursor: "pointer",
+    fontSize: "0.65rem",
+    fontWeight: "600",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+    transition: "all 0.15s ease",
+    whiteSpace: "nowrap",
+  },
+  visibilityToggleOn: {
+    backgroundColor: "#d1fae5",
+    borderColor: "#10b981",
+    color: "#065f46",
+  },
+  visibilityToggleOff: {
+    backgroundColor: "#f1f5f9",
+    borderColor: "#94a3b8",
+    color: "#64748b",
   },
   addQBtn: {
     padding: "3px 8px",

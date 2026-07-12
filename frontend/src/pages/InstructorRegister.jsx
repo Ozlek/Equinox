@@ -1,19 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
 
-export default function Register({ onNavigate, onRegisterSuccess }) {
-  const [formData, setFormData] = useState({ username: '', email: '', password1: '', password2: '', user_type: 'student' });
+export default function InstructorRegister({ onNavigate, onRegisterSuccess }) {
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password1: '',
+    password2: '',
+    grade_level_min: 1,
+    grade_level_max: 10,
+    assigned_topics: [],
+    instructional_scope: '',
+  });
+  const [topics, setTopics] = useState([]);
   const [fieldErrors, setFieldErrors] = useState(null);
+  const [loadingTopics, setLoadingTopics] = useState(true);
+
+  useEffect(() => {
+    // Fetch available topics for the checkbox list (public endpoint)
+    api.get('/topics/all/')
+      .then(res => setTopics(res.data))
+      .catch(err => console.error("Failed to load topics", err))
+      .finally(() => setLoadingTopics(false));
+  }, []);
+
+  const toggleTopic = (topicId) => {
+    setFormData(prev => ({
+      ...prev,
+      assigned_topics: prev.assigned_topics.includes(topicId)
+        ? prev.assigned_topics.filter(id => id !== topicId)
+        : [...prev.assigned_topics, topicId],
+    }));
+  };
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     setFieldErrors(null);
 
     try {
-      const response = await api.post('/accounts/register/', formData);
+      const response = await api.post('/accounts/register/instructor/', formData);
       
       if (response.data.authenticated || response.status === 201) {
-        
         try {
           const tokenResponse = await api.post('/api/token/', {
             username: formData.username,
@@ -24,23 +51,49 @@ export default function Register({ onNavigate, onRegisterSuccess }) {
           localStorage.setItem('refresh_token', tokenResponse.data.refresh);
 
           setTimeout(() => onRegisterSuccess(formData.username, response.data), 100);
-
         } catch (tokenErr) {
           console.error("Auto-login after registration failed", tokenErr);
           onNavigate('login'); 
         }
-
       } else {
         setFieldErrors(response.data.errors);
       }
     } catch (err) {
-      console.error("Registration Error:", err);
+      console.error("Instructor Registration Error:", err);
       if (err.response && err.response.data) {
         setFieldErrors(err.response.data.errors || err.response.data);
       } else {
         setFieldErrors({ network: ["Could not establish server connection."] });
       }
     }
+  };
+
+  const inputStyle = {
+    width: '100%',
+    padding: '0.6rem 0.8rem',
+    backgroundColor: '#fff',
+    border: '1px solid #cbd5e1',
+    borderRadius: '3px',
+    color: '#1e293b',
+    fontFamily: "'Patrick Hand', 'Times New Roman', serif",
+    fontSize: '0.85rem',
+    outline: 'none',
+    boxSizing: 'border-box',
+    transition: 'border-color 0.15s ease',
+    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.08)',
+  };
+
+  const labelStyle = {
+    fontFamily: "'Patrick Hand', 'Times New Roman', serif",
+    color: '#475569',
+    fontSize: '0.6rem',
+    fontWeight: '700',
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '3px',
+    width: '100%',
   };
 
   return (
@@ -53,9 +106,7 @@ export default function Register({ onNavigate, onRegisterSuccess }) {
       `}</style>
       <div style={styles.graphingPaper}>
         <div style={styles.pageWrapper}>
-          {/* Notebook Cover Card */}
           <div style={styles.notebookCover}>
-            {/* Spiral binding — left side */}
             <div style={styles.spiralBinding}>
               {[...Array(8)].map((_, i) => (
                 <div key={i} style={styles.spiralHole}>
@@ -65,18 +116,15 @@ export default function Register({ onNavigate, onRegisterSuccess }) {
             </div>
 
             <div style={styles.coverContent}>
-              {/* Marble texture */}
               <div style={styles.marbleAccent} />
 
-              {/* Title label — simple Equinox branding */}
               <div style={styles.titleLabel}>
                 <div style={styles.titleLabelInner}>
                   <h1 style={styles.coverTitle}>Equinox</h1>
-                  <p style={styles.coverSubtitle}>Create Account</p>
+                  <p style={styles.coverSubtitle}>Instructor / Contributor Registration</p>
                 </div>
               </div>
 
-              {/* Ruled notebook page area */}
               <div style={styles.ruledPage}>
                 <div style={styles.redMargin} />
                 <div style={styles.pageInner}>
@@ -90,55 +138,157 @@ export default function Register({ onNavigate, onRegisterSuccess }) {
 
                   <form onSubmit={handleRegisterSubmit} style={styles.formElement}>
                     <div style={styles.formGroup}>
-                      <label style={styles.label}>Username</label>
+                      <label style={labelStyle}>Username</label>
                       <input 
                         type="text" 
-                        style={styles.inputField} 
+                        style={inputStyle} 
                         onChange={e => setFormData({...formData, username: e.target.value})} 
                         required 
                       />
                     </div>
                     
                     <div style={styles.formGroup}>
-                      <label style={styles.label}>Email Address</label>
+                      <label style={labelStyle}>Email Address</label>
                       <input 
                         type="email" 
-                        style={styles.inputField} 
+                        style={inputStyle} 
                         onChange={e => setFormData({...formData, email: e.target.value})} 
                         required 
                       />
                     </div>
                     
                     <div style={styles.formGroup}>
-                      <label style={styles.label}>Password</label>
+                      <label style={labelStyle}>Password</label>
                       <input 
                         type="password" 
-                        style={styles.inputField} 
+                        style={inputStyle} 
                         onChange={e => setFormData({...formData, password1: e.target.value})} 
                         required 
                       />
                     </div>
 
                     <div style={styles.formGroup}>
-                      <label style={styles.label}>Confirm Password</label>
+                      <label style={labelStyle}>Confirm Password</label>
                       <input 
                         type="password" 
-                        style={styles.inputField} 
+                        style={inputStyle} 
                         onChange={e => setFormData({...formData, password2: e.target.value})} 
                         required 
                       />
                     </div>
 
+                    {/* Grade Level Range */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                      <div style={styles.formGroup}>
+                        <label style={labelStyle}>Min Grade Level</label>
+                        <select
+                          style={{ ...inputStyle, cursor: 'pointer' }}
+                          value={formData.grade_level_min}
+                          onChange={e => setFormData({...formData, grade_level_min: parseInt(e.target.value)})}
+                        >
+                          {[1,2,3,4,5,6,7,8,9,10].map(g => (
+                            <option key={g} value={g}>Grade {g}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div style={styles.formGroup}>
+                        <label style={labelStyle}>Max Grade Level</label>
+                        <select
+                          style={{ ...inputStyle, cursor: 'pointer' }}
+                          value={formData.grade_level_max}
+                          onChange={e => setFormData({...formData, grade_level_max: parseInt(e.target.value)})}
+                        >
+                          {[1,2,3,4,5,6,7,8,9,10].map(g => (
+                            <option key={g} value={g}>Grade {g}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Instructional Scope */}
+                    <div style={styles.formGroup}>
+                      <label style={labelStyle}>Instructional Scope</label>
+                      <input 
+                        type="text" 
+                        style={inputStyle}
+                        placeholder="E.g. Elementary Mathematics Specialist"
+                        value={formData.instructional_scope}
+                        onChange={e => setFormData({...formData, instructional_scope: e.target.value})} 
+                      />
+                      <span style={{ fontSize: '0.6rem', color: '#94a3b8', marginTop: '2px' }}>
+                        Briefly describe your teaching scope or specialization.
+                      </span>
+                    </div>
+
+                    {/* Assigned Topics */}
+                    <div style={styles.formGroup}>
+                      <label style={labelStyle}>Assigned Topics (select the ones you'll manage)</label>
+                      {loadingTopics ? (
+                        <p style={{ fontSize: '0.75rem', color: '#64748b' }}>Loading topics...</p>
+                      ) : (
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr',
+                          gap: '4px',
+                          maxHeight: '180px',
+                          overflowY: 'auto',
+                          padding: '6px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '3px',
+                          backgroundColor: '#faf9f7',
+                        }}>
+                          {topics.map(topic => (
+                            <label key={topic.id} style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              fontSize: '0.72rem',
+                              color: '#334155',
+                              cursor: 'pointer',
+                              padding: '2px 4px',
+                              borderRadius: '3px',
+                              backgroundColor: formData.assigned_topics.includes(topic.id) ? '#e0e7ff' : 'transparent',
+                            }}>
+                              <input
+                                type="checkbox"
+                                checked={formData.assigned_topics.includes(topic.id)}
+                                onChange={() => toggleTopic(topic.id)}
+                              />
+                              {topic.name}
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{
+                      padding: '0.5rem',
+                      backgroundColor: 'rgba(139, 92, 246, 0.06)',
+                      border: '1px solid #c4b5fd',
+                      borderRadius: '3px',
+                      fontSize: '0.7rem',
+                      color: '#6d28d9',
+                      lineHeight: '1.4',
+                    }}>
+                      <strong>Access Notice:</strong> Your account will be restricted to the grade levels and topics selected above. You'll only be able to create and manage questions within your assigned scope.
+                    </div>
+
                     <button type="submit" style={styles.stickyNoteBtn}>
                       <span style={styles.stickyNotePin}>📌</span>
-                      <span>Register</span>
+                      <span>Register as Instructor</span>
                     </button>
                   </form>
 
                   <p style={styles.footerText}>
-                    Already have a profile?{' '}
+                    Already have an account?{' '}
                     <button style={styles.switchBtn} onClick={() => onNavigate('login')}>
                       Log In Here
+                    </button>
+                  </p>
+                  <p style={styles.footerText}>
+                    Want to register as a student?{' '}
+                    <button style={styles.switchBtn} onClick={() => onNavigate('register')}>
+                      Student Registration
                     </button>
                   </p>
                 </div>
@@ -180,7 +330,6 @@ const styles = {
     zIndex: 1,
   },
 
-  // ── Composition Notebook Cover ──
   notebookCover: {
     position: 'relative',
     display: 'flex',
@@ -241,7 +390,6 @@ const styles = {
     pointerEvents: 'none',
   },
 
-  // ── Title Label ──
   titleLabel: {
     position: 'relative',
     zIndex: 1,
@@ -262,7 +410,7 @@ const styles = {
     fontFamily: "'Patrick Hand', 'Times New Roman', serif",
     fontSize: '1.3rem',
     fontWeight: 'bold',
-    color: '#60a5fa',
+    color: '#a78bfa',
     fontStyle: 'italic',
     margin: 0,
     letterSpacing: '0.02em',
@@ -275,7 +423,6 @@ const styles = {
     margin: 0,
   },
 
-  // ── Ruled Notebook Page ──
   ruledPage: {
     position: 'relative',
     zIndex: 1,
@@ -304,7 +451,6 @@ const styles = {
     gap: '1rem',
   },
 
-  // ── Form ──
   formElement: {
     display: 'flex',
     flexDirection: 'column',
@@ -317,31 +463,7 @@ const styles = {
     gap: '3px',
     width: '100%',
   },
-  label: {
-    fontFamily: "'Patrick Hand', 'Times New Roman', serif",
-    color: '#475569',
-    fontSize: '0.6rem',
-    fontWeight: '700',
-    letterSpacing: '0.08em',
-    textTransform: 'uppercase',
-  },
 
-  inputField: {
-    width: '100%',
-    padding: '0.6rem 0.8rem',
-    backgroundColor: '#fff',
-    border: '1px solid #cbd5e1',
-    borderRadius: '3px',
-    color: '#1e293b',
-    fontFamily: "'Patrick Hand', 'Times New Roman', serif",
-    fontSize: '0.85rem',
-    outline: 'none',
-    boxSizing: 'border-box',
-    transition: 'border-color 0.15s ease',
-    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.08)',
-  },
-
-  // ── Sticky Note Submit Button ──
   stickyNoteBtn: {
     width: '100%',
     padding: '0.75rem 1rem',
@@ -351,7 +473,7 @@ const styles = {
     fontFamily: "'Patrick Hand', 'Times New Roman', serif",
     fontSize: '0.9rem',
     fontWeight: 'bold',
-    backgroundColor: '#86efac',
+    backgroundColor: '#c4b5fd',
     color: '#1e293b',
     fontStyle: 'italic',
     letterSpacing: '0.02em',
@@ -370,7 +492,6 @@ const styles = {
     lineHeight: 1,
   },
 
-  // ── Error Banner ──
   errorBanner: {
     display: 'flex',
     flexDirection: 'column',
@@ -385,7 +506,6 @@ const styles = {
     lineHeight: '1.4',
   },
 
-  // ── Footer ──
   footerText: {
     textAlign: 'center',
     color: '#64748b',

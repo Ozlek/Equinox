@@ -7,9 +7,10 @@ from django.contrib.auth import login, logout, authenticate
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from .forms import RegisterForm
+from .forms import RegisterForm, InstructorRegisterForm
 from .models import UserProfile
 from playthrough.models import Question, Topic, QuestionChangeRequest, Lesson, LessonChangeRequest
+from topics.models import Topic as TopicModel
 
 
 # ---------------------------------------------------------------------------
@@ -40,6 +41,28 @@ def _require_instructor(request):
         raise PermissionDenied("Instructor or admin access required.")
 
 
+def _check_instructor_scope(profile, topic_id, grade_level):
+    """
+    Validate that an instructor can access a given topic/grade.
+    Returns (is_valid, error_message) tuple.
+    """
+    if profile.user_type != 'instructor':
+        return True, None  # Admins have full access
+    
+    # Check topic assignment
+    if profile.assigned_topics.exists():
+        if topic_id not in profile.assigned_topics.values_list('id', flat=True):
+            return False, "You are not assigned to this topic."
+    
+    # Check grade level range
+    if profile.grade_level_min and grade_level < profile.grade_level_min:
+        return False, f"Grade level must be at least {profile.grade_level_min}."
+    if profile.grade_level_max and grade_level > profile.grade_level_max:
+        return False, f"Grade level must be at most {profile.grade_level_max}."
+    
+    return True, None
+
+
 # ---------------------------------------------------------------------------
 # Auth views
 # ---------------------------------------------------------------------------
@@ -67,6 +90,16 @@ def login_api(request):
         refresh = RefreshToken.for_user(user)
         profile = getattr(user, 'profile', None)
 
+        # Instructors don't need student onboarding
+        needs_onboarding = False
+        if profile:
+            if profile.user_type == 'instructor':
+                needs_onboarding = False
+            else:
+                needs_onboarding = not profile.has_completed_onboarding
+        else:
+            needs_onboarding = True
+
         return Response({
             "authenticated": True,
             "username": user.username,
@@ -76,7 +109,7 @@ def login_api(request):
             "user_type": profile.user_type if profile else 'student',
             "access": str(refresh.access_token),
             "refresh": str(refresh),
-            "needs_onboarding": profile is None or not profile.has_completed_onboarding,
+            "needs_onboarding": needs_onboarding,
             "message": "Login successful"
         }, status=status.HTTP_200_OK)
 
@@ -133,6 +166,15 @@ def logout_api(request):
 def check_auth_status(request):
     if request.user.is_authenticated:
         profile = getattr(request.user, 'profile', None)
+        # Instructors don't need student onboarding
+        needs_onboarding = False
+        if profile:
+            if profile.user_type == 'instructor':
+                needs_onboarding = False
+            else:
+                needs_onboarding = not profile.has_completed_onboarding
+        else:
+            needs_onboarding = True
         return Response({
             "authenticated": True,
             "username": request.user.username,
@@ -141,7 +183,7 @@ def check_auth_status(request):
             "is_superuser": request.user.is_superuser,
             "user_type": profile.user_type if profile else 'student',
             "date_joined": request.user.date_joined.isoformat() if request.user.date_joined else None,
-            "needs_onboarding": profile is None or not profile.has_completed_onboarding
+            "needs_onboarding": needs_onboarding
         })
     return Response({"authenticated": False})
 
@@ -313,6 +355,7 @@ def admin_topics_list(request):
             "description": topic.description,
             "grade_level_min": topic.grade_level_min,
             "grade_level_max": topic.grade_level_max,
+            "is_visible": topic.is_visible,
             "question_counts_by_grade": grades,
             "total_questions": sum(grades.values()),
         })
@@ -630,6 +673,18 @@ def instructor_questions_list(request):
 
     if request.method == 'POST':
         data = request.data
+        profile = getattr(request.user, 'profile', None)
+        
+        # Validate scope for instructors
+        if profile and profile.user_type == 'instructor':
+            is_valid, error_msg = _check_instructor_scope(
+                profile, 
+                data.get('topic_id'), 
+                data.get('grade_level', 1)
+            )
+            if not is_valid:
+                return Response({"error": error_msg}, status=status.HTTP_400_BAD_REQUEST)
+        
         change_request = QuestionChangeRequest.objects.create(
             change_type='add',
             proposed_data={
@@ -654,6 +709,16 @@ def instructor_questions_list(request):
 
     # GET - list questions
     qs = Question.objects.select_related('topic').all().order_by('id')
+
+    # Filter by instructor's assigned scope
+    profile = getattr(request.user, 'profile', None)
+    if profile and profile.user_type == 'instructor':
+        if profile.assigned_topics.exists():
+            qs = qs.filter(topic__in=profile.assigned_topics.all())
+        if profile.grade_level_min:
+            qs = qs.filter(grade_level__gte=profile.grade_level_min)
+        if profile.grade_level_max:
+            qs = qs.filter(grade_level__lte=profile.grade_level_max)
 
     topic_id = request.query_params.get('topic_id')
     grade_level = request.query_params.get('grade_level')
@@ -696,6 +761,17 @@ def instructor_question_detail(request, question_id):
     _require_instructor(request)
 
     question = get_object_or_404(Question, id=question_id)
+    profile = getattr(request.user, 'profile', None)
+
+    # Validate scope for instructors
+    if profile and profile.user_type == 'instructor':
+        is_valid, error_msg = _check_instructor_scope(
+            profile,
+            question.topic_id,
+            question.grade_level
+        )
+        if not is_valid:
+            return Response({"error": error_msg}, status=status.HTTP_400_BAD_REQUEST)
 
     if request.method == 'PUT':
         data = request.data
@@ -806,6 +882,24 @@ def admin_lesson_pending_count(request):
     count = LessonChangeRequest.objects.filter(status='pending').count()
 
     return Response({"lesson_pending_count": count})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def admin_toggle_topic_visibility(request, topic_id):
+    """Toggle the is_visible field on a topic (admin)."""
+    _require_admin(request)
+
+    topic = get_object_or_404(Topic, id=topic_id)
+    topic.is_visible = not topic.is_visible
+    topic.save()
+
+    return Response({
+        "id": topic.id,
+        "name": topic.name,
+        "is_visible": topic.is_visible,
+        "message": f"Topic visibility set to {topic.is_visible}.",
+    })
 
 
 # ===========================================================================
@@ -1033,6 +1127,18 @@ def instructor_lessons_list(request):
 
     if request.method == 'POST':
         data = request.data
+        profile = getattr(request.user, 'profile', None)
+        
+        # Validate scope for instructors
+        if profile and profile.user_type == 'instructor':
+            is_valid, error_msg = _check_instructor_scope(
+                profile,
+                data.get('topic_id'),
+                data.get('grade_level', 1)
+            )
+            if not is_valid:
+                return Response({"error": error_msg}, status=status.HTTP_400_BAD_REQUEST)
+        
         change_request = LessonChangeRequest.objects.create(
             change_type='add',
             proposed_data={
@@ -1053,6 +1159,16 @@ def instructor_lessons_list(request):
 
     # GET - list lessons
     qs = Lesson.objects.select_related('topic').all().order_by('topic__name', 'grade_level', 'order')
+
+    # Filter by instructor's assigned scope
+    profile = getattr(request.user, 'profile', None)
+    if profile and profile.user_type == 'instructor':
+        if profile.assigned_topics.exists():
+            qs = qs.filter(topic__in=profile.assigned_topics.all())
+        if profile.grade_level_min:
+            qs = qs.filter(grade_level__gte=profile.grade_level_min)
+        if profile.grade_level_max:
+            qs = qs.filter(grade_level__lte=profile.grade_level_max)
 
     topic_id = request.query_params.get('topic_id')
     grade_level = request.query_params.get('grade_level')
@@ -1089,6 +1205,17 @@ def instructor_lesson_detail(request, lesson_id):
     _require_instructor(request)
 
     lesson = get_object_or_404(Lesson, id=lesson_id)
+    profile = getattr(request.user, 'profile', None)
+
+    # Validate scope for instructors
+    if profile and profile.user_type == 'instructor':
+        is_valid, error_msg = _check_instructor_scope(
+            profile,
+            lesson.topic_id,
+            lesson.grade_level
+        )
+        if not is_valid:
+            return Response({"error": error_msg}, status=status.HTTP_400_BAD_REQUEST)
 
     if request.method == 'PUT':
         data = request.data
@@ -1121,6 +1248,88 @@ def instructor_lesson_detail(request, lesson_id):
         "request_id": change_request.id,
         "message": "Lesson deletion request submitted for admin review.",
     }, status=status.HTTP_200_OK)
+
+
+# ---------------------------------------------------------------------------
+# Instructor Registration (separate endpoint)
+# ---------------------------------------------------------------------------
+
+@api_view(['POST'])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def instructor_register_api(request):
+    """
+    Register a new instructor account with assignment fields:
+    - grade_level_min / grade_level_max
+    - assigned_topics (list of topic IDs)
+    - instructional_scope
+    """
+    from topics.models import Topic as TopicModel
+
+    # Convert DRF data to mutable format for Django form compatibility
+    data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
+    # Ensure integer fields are strings for Django form validation
+    if 'grade_level_min' in data:
+        data['grade_level_min'] = str(data['grade_level_min'])
+    if 'grade_level_max' in data:
+        data['grade_level_max'] = str(data['grade_level_max'])
+
+    form = InstructorRegisterForm(data)
+    if not form.is_valid():
+        return Response({
+            "authenticated": False,
+            "errors": form.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    user = form.save()
+    user.is_staff = True
+    user.save()
+
+    # Update profile
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    profile.user_type = 'instructor'
+    profile.grade_level_min = form.cleaned_data.get('grade_level_min')
+    profile.grade_level_max = form.cleaned_data.get('grade_level_max')
+    profile.instructional_scope = form.cleaned_data.get('instructional_scope', '')
+    profile.has_completed_onboarding = True  # Instructors don't need student onboarding
+
+    # Assign topics
+    topic_ids = request.data.get('assigned_topics', [])
+    if topic_ids:
+        topics = TopicModel.objects.filter(id__in=topic_ids)
+        profile.assigned_topics.set(topics)
+
+    profile.save()
+
+    login(request, user)
+    return Response({
+        "authenticated": True,
+        "username": user.username,
+        "is_staff": user.is_staff,
+        "is_superuser": user.is_superuser,
+        "user_type": 'instructor',
+        "message": "Instructor registration successful"
+    }, status=status.HTTP_201_CREATED)
+
+
+# ---------------------------------------------------------------------------
+# Instructor Profile (view assignments)
+# ---------------------------------------------------------------------------
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def instructor_profile_api(request):
+    """Get the current instructor's assignment data."""
+    profile = getattr(request.user, 'profile', None)
+    if not profile or profile.user_type not in ('instructor', 'admin'):
+        return Response({"error": "Not an instructor account."}, status=status.HTTP_400_BAD_REQUEST)
+
+    return Response({
+        "grade_level_min": profile.grade_level_min,
+        "grade_level_max": profile.grade_level_max,
+        "instructional_scope": profile.instructional_scope,
+        "assigned_topics": list(profile.assigned_topics.values('id', 'name')),
+    })
 
 
 @api_view(['GET'])

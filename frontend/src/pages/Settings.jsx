@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
 import { useConfirmDialog } from '../components/ConfirmDialog';
 import { playCheck, playClick, playNext } from '../utils/sounds';
+import { getSfxVolume, setSfxVolume, getMusicVolume, setMusicVolume } from '../utils/sounds';
 
 export default function Settings({ onNavigate }) {
   const [userInfo, setUserInfo] = useState(null);
@@ -17,6 +18,10 @@ export default function Settings({ onNavigate }) {
     const stored = localStorage.getItem('pref_notifications');
     return stored === null ? true : stored === 'true';
   });
+  
+  // Volume slider states
+  const [sfxVolume, setSfxVolumeState] = useState(() => getSfxVolume());
+  const [musicVolume, setMusicVolumeState] = useState(() => getMusicVolume());
 
   // Delete account modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -270,8 +275,8 @@ const handleSoundToggle = () => {
                 {/* Sound Effects */}
                 <div style={styles.toggleRow}>
                   <div>
-                    <div style={styles.actionRowTitle}>Sound Effects</div>
-                    <div style={styles.actionRowDesc}>Work in Progress: Play audio feedback during quiz interactions.</div>
+                    <div style={styles.actionRowTitle}>Sound Options</div>
+                    <div style={styles.actionRowDesc}>Play audio feedback during quiz interactions.</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     {savedSound && <span style={styles.savedBadge}>Saved ✓</span>}
@@ -284,6 +289,56 @@ const handleSoundToggle = () => {
                     </button>
                   </div>
                 </div>
+
+                {/* Sound Effects Volume Slider */}
+                {soundEnabled && (
+                  <div style={{ ...styles.toggleRow, paddingLeft: '1.25rem' }}>
+                    <div>
+                      <div style={{ ...styles.actionRowTitle, fontSize: '0.9rem', color: '#64748b' }}>SFX Volume</div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '200px' }}>
+                      <span style={{ color: '#94a3b8', fontSize: '0.8rem', width: '30px' }}>{Math.round(sfxVolume * 100)}%</span>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={sfxVolume}
+                        onChange={(e) => {
+                          const vol = parseFloat(e.target.value);
+                          setSfxVolumeState(vol);
+                          setSfxVolume(vol);
+                        }}
+                        style={{ flex: 1, cursor: 'pointer' }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Music Volume Slider */}
+                {soundEnabled && (
+                  <div style={{ ...styles.toggleRow, paddingLeft: '1.25rem' }}>
+                    <div>
+                      <div style={{ ...styles.actionRowTitle, fontSize: '0.9rem', color: '#64748b' }}>Music Volume</div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '200px' }}>
+                      <span style={{ color: '#94a3b8', fontSize: '0.8rem', width: '30px' }}>{Math.round(musicVolume * 100)}%</span>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={musicVolume}
+                        onChange={(e) => {
+                          const vol = parseFloat(e.target.value);
+                          setMusicVolumeState(vol);
+                          setMusicVolume(vol);
+                        }}
+                        style={{ flex: 1, cursor: 'pointer' }}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* Notifications */}
                 <div style={styles.toggleRow}>

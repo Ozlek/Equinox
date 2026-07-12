@@ -19,6 +19,27 @@ class UserProfile(models.Model):
         default='student',
     )
 
+    # Instructor assignment fields
+    assigned_topics = models.ManyToManyField(
+        'topics.Topic',
+        blank=True,
+        help_text="Topics this instructor is allowed to manage"
+    )
+    grade_level_min = models.IntegerField(
+        null=True, blank=True,
+        help_text="Minimum grade level the instructor can work with"
+    )
+    grade_level_max = models.IntegerField(
+        null=True, blank=True,
+        help_text="Maximum grade level the instructor can work with"
+    )
+    instructional_scope = models.CharField(
+        max_length=200,
+        blank=True,
+        default='',
+        help_text="E.g. 'Elementary Mathematics Specialist'"
+    )
+
     def __str__(self):
         return f"{self.user.username}'s profile ({self.get_user_type_display()})"
 

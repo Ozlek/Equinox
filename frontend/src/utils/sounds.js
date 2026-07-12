@@ -9,6 +9,28 @@ const isSoundEnabled = () => {
   return stored === null ? true : stored === 'true';
 };
 
+// Get sound effects volume (0-1)
+export const getSfxVolume = () => {
+  const stored = localStorage.getItem('pref_sfx_volume');
+  return stored !== null ? parseFloat(stored) : 0.5;
+};
+
+// Get music volume (0-1)
+export const getMusicVolume = () => {
+  const stored = localStorage.getItem('pref_music_volume');
+  return stored !== null ? parseFloat(stored) : 0.3;
+};
+
+// Set sound effects volume
+export const setSfxVolume = (volume) => {
+  localStorage.setItem('pref_sfx_volume', Math.max(0, Math.min(1, volume)));
+};
+
+// Set music volume
+export const setMusicVolume = (volume) => {
+  localStorage.setItem('pref_music_volume', Math.max(0, Math.min(1, volume)));
+};
+
 // Audio context singleton for Web Audio API
 let audioContext = null;
 
@@ -34,14 +56,14 @@ const loadAudio = (name) => {
 };
 
 // Play HTML5 audio with fallback to Web Audio
-const playHtml5Audio = (name, fallbackFn) => {
+const playHtml5Audio = (name, fallbackFn, isMusic = false) => {
   if (!isSoundEnabled()) return;
   
   try {
     const audio = loadAudio(name);
     // Clone to allow overlapping plays
     const clone = audio.cloneNode();
-    clone.volume = 0.5;
+    clone.volume = isMusic ? getMusicVolume() : getSfxVolume();
     clone.play().catch(() => {
       // If HTML5 audio fails, try Web Audio fallback
       if (fallbackFn) fallbackFn();
@@ -247,7 +269,7 @@ export const playPlaythroughLoop1 = () => {
   try {
     const audio = loadAudio('playthroughLoop1');
     const clone = audio.cloneNode();
-    clone.volume = 0.3;
+    clone.volume = getMusicVolume();
     clone.loop = false;
     
     // Set up onended handler to play loop2 after a delay
@@ -289,7 +311,7 @@ export const playPlaythroughLoop2 = () => {
   try {
     const audio = loadAudio('playthroughLoop2');
     const clone = audio.cloneNode();
-    clone.volume = 0.3;
+    clone.volume = getMusicVolume();
     clone.loop = false;
     
     // Set up onended handler to play loop1 after a delay

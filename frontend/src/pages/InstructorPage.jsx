@@ -18,6 +18,7 @@ export default function InstructorPage() {
   const [myRequests, setMyRequests] = useState([]);
   const [myLessonRequests, setMyLessonRequests] = useState([]);
   const [requestsLoading, setRequestsLoading] = useState(false);
+  const [instructorProfile, setInstructorProfile] = useState(null);
   const { showToast, ToastContainer } = useToast();
   const { confirm, ConfirmDialogComponent } = useConfirmDialog();
 
@@ -79,10 +80,19 @@ export default function InstructorPage() {
     }
   }, []);
 
+  const fetchInstructorProfile = useCallback(async () => {
+    try {
+      const res = await api.get("/accounts/instructor/profile/");
+      setInstructorProfile(res.data);
+    } catch (err) {
+      console.error("Failed to load instructor profile", err);
+    }
+  }, []);
+
   useEffect(() => {
     setLoading(true);
-    fetchTopics().finally(() => setLoading(false));
-  }, [fetchTopics]);
+    Promise.all([fetchTopics(), fetchInstructorProfile()]).finally(() => setLoading(false));
+  }, [fetchTopics, fetchInstructorProfile]);
 
   useEffect(() => {
     if (selectedTopicId) fetchQuestions();
@@ -232,6 +242,28 @@ export default function InstructorPage() {
           <div style={styles.ruledPage}>
             <div style={styles.redMargin} />
             <div style={styles.pageInner}>
+              {/* Instructor scope notice */}
+              {instructorProfile && (
+                <div style={{
+                  padding: '0.5rem 0.7rem',
+                  backgroundColor: 'rgba(99, 102, 241, 0.06)',
+                  border: '1px solid #c7d2fe',
+                  borderRadius: '4px',
+                  fontSize: '0.72rem',
+                  color: '#4338ca',
+                  lineHeight: '1.4',
+                }}>
+                  <strong>Your Assigned Scope:</strong>{' '}
+                  Grades {instructorProfile.grade_level_min || '?'}–{instructorProfile.grade_level_max || '?'}
+                  {instructorProfile.assigned_topics && instructorProfile.assigned_topics.length > 0 && (
+                    <> · Topics: {instructorProfile.assigned_topics.map(t => t.name).join(', ')}</>
+                  )}
+                  {instructorProfile.instructional_scope && (
+                    <> · Scope: {instructorProfile.instructional_scope}</>
+                  )}
+                </div>
+              )}
+
               {/* Tab bar */}
               <div style={styles.tabBar}>
                 <button

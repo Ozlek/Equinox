@@ -43,7 +43,15 @@ export default function Home({ onNavigate }) {
               onClick={() => onNavigate('register')}
             >
               <span style={styles.stickyNotePin}>📌</span>
-              <span style={styles.stickyNoteLabel}>Create Profile</span>
+              <span style={styles.stickyNoteLabel}>Create Student Profile</span>
+            </button>
+
+            <button 
+              style={styles.stickyNoteBtnPurple}
+              onClick={() => onNavigate('instructor-register')}
+            >
+              <span style={styles.stickyNotePin}>📌</span>
+              <span style={styles.stickyNoteLabel}>Create Instructor Profile</span>
             </button>
           </div>
         </div>
@@ -201,6 +209,29 @@ const styles = {
     fontStyle: 'italic',
     letterSpacing: '0.02em',
     transform: 'rotate(0.6deg)',
+    boxShadow: '3px 4px 10px rgba(0,0,0,0.15), -1px -1px 0 rgba(255,255,255,0.4) inset',
+    transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    position: 'relative',
+  },
+
+  stickyNoteBtnPurple: {
+    width: '100%',
+    padding: '0.9rem 1.5rem',
+    border: 'none',
+    borderRadius: '2px',
+    cursor: 'pointer',
+    fontFamily: "'Patrick Hand', 'Times New Roman', serif",
+    fontSize: '0.95rem',
+    fontWeight: 'bold',
+    backgroundColor: '#b893fd',
+    color: '#1e293b',
+    fontStyle: 'italic',
+    letterSpacing: '0.02em',
+    transform: 'rotate(-0.8deg)',
     boxShadow: '3px 4px 10px rgba(0,0,0,0.15), -1px -1px 0 rgba(255,255,255,0.4) inset',
     transition: 'transform 0.15s ease, box-shadow 0.15s ease',
     display: 'flex',

@@ -5,19 +5,11 @@ from django.shortcuts import get_object_or_404
 from .models import Topic
 from playthrough.models import Lesson
 
-# Post-testing topics - focused set for user feedback gathering
-POST_TESTING_TOPICS = [
-    'Arithmetic',
-    'Fractions, Decimals, and Percentages',
-    'Ratios and Proportional Reasoning',
-    'Algebra and Algebraic Expressions',
-    'Geometry and Spatial Reasoning',
-]
-
 @api_view(['GET'])
 @permission_classes([AllowAny]) # Anyone can browse the available topic lists
 def topic_list_api(request):
-    topics = Topic.objects.filter(name__in=POST_TESTING_TOPICS)
+    """Return visible topics for learners."""
+    topics = Topic.objects.filter(is_visible=True).order_by('name')
     data = [{
         "id": t.id,
         "name": t.name,
@@ -79,3 +71,18 @@ def topic_lessons_api(request, topic_id):
     } for lesson in lessons]
     
     return Response({'lessons': data})
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def all_topics_api(request):
+    """Return all topics for public use (e.g., instructor registration)."""
+    topics = Topic.objects.all().order_by('name')
+    data = [{
+        "id": t.id,
+        "name": t.name,
+        "grade_level_min": t.grade_level_min,
+        "grade_level_max": t.grade_level_max,
+        "description": t.description
+    } for t in topics]
+    return Response(data)

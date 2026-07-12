@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     path('register/', views.register_api, name='register'),
+    path('register/instructor/', views.instructor_register_api, name='instructor_register'),
     path('login/', views.login_api, name='login'),
     path('logout/', views.logout_api, name='logout'),
     path('check-auth/', views.check_auth_status, name='check_auth'),
@@ -12,6 +13,9 @@ urlpatterns = [
     path('reset-achievements/', views.reset_achievements_api, name='reset_achievements'),
     path('delete-account/', views.delete_account_api, name='delete_account'),
     path('password/reset/', include('dj_rest_auth.urls')),
+
+    # ── Instructor profile ──
+    path('instructor/profile/', views.instructor_profile_api, name='instructor_profile'),
 
     # ── Admin endpoints ──
     path('admin/users/', views.admin_users_list, name='admin_users_list'),
@@ -26,6 +30,7 @@ urlpatterns = [
     path('admin/change-requests/', views.admin_change_requests_list, name='admin_change_requests_list'),
     path('admin/change-requests/<int:request_id>/review/', views.admin_change_request_review, name='admin_change_request_review'),
     path('admin/questions/<int:question_id>/toggle-verify/', views.admin_toggle_verification, name='admin_toggle_verification'),
+    path('admin/topics/<int:topic_id>/toggle-visibility/', views.admin_toggle_topic_visibility, name='admin_toggle_topic_visibility'),
     path('admin/lesson-change-requests/', views.admin_lesson_change_requests_list, name='admin_lesson_change_requests_list'),
     path('admin/lesson-change-requests/<int:request_id>/review/', views.admin_lesson_change_request_review, name='admin_lesson_change_request_review'),
 

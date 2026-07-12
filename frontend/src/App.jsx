@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import InstructorRegister from './pages/InstructorRegister';
 // ─── NEW PASSWORD RECOVERY IMPORTS ───
 import ForgotPassword from './pages/ForgotPassword';
 import PasswordResetConfirm from './pages/PasswordResetConfirm';
@@ -18,6 +19,7 @@ import AdminPage from './pages/AdminPage';
 import InstructorPage from './pages/InstructorPage';
 import Profile from './pages/Profile';
 import Shop from './pages/Shop';
+import RoleSelectionModal from './components/RoleSelectionModal';
 import api from './api/axios';
 import { getCookie } from './utils';
 
@@ -115,6 +117,7 @@ export default function App() {
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
 
   useEffect(() => {
       setIsMobile(window.innerWidth < 768);
@@ -401,6 +404,21 @@ export default function App() {
 
   return (
     <div style={appLayoutStyles.appContainer}>
+      {/* Role Selection Modal */}
+      {showRoleModal && (
+        <RoleSelectionModal
+          onSelect={(role) => {
+            setShowRoleModal(false);
+            if (role === 'student') {
+              navigateTo('register');
+            } else {
+              navigateTo('instructor-register');
+            }
+          }}
+          onClose={() => setShowRoleModal(false)}
+        />
+      )}
+
       {user && needsOnboarding && (
         <Questionnaire
             onComplete={async () => {
@@ -490,7 +508,7 @@ export default function App() {
               <div style={{ display: 'flex', flexDirection: 'row', gap: '8px' }}>
                 <TopbarTab id="home-tab" icon="house-fill" label="Home" index={1} isActive={currentView === 'home'} onClick={() => navigateTo('home')} />
                 <TopbarTab id="login-tab" icon="box-arrow-in-right" label="Login" index={2} isActive={currentView === 'login'} onClick={() => navigateTo('login')} />
-                <TopbarTab id="register-tab" icon="person-plus-fill" label="Register" index={3} isActive={currentView === 'register'} onClick={() => navigateTo('register')} />
+                <TopbarTab id="register-tab" icon="person-plus-fill" label="Register" index={3} isActive={currentView === 'register'} onClick={() => setShowRoleModal(true)} />
               </div>
             )}
           </div>
@@ -541,6 +559,7 @@ export default function App() {
             {!user && currentView === 'home' && <Home onNavigate={navigateTo} />}
             {!user && currentView === 'login' && <Login onNavigate={navigateTo} onLoginSuccess={(name, needsOnboard, isStaff, isSuperuser) => { setUser(name); setNeedsOnboarding(needsOnboard); setIsStaff(isStaff); setIsSuperuser(isSuperuser); setCurrentView('dashboard'); }} />}
             {!user && currentView === 'register' && <Register onNavigate={navigateTo} onRegisterSuccess={(name, data) => { setUser(name); setNeedsOnboarding(true); setIsStaff(data?.is_staff || false); setIsSuperuser(data?.is_superuser || false); setCurrentView('dashboard'); }} />}
+            {!user && currentView === 'instructor-register' && <InstructorRegister onNavigate={navigateTo} onRegisterSuccess={(name, data) => { setUser(name); setNeedsOnboarding(false); setIsStaff(true); setIsSuperuser(data?.is_superuser || false); setCurrentView('dashboard'); }} />}
             
             {/* ─── ADDED RECOVERY COMPONENTS HERE ─── */}
             {!user && currentView === 'forgot-password' && <ForgotPassword onNavigate={navigateTo} />}

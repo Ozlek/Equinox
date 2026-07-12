@@ -9,4 +9,6 @@ urlpatterns = [
     
     path('<int:topic_id>/lessons/', views.topic_lessons_api, name='topic_lessons'),
 
+    path('all/', views.all_topics_api, name='all_topics'),
+
 ]
