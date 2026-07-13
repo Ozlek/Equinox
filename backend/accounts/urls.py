@@ -42,4 +42,15 @@ urlpatterns = [
     path('instructor/lessons/', views.instructor_lessons_list, name='instructor_lessons_list'),
     path('instructor/lessons/<int:lesson_id>/', views.instructor_lesson_detail, name='instructor_lesson_detail'),
     path('instructor/my-lesson-change-requests/', views.instructor_my_lesson_change_requests, name='instructor_my_lesson_change_requests'),
+
+    # ── Template endpoints ──
+    path('instructor/templates/', views.instructor_templates_list, name='instructor_templates_list'),
+    path('instructor/templates/<str:template_id>/toggle-verify/', views.instructor_toggle_template_verification, name='instructor_toggle_template_verification'),
+    path('instructor/template-change-requests/', views.instructor_template_change_requests, name='instructor_template_change_requests'),
+    path('instructor/questions/batch-verify/', views.instructor_batch_verify_questions, name='instructor_batch_verify_questions'),
+
+    # ── Admin template endpoints ──
+    path('admin/template-change-requests/', views.admin_template_change_requests_list, name='admin_template_change_requests_list'),
+    path('admin/template-change-requests/<int:request_id>/review/', views.admin_template_change_request_review, name='admin_template_change_request_review'),
+    path('admin/template-change-requests/pending-count/', views.admin_template_pending_count, name='admin_template_pending_count'),
 ]

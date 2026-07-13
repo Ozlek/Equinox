@@ -49,9 +49,17 @@ class Question(models.Model):
         help_text="Whether this question has been verified as correct by an instructor or admin"
     )
 
+    template_id = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text="Links this question to a QuestionTemplate (e.g., 'arith_01', 'alg_05'). Null for imported/non-template questions."
+    )
+
     class Meta:
         indexes = [
             models.Index(fields=['topic', 'difficulty']),
+            models.Index(fields=['template_id']),
         ]
 
     def __str__(self):
@@ -200,6 +208,135 @@ class LessonChangeRequest(models.Model):
         User, on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='reviewed_lesson_change_requests'
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_notes = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.get_change_type_display()} request by {self.submitted_by.username} ({self.status})"
+
+
+# ==========================================
+# QUESTION TEMPLATE MODEL
+# ==========================================
+
+class QuestionTemplate(models.Model):
+    """
+    Represents a procedural question template (e.g., arith_01 basic addition).
+    Teachers verify these templates once, which cascades to all generated questions.
+    """
+    DOMAIN_CHOICES = [
+        ('Arithmetic', 'Arithmetic'),
+        ('Algebra', 'Algebra'),
+        ('Geometry', 'Geometry'),
+        ('Statistics', 'Statistics'),
+        ('Trigonometry', 'Trigonometry'),
+    ]
+    DIFFICULTY_CHOICES = [
+        ('Novice', 'Novice (1.0)'),
+        ('Intermediate', 'Intermediate (2.0)'),
+        ('Advanced', 'Advanced (3.0)'),
+        ('Expert', 'Expert (4.0)'),
+    ]
+
+    template_id = models.CharField(
+        max_length=20,
+        unique=True,
+        help_text="Unique identifier matching the generator method (e.g., 'arith_01')"
+    )
+    domain = models.CharField(max_length=20, choices=DOMAIN_CHOICES)
+    display_name = models.CharField(
+        max_length=100,
+        help_text="Human-readable name (e.g., 'Basic Addition')"
+    )
+    template_text = models.TextField(
+        help_text="Template with {placeholder} variables (e.g., 'Calculate: {a} + {b}')"
+    )
+    solution_template = models.TextField(
+        help_text="Step-by-step solution with {placeholder} variables"
+    )
+    base_difficulty = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES)
+    is_word_problem = models.BooleanField(default=False)
+    is_verified = models.BooleanField(
+        default=False,
+        help_text="Whether this template has been verified by an instructor"
+    )
+    is_implemented = models.BooleanField(
+        default=True,
+        help_text="Whether a developer has written the generator code. False for instructor-requested templates awaiting implementation."
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Whether this template is actively generating questions. Set to False when retired."
+    )
+    verified_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='verified_templates'
+    )
+    verified_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['domain', 'template_id']
+
+    def __str__(self):
+        return f"{self.template_id} - {self.display_name}"
+
+
+# ==========================================
+# TEMPLATE CHANGE REQUEST MODEL
+# ==========================================
+
+class TemplateChangeRequest(models.Model):
+    """
+    Stores change requests submitted by instructors for template modifications.
+    
+    Acts like a pull request system — instructors propose new templates,
+    edits, or deletions, and admins approve/reject them before they take effect.
+    """
+    CHANGE_TYPES = [
+        ('add', 'Add Template'),
+        ('edit', 'Edit Template'),
+        ('delete', 'Delete Template'),
+    ]
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
+    template = models.ForeignKey(
+        QuestionTemplate, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='change_requests'
+    )
+    change_type = models.CharField(max_length=10, choices=CHANGE_TYPES)
+    proposed_data = models.JSONField(
+        help_text="The proposed template data as a JSON object. "
+                  "For 'add': {domain, display_name, template_text, solution_template, "
+                  "base_difficulty, is_word_problem, rationale, sample_numbers}. "
+                  "For 'edit': {template_id, reason, ...changed fields}. "
+                  "For 'delete': {template_id, reason}."
+    )
+    submitted_by = models.ForeignKey(
+        User, on_delete=models.CASCADE,
+        related_name='submitted_template_change_requests'
+    )
+    status = models.CharField(
+        max_length=10, choices=STATUS_CHOICES,
+        default='pending'
+    )
+    reviewed_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='reviewed_template_change_requests'
     )
     reviewed_at = models.DateTimeField(null=True, blank=True)
     review_notes = models.TextField(null=True, blank=True)

@@ -87,11 +87,11 @@ const styles = {
 const appLayoutStyles = {
   appContainer: { display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', backgroundColor: '#1a202c', color: '#f7fafc' },
   topbar: { height: '60px', backgroundColor: '#111827', borderBottom: '1px solid #1f2937', zIndex: 1030, display: 'flex', alignItems: 'center', flexShrink: 0 },
-  mainGrid: { display: 'flex', flex: 1, height: 'calc(100vh - 60px)', overflow: 'hidden', position: 'relative' },
+  mainGrid: { display: 'flex', flex: 1, height: '100vh', overflow: 'hidden', position: 'relative' },
   sidebar: { backgroundColor: '#111827', borderRight: '1px solid #1f2937', transition: 'transform 0.2s ease-in-out', zIndex: 1020, left: 0, padding: '0', width: '280px' },
   sidebarTooltip: { position: 'absolute', left: '100%', top: '50%', transform: 'translateY(-50%)', marginLeft: '12px', backgroundColor: '#1f2937', color: '#f7fafc', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '500', whiteSpace: 'nowrap', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)', border: '1px solid #374151', pointerEvents: 'none', zIndex: 1050 },
   topbarTooltip: { position: 'absolute', top: '100%', right: '0', marginTop: '8px', backgroundColor: '#1f2937', color: '#f7fafc', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '500', whiteSpace: 'nowrap', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)', border: '1px solid #374151', pointerEvents: 'none', zIndex: 1050 },
-  mobileBackdrop: { position: 'fixed', top: '60px', left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(3px)', zIndex: 1010 },
+  mobileBackdrop: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(3px)', zIndex: 1010 },
   contentContainer: { flex: 1, overflowY: 'auto', height: '100%', backgroundColor: '#1a202c', marginLeft: '280px' }
 };
 
@@ -434,90 +434,92 @@ export default function App() {
         />
       )}
 
-      {/* 1. TOPBAR SYSTEM */}
-      <nav className="navbar navbar-dark bg-dark px-3" style={appLayoutStyles.topbar}>
-        <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row' }}>
-          
-          <div style={{ display: 'flex', alignItems: 'center', flexDirection: 'row', gap: '8px' }}>
-            {user && (
-              <button 
-                className="btn btn-dark d-md-none border-0 px-2 py-1"
-                style={{ backgroundColor: 'transparent' }}
-                onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-              >
-                <i className={`bi bi-${mobileSidebarOpen ? 'x-lg' : 'list'} fs-4 text-secondary`}></i>
-              </button>
-            )}
-            <TopbarTab 
-              id="equinox-tab" 
-              icon="star-fill" 
-              label="EQUINOX" 
-              index={0} 
-              isActive={user ? currentView === 'dashboard' : currentView === 'home'} 
-              onClick={() => navigateTo(user ? 'dashboard' : 'home')} 
-            />
+      {/* 1. TOPBAR SYSTEM - Hidden during playthrough */}
+      {currentView !== 'playthrough' && (
+        <nav className="navbar navbar-dark bg-dark px-3" style={appLayoutStyles.topbar}>
+          <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row' }}>
             
-            {/* Grade Level Selector - only show for logged-in users */}
-            {user && userGrade && (
-              <select
-                value={userGrade}
-                onChange={(e) => {
-                  const newGrade = parseInt(e.target.value, 10);
-                  const previousGrade = userGrade;
-                  setUserGrade(newGrade);
-                  // Update grade on backend
-                  api.post('/accounts/grade/update/', {
-                      grade_level: newGrade
-                  })
-                  .catch(() => {
-                      setUserGrade(previousGrade);
-                  });
-                }}
-                style={{
-                  backgroundColor: '#1f2937',
-                  color: '#f7fafc',
-                  border: '1px solid #374151',
-                  borderRadius: '6px',
-                  padding: '0.35rem 0.6rem',
-                  fontSize: '0.85rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  fontFamily: "'Courier New', monospace",
-                  letterSpacing: '0.05em',
-                  outline: 'none',
-                }}
-              >
-                {[1,2,3,4,5,6,7,8,9,10].map(g => (
-                  <option key={g} value={g}>Grade {g}</option>
-                ))}
-              </select>
-            )}
-          </div>
+            <div style={{ display: 'flex', alignItems: 'center', flexDirection: 'row', gap: '8px' }}>
+              {user && (
+                <button 
+                  className="btn btn-dark d-md-none border-0 px-2 py-1"
+                  style={{ backgroundColor: 'transparent' }}
+                  onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+                >
+                  <i className={`bi bi-${mobileSidebarOpen ? 'x-lg' : 'list'} fs-4 text-secondary`}></i>
+                </button>
+              )}
+              <TopbarTab 
+                id="equinox-tab" 
+                icon="star-fill" 
+                label="EQUINOX" 
+                index={0} 
+                isActive={user ? currentView === 'dashboard' : currentView === 'home'} 
+                onClick={() => navigateTo(user ? 'dashboard' : 'home')} 
+              />
+              
+              {/* Grade Level Selector - only show for logged-in users */}
+              {user && userGrade && (
+                <select
+                  value={userGrade}
+                  onChange={(e) => {
+                    const newGrade = parseInt(e.target.value, 10);
+                    const previousGrade = userGrade;
+                    setUserGrade(newGrade);
+                    // Update grade on backend
+                    api.post('/accounts/grade/update/', {
+                        grade_level: newGrade
+                    })
+                    .catch(() => {
+                        setUserGrade(previousGrade);
+                    });
+                  }}
+                  style={{
+                    backgroundColor: '#1f2937',
+                    color: '#f7fafc',
+                    border: '1px solid #374151',
+                    borderRadius: '6px',
+                    padding: '0.35rem 0.6rem',
+                    fontSize: '0.85rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    fontFamily: "'Courier New', monospace",
+                    letterSpacing: '0.05em',
+                    outline: 'none',
+                  }}
+                >
+                  {[1,2,3,4,5,6,7,8,9,10].map(g => (
+                    <option key={g} value={g}>Grade {g}</option>
+                  ))}
+                </select>
+              )}
+            </div>
 
-          <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '12px' }}>
-            {user ? (
-              <>
-                <TopbarAction id="profile-status" icon="person-circle" label={`Signed in as: ${user}`} colorClass="text-warning" onClick={() => navigateTo('profile')} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', backgroundColor: '#1f2937', borderRadius: '6px', border: '1px solid #374151' }}>
-                  <span style={{ color: '#fbbf24', fontSize: '1.1rem' }}>⭐</span>
-                  <span style={{ color: '#f7fafc', fontSize: '0.9rem', fontWeight: 'bold', fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif" }}>{userStars.toLocaleString()}</span>
+            <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '12px' }}>
+              {user ? (
+                <>
+                  <TopbarAction id="profile-status" icon="person-circle" label={`Signed in as: ${user}`} colorClass="text-warning" onClick={() => navigateTo('profile')} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', backgroundColor: '#1f2937', borderRadius: '6px', border: '1px solid #374151' }}>
+                    <span style={{ color: '#fbbf24', fontSize: '1.1rem' }}>⭐</span>
+                    <span style={{ color: '#f7fafc', fontSize: '0.9rem', fontWeight: 'bold', fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif" }}>{userStars.toLocaleString()}</span>
+                  </div>
+                  <TopbarAction id="logout-trigger" icon="box-arrow-right" label="Logout" colorClass="text-danger" onClick={handleLogout} />
+                </>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'row', gap: '8px' }}>
+                  <TopbarTab id="home-tab" icon="house-fill" label="Home" index={1} isActive={currentView === 'home'} onClick={() => navigateTo('home')} />
+                  <TopbarTab id="login-tab" icon="box-arrow-in-right" label="Login" index={2} isActive={currentView === 'login'} onClick={() => navigateTo('login')} />
+                  <TopbarTab id="register-tab" icon="person-plus-fill" label="Register" index={3} isActive={currentView === 'register'} onClick={() => setShowRoleModal(true)} />
                 </div>
-                <TopbarAction id="logout-trigger" icon="box-arrow-right" label="Logout" colorClass="text-danger" onClick={handleLogout} />
-              </>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'row', gap: '8px' }}>
-                <TopbarTab id="home-tab" icon="house-fill" label="Home" index={1} isActive={currentView === 'home'} onClick={() => navigateTo('home')} />
-                <TopbarTab id="login-tab" icon="box-arrow-in-right" label="Login" index={2} isActive={currentView === 'login'} onClick={() => navigateTo('login')} />
-                <TopbarTab id="register-tab" icon="person-plus-fill" label="Register" index={3} isActive={currentView === 'register'} onClick={() => setShowRoleModal(true)} />
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
-      </nav>
+        </nav>
+      )}
 
       {/* 2. BODY CONTAINER SYSTEM */}
       <div style={appLayoutStyles.mainGrid}>
-        {user && (
+        {user && currentView !== 'playthrough' && (
           <>
             <div
                 style={dynamicSidebarStyle}
@@ -544,7 +546,7 @@ export default function App() {
           ...appLayoutStyles.contentContainer,
           backgroundColor: user ? '#1a202c' : 'transparent',
           marginLeft:
-            user
+            user && currentView !== 'playthrough'
               ? (isMobile
                   ? '0'
                   : sidebarExpanded

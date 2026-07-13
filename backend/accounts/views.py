@@ -9,7 +9,10 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from .forms import RegisterForm, InstructorRegisterForm
 from .models import UserProfile
-from playthrough.models import Question, Topic, QuestionChangeRequest, Lesson, LessonChangeRequest
+from playthrough.models import (
+    Question, Topic, QuestionChangeRequest, Lesson, LessonChangeRequest,
+    QuestionTemplate, TemplateChangeRequest
+)
 from topics.models import Topic as TopicModel
 
 
@@ -1355,3 +1358,331 @@ def instructor_my_lesson_change_requests(request):
     } for cr in qs]
 
     return Response(data)
+
+
+# ===========================================================================
+# TEMPLATE MANAGEMENT ENDPOINTS
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# Instructor — List & Verify Templates
+# ---------------------------------------------------------------------------
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def instructor_templates_list(request):
+    """
+    List all question templates with their verification status and sample data.
+    Each template includes a pre-rendered sample question + solution + answer.
+    """
+    _require_instructor(request)
+
+    from django.db.models import Count
+
+    qs = QuestionTemplate.objects.all().order_by('domain', 'template_id')
+
+    # Generate a sample for each template by calling the generator
+    from playthrough.question_generator import EquinoxQuestionGenerator
+    gen = EquinoxQuestionGenerator()
+
+    data = []
+    for template in qs:
+        sample_question = None
+        sample_solution = None
+        sample_answer = None
+
+        # Try to generate a sample if the template is implemented
+        if template.is_implemented:
+            try:
+                # Find the domain and template index
+                domain_funcs = gen.registry.get(template.domain, [])
+                for idx, func in enumerate(domain_funcs):
+                    sample = func()
+                    if sample["id"] == template.template_id:
+                        sample_question = sample["question"]
+                        sample_solution = sample.get("solution", "")
+                        sample_answer = sample["answer"]
+                        break
+            except Exception:
+                pass
+
+        # Count how many questions use this template
+        instance_count = Question.objects.filter(template_id=template.template_id).count()
+
+        data.append({
+            "id": template.id,
+            "template_id": template.template_id,
+            "domain": template.domain,
+            "display_name": template.display_name,
+            "template_text": template.template_text,
+            "solution_template": template.solution_template,
+            "base_difficulty": template.base_difficulty,
+            "is_word_problem": template.is_word_problem,
+            "is_verified": template.is_verified,
+            "is_implemented": template.is_implemented,
+            "is_active": template.is_active,
+            "verified_by": template.verified_by.username if template.verified_by else None,
+            "verified_at": template.verified_at.isoformat() if template.verified_at else None,
+            "instance_count": instance_count,
+            "sample_question": sample_question,
+            "sample_solution": sample_solution,
+            "sample_answer": sample_answer,
+        })
+
+    return Response(data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def instructor_toggle_template_verification(request, template_id):
+    """
+    Toggle the is_verified flag on a QuestionTemplate.
+    Also cascades to all Questions linked to this template.
+    """
+    _require_instructor(request)
+
+    template = get_object_or_404(QuestionTemplate, template_id=template_id)
+    template.is_verified = not template.is_verified
+    template.verified_by = request.user if template.is_verified else None
+    template.verified_at = timezone.now() if template.is_verified else None
+    template.save()
+
+    # Cascade to all questions with this template_id
+    Question.objects.filter(template_id=template_id).update(
+        is_verified=template.is_verified
+    )
+
+    return Response({
+        "template_id": template.template_id,
+        "is_verified": template.is_verified,
+        "message": f"Template '{template.template_id}' verification set to {template.is_verified}. "
+                   f"All {Question.objects.filter(template_id=template_id).count()} linked questions updated.",
+    })
+
+
+# ---------------------------------------------------------------------------
+# Instructor — Template Change Requests
+# ---------------------------------------------------------------------------
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def instructor_template_change_requests(request):
+    """
+    GET:  List the current user's own template change requests.
+    POST: Submit a new template change request (add/edit/delete).
+    """
+    _require_instructor(request)
+
+    if request.method == 'POST':
+        data = request.data
+        change_type = data.get('change_type')
+        
+        if change_type not in ('add', 'edit', 'delete'):
+            return Response({"error": "change_type must be 'add', 'edit', or 'delete'"},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        proposed_data = data.get('proposed_data', {})
+
+        # For edit/delete, validate template exists
+        template = None
+        if change_type in ('edit', 'delete'):
+            tid = proposed_data.get('template_id') or data.get('template_id')
+            if tid:
+                template = QuestionTemplate.objects.filter(template_id=tid).first()
+
+        change_request = TemplateChangeRequest.objects.create(
+            template=template,
+            change_type=change_type,
+            proposed_data=proposed_data,
+            submitted_by=request.user,
+        )
+
+        return Response({
+            "request_id": change_request.id,
+            "message": f"Template {change_type} request submitted for admin review.",
+        }, status=status.HTTP_201_CREATED)
+
+    # GET - list user's own template change requests
+    qs = TemplateChangeRequest.objects.filter(
+        submitted_by=request.user
+    ).select_related('template', 'reviewed_by')
+
+    data = [{
+        "id": cr.id,
+        "change_type": cr.change_type,
+        "proposed_data": cr.proposed_data,
+        "status": cr.status,
+        "reviewed_by": cr.reviewed_by.username if cr.reviewed_by else None,
+        "reviewed_at": cr.reviewed_at.isoformat() if cr.reviewed_at else None,
+        "review_notes": cr.review_notes,
+        "template_id": cr.template.template_id if cr.template else None,
+        "created_at": cr.created_at.isoformat(),
+    } for cr in qs]
+
+    return Response(data)
+
+
+# ---------------------------------------------------------------------------
+# Admin — Template Change Request Management
+# ---------------------------------------------------------------------------
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_template_change_requests_list(request):
+    """List all template change requests, optionally filtered by status."""
+    _require_admin(request)
+
+    qs = TemplateChangeRequest.objects.select_related(
+        'submitted_by', 'reviewed_by', 'template'
+    ).all()
+
+    status_filter = request.query_params.get('status')
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+
+    data = [{
+        "id": cr.id,
+        "change_type": cr.change_type,
+        "proposed_data": cr.proposed_data,
+        "submitted_by": cr.submitted_by.username,
+        "submitted_by_id": cr.submitted_by.id,
+        "status": cr.status,
+        "reviewed_by": cr.reviewed_by.username if cr.reviewed_by else None,
+        "reviewed_at": cr.reviewed_at.isoformat() if cr.reviewed_at else None,
+        "review_notes": cr.review_notes,
+        "template_id": cr.template.template_id if cr.template else None,
+        "created_at": cr.created_at.isoformat(),
+    } for cr in qs]
+
+    return Response(data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def admin_template_change_request_review(request, request_id):
+    """Approve or reject a template change request."""
+    _require_admin(request)
+
+    change_request = get_object_or_404(TemplateChangeRequest, id=request_id)
+
+    if change_request.status != 'pending':
+        return Response({
+            "error": f"This request has already been {change_request.status}."
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    action = request.data.get('action')  # 'approve' or 'reject'
+    review_notes = request.data.get('review_notes', '')
+
+    if action not in ('approve', 'reject'):
+        return Response({"error": "action must be 'approve' or 'reject'"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if action == 'approve':
+        try:
+            _apply_template_change_request(change_request)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    change_request.status = 'approved' if action == 'approve' else 'rejected'
+    change_request.reviewed_by = request.user
+    change_request.reviewed_at = timezone.now()
+    change_request.review_notes = review_notes
+    change_request.save()
+
+    return Response({
+        "message": f"Template change request {change_request.status}.",
+        "request_id": change_request.id,
+        "status": change_request.status,
+    })
+
+
+def _apply_template_change_request(change_request):
+    """Apply the approved template change request to the QuestionTemplate table."""
+    data = change_request.proposed_data
+
+    if change_request.change_type == 'add':
+        # Create a new template record (is_implemented=False — needs developer)
+        QuestionTemplate.objects.create(
+            template_id=data.get('template_id', ''),
+            domain=data.get('domain', 'Arithmetic'),
+            display_name=data.get('display_name', ''),
+            template_text=data.get('template_text', ''),
+            solution_template=data.get('solution_template', ''),
+            base_difficulty=data.get('base_difficulty', 'Novice'),
+            is_word_problem=data.get('is_word_problem', False),
+            is_implemented=False,  # Developer needs to write the generator code
+            is_active=True,
+        )
+
+    elif change_request.change_type == 'edit':
+        template = change_request.template
+        if not template:
+            raise ValueError("Cannot edit: the template no longer exists.")
+        if 'display_name' in data:
+            template.display_name = data['display_name']
+        if 'template_text' in data:
+            template.template_text = data['template_text']
+        if 'solution_template' in data:
+            template.solution_template = data['solution_template']
+        if 'base_difficulty' in data:
+            template.base_difficulty = data['base_difficulty']
+        if 'is_word_problem' in data:
+            template.is_word_problem = data['is_word_problem']
+        template.save()
+
+    elif change_request.change_type == 'delete':
+        template = change_request.template
+        if not template:
+            raise ValueError("Cannot delete: the template no longer exists.")
+        # Soft-delete: mark as inactive instead of hard-deleting
+        template.is_active = False
+        template.save()
+
+    else:
+        raise ValueError(f"Unknown change type: {change_request.change_type}")
+
+
+# ---------------------------------------------------------------------------
+# Admin — Template Pending Count
+# ---------------------------------------------------------------------------
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_template_pending_count(request):
+    """Return the count of pending template change requests."""
+    _require_admin(request)
+
+    count = TemplateChangeRequest.objects.filter(status='pending').count()
+
+    return Response({"template_pending_count": count})
+
+
+# ---------------------------------------------------------------------------
+# Instructor — Batch Verify Questions
+# ---------------------------------------------------------------------------
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def instructor_batch_verify_questions(request):
+    """
+    Batch verify all questions matching the given filters.
+    Body: { "topic_id": 1, "grade_level": 7, "source": "train" }
+    All parameters are optional — omitting a filter means "all".
+    """
+    _require_instructor(request)
+
+    data = request.data
+    qs = Question.objects.all()
+
+    if data.get('topic_id'):
+        qs = qs.filter(topic_id=data['topic_id'])
+    if data.get('grade_level'):
+        qs = qs.filter(grade_level=data['grade_level'])
+    if data.get('source'):
+        qs = qs.filter(source=data['source'])
+
+    count = qs.update(is_verified=True)
+
+    return Response({
+        "message": f"Verified {count} questions.",
+        "count": count,
+    })

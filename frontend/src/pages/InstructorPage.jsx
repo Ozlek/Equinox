@@ -14,9 +14,13 @@ export default function InstructorPage() {
   const [selectedGrade, setSelectedGrade] = useState(null);
   const [editModal, setEditModal] = useState(null);
   const [questionsPage, setQuestionsPage] = useState(1);
-  const [activeTab, setActiveTab] = useState("questions"); // 'questions' | 'lessons' | 'my-requests' | 'my-lesson-requests'
+  const [activeTab, setActiveTab] = useState("questions"); // 'questions' | 'lessons' | 'templates' | 'my-requests' | 'my-lesson-requests'
   const [myRequests, setMyRequests] = useState([]);
   const [myLessonRequests, setMyLessonRequests] = useState([]);
+  const [templates, setTemplates] = useState([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templateDomainFilter, setTemplateDomainFilter] = useState("");
+  const [templateModal, setTemplateModal] = useState(null);
   const [requestsLoading, setRequestsLoading] = useState(false);
   const [instructorProfile, setInstructorProfile] = useState(null);
   const { showToast, ToastContainer } = useToast();
@@ -89,6 +93,40 @@ export default function InstructorPage() {
     }
   }, []);
 
+  const fetchTemplates = useCallback(async () => {
+    setTemplatesLoading(true);
+    try {
+      const res = await api.get("/accounts/instructor/templates/");
+      setTemplates(res.data);
+    } catch (err) {
+      console.error("Failed to load templates", err);
+    } finally {
+      setTemplatesLoading(false);
+    }
+  }, []);
+
+  const handleToggleTemplateVerify = async (templateId) => {
+    try {
+      const res = await api.post(`/accounts/instructor/templates/${templateId}/toggle-verify/`);
+      showToast(res.data.message || "Template verification toggled", "success");
+      fetchTemplates();
+    } catch (err) {
+      console.error("Toggle template verify failed", err);
+      showToast("Failed to toggle template verification", "error");
+    }
+  };
+
+  const handleSubmitTemplateRequest = async (data) => {
+    try {
+      const res = await api.post("/accounts/instructor/template-change-requests/", data);
+      showToast(res.data.message || "Template request submitted!", "success");
+      setTemplateModal(null);
+    } catch (err) {
+      console.error("Template request failed", err);
+      showToast("Failed to submit template request", "error");
+    }
+  };
+
   useEffect(() => {
     setLoading(true);
     Promise.all([fetchTopics(), fetchInstructorProfile()]).finally(() => setLoading(false));
@@ -109,6 +147,10 @@ export default function InstructorPage() {
   useEffect(() => {
     if (activeTab === "my-lesson-requests") fetchMyLessonRequests();
   }, [activeTab, fetchMyLessonRequests]);
+
+  useEffect(() => {
+    if (activeTab === "templates") fetchTemplates();
+  }, [activeTab, fetchTemplates]);
 
   const handleDeleteQuestion = async (id) => {
     const ok = await confirm("Are you sure you want to submit a deletion request for this question? An admin will review it before it is removed.", {
@@ -274,6 +316,10 @@ export default function InstructorPage() {
                   style={{ ...styles.tabBtn, backgroundColor: activeTab === "lessons" ? "#6366f1" : "#e2e8f0", color: activeTab === "lessons" ? "#fff" : "#475569" }}
                   onClick={() => setActiveTab("lessons")}
                 >📖 Lessons</button>
+                <button
+                  style={{ ...styles.tabBtn, backgroundColor: activeTab === "templates" ? "#6366f1" : "#e2e8f0", color: activeTab === "templates" ? "#fff" : "#475569" }}
+                  onClick={() => setActiveTab("templates")}
+                >🧩 Templates</button>
                 <button
                   style={{ ...styles.tabBtn, backgroundColor: activeTab === "my-requests" ? "#6366f1" : "#e2e8f0", color: activeTab === "my-requests" ? "#fff" : "#475569" }}
                   onClick={() => setActiveTab("my-requests")}
@@ -457,6 +503,116 @@ export default function InstructorPage() {
                     </div>
                   )}
                 </div>
+              ) : activeTab === "templates" ? (
+                /* ── TEMPLATES TAB ── */
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+                    <p style={{ margin: 0, fontSize: "0.85rem", color: "#1e293b", fontWeight: "bold" }}>
+                      {templates.filter(t => t.is_verified).length} of {templates.length} templates verified
+                      {templates.length > 0 && ` (${Math.round(templates.filter(t => t.is_verified).length / templates.length * 100)}%)`}
+                    </p>
+                    <button
+                      style={styles.addQBtn}
+                      onClick={() => setTemplateModal({ mode: "add" })}
+                    >+ Request Template</button>
+                  </div>
+                  {/* Domain filter */}
+                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "0.5rem" }}>
+                    <button
+                      style={{ ...styles.gradeChip, backgroundColor: !templateDomainFilter ? "#6366f1" : "#e2e8f0", color: !templateDomainFilter ? "#fff" : "#475569" }}
+                      onClick={() => setTemplateDomainFilter("")}
+                    >All</button>
+                    {["Arithmetic", "Algebra", "Geometry", "Statistics", "Trigonometry"].map(d => (
+                      <button
+                        key={d}
+                        style={{ ...styles.gradeChip, backgroundColor: templateDomainFilter === d ? "#6366f1" : "#e2e8f0", color: templateDomainFilter === d ? "#fff" : "#475569" }}
+                        onClick={() => setTemplateDomainFilter(templateDomainFilter === d ? "" : d)}
+                      >{d}</button>
+                    ))}
+                  </div>
+                  {templatesLoading ? (
+                    <p style={styles.message}>Loading templates...</p>
+                  ) : templates.length === 0 ? (
+                    <p style={styles.message}>No templates found. Run the import command to register templates.</p>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                      {templates
+                        .filter(t => !templateDomainFilter || t.domain === templateDomainFilter)
+                        .map((t) => (
+                        <div key={t.template_id} style={{
+                          border: "1px solid #e2e8f0",
+                          borderRadius: "6px",
+                          padding: "0.6rem 0.75rem",
+                          backgroundColor: "#fffefb",
+                          borderLeft: `4px solid ${t.is_verified ? "#059669" : t.is_implemented ? "#6366f1" : "#f59e0b"}`,
+                        }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem" }}>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                                <strong style={{ color: "#1e293b", fontSize: "0.85rem" }}>
+                                  {t.template_id}
+                                </strong>
+                                <span style={{ fontSize: "0.65rem", color: "#6366f1", fontWeight: "bold" }}>{t.domain}</span>
+                                <span style={{
+                                  fontSize: "0.6rem",
+                                  padding: "1px 6px",
+                                  borderRadius: "999px",
+                                  backgroundColor: t.base_difficulty === "Novice" ? "#d1fae5" : t.base_difficulty === "Intermediate" ? "#fef3c7" : t.base_difficulty === "Advanced" ? "#fee2e2" : "#f3e8ff",
+                                  color: t.base_difficulty === "Novice" ? "#065f46" : t.base_difficulty === "Intermediate" ? "#92400e" : t.base_difficulty === "Advanced" ? "#991b1b" : "#6b21a8",
+                                }}>
+                                  {t.base_difficulty}
+                                </span>
+                                <span style={{ fontSize: "0.6rem", color: "#64748b" }}>
+                                  {t.instance_count} instances
+                                </span>
+                                {!t.is_implemented && (
+                                  <span style={{ fontSize: "0.6rem", padding: "1px 6px", borderRadius: "999px", backgroundColor: "#fef3c7", color: "#92400e" }}>
+                                    Needs Implementation
+                                  </span>
+                                )}
+                              </div>
+                              <p style={{ margin: "2px 0 0", fontSize: "0.8rem", color: "#1e293b", fontWeight: "bold" }}>
+                                {t.display_name}
+                              </p>
+                              {/* Sample question + solution */}
+                              {t.sample_question && (
+                                <div style={{ marginTop: "4px", padding: "0.4rem", backgroundColor: "#f8fafc", borderRadius: "4px" }}>
+                                  <p style={{ margin: 0, fontSize: "0.72rem", color: "#334155" }}>
+                                    <strong>📝 Sample:</strong> {t.sample_question}
+                                  </p>
+                                  {t.sample_solution && (
+                                    <p style={{ margin: "2px 0 0", fontSize: "0.68rem", color: "#64748b", whiteSpace: "pre-line" }}>
+                                      <strong>💡 Solution:</strong> {t.sample_solution}
+                                    </p>
+                                  )}
+                                  {t.sample_answer && (
+                                    <p style={{ margin: "2px 0 0", fontSize: "0.68rem", color: "#059669", fontWeight: "bold" }}>
+                                      ✅ Answer: {t.sample_answer}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "center" }}>
+                              {t.is_implemented && (
+                                <button
+                                  style={{
+                                    ...styles.verifyBtn,
+                                    backgroundColor: t.is_verified ? "#059669" : "#6b7280",
+                                  }}
+                                  onClick={() => handleToggleTemplateVerify(t.template_id)}
+                                  title={t.is_verified ? "Mark as Unverified" : "Mark as Verified"}
+                                >
+                                  {t.is_verified ? "✅ Verified" : "⬜ Verify"}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ) : (
                 /* ── MY LESSON REQUESTS TAB ── */
                 <div>
@@ -508,6 +664,7 @@ export default function InstructorPage() {
       </div>
       {editModal && editModal.type === "lesson" && <LessonCrudModal mode={editModal.mode} initialData={editModal.data} topics={topics} onSave={handleSaveLesson} onClose={() => setEditModal(null)} />}
       {editModal && editModal.type !== "lesson" && <QuestionCrudModal mode={editModal.mode} initialData={editModal.data} topics={topics} onSave={handleSaveQuestion} onClose={() => setEditModal(null)} />}
+      {templateModal && <TemplateRequestModal mode={templateModal.mode} onSave={handleSubmitTemplateRequest} onClose={() => setTemplateModal(null)} />}
     </div>
   );
 }
@@ -581,6 +738,83 @@ function LessonCrudModal({ mode, initialData, topics, onSave, onClose }) {
               ℹ️ This will be submitted as a change request for admin review.
             </p>
             <button type="submit" style={styles.saveBtn}>📤 Submit for Review</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TemplateRequestModal({ mode, onSave, onClose }) {
+  const [form, setForm] = useState({
+    change_type: "add",
+    proposed_data: {
+      template_id: "",
+      domain: "Arithmetic",
+      display_name: "",
+      template_text: "",
+      solution_template: "",
+      base_difficulty: "Novice",
+      is_word_problem: false,
+      rationale: "",
+    }
+  });
+  const handleChange = (field, value) => setForm((prev) => ({ ...prev, proposed_data: { ...prev.proposed_data, [field]: value } }));
+  const handleChangeType = (value) => setForm((prev) => ({ ...prev, change_type: value }));
+  const handleSubmit = (e) => { e.preventDefault(); onSave(form); };
+  const inputStyle = { width: "100%", padding: "0.5rem 0.7rem", border: "1px solid #cbd5e1", borderRadius: "3px", fontSize: "0.85rem", fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif", boxSizing: "border-box", outline: "none" };
+  const labelStyle = { fontSize: "0.65rem", fontWeight: "bold", color: "#475569", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "2px" };
+  return (
+    <div style={styles.overlay} onClick={onClose}>
+      <div style={{ ...styles.modal, maxWidth: "640px" }} onClick={(e) => e.stopPropagation()}>
+        <div style={styles.modalHeader}>
+          <h3 style={{ margin: 0, color: "#f8fafc", fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif" }}>Request New Template</h3>
+          <button onClick={onClose} style={styles.closeBtn}>✕</button>
+        </div>
+        <div style={styles.modalBody}>
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+            <div>
+              <label style={labelStyle}>Request Type</label>
+              <select style={inputStyle} value={form.change_type} onChange={(e) => handleChangeType(e.target.value)}>
+                <option value="add">Add New Template</option>
+                <option value="edit">Edit Existing Template</option>
+                <option value="delete">Delete Template</option>
+              </select>
+            </div>
+            <div><label style={labelStyle}>Domain</label>
+              <select style={inputStyle} value={form.proposed_data.domain} onChange={(e) => handleChange("domain", e.target.value)}>
+                <option value="Arithmetic">Arithmetic</option>
+                <option value="Algebra">Algebra</option>
+                <option value="Geometry">Geometry</option>
+                <option value="Statistics">Statistics</option>
+                <option value="Trigonometry">Trigonometry</option>
+              </select>
+            </div>
+            <div><label style={labelStyle}>Template ID (e.g., arith_11)</label><input style={inputStyle} value={form.proposed_data.template_id} onChange={(e) => handleChange("template_id", e.target.value)} placeholder="e.g., arith_11" /></div>
+            <div><label style={labelStyle}>Display Name</label><input style={inputStyle} value={form.proposed_data.display_name} onChange={(e) => handleChange("display_name", e.target.value)} placeholder="e.g., Mixed Operations" /></div>
+            <div><label style={labelStyle}>Question Template (use {'{placeholder}'} variables)</label><textarea style={{ ...inputStyle, minHeight: "50px" }} value={form.proposed_data.template_text} onChange={(e) => handleChange("template_text", e.target.value)} placeholder="e.g., Calculate: {a} + {b} x {c}" /></div>
+            <div><label style={labelStyle}>Solution Template (step-by-step)</label><textarea style={{ ...inputStyle, minHeight: "80px" }} value={form.proposed_data.solution_template} onChange={(e) => handleChange("solution_template", e.target.value)} placeholder="Step 1: Multiply {b} x {c} = {b_times_c}. Step 2: Add {a} + {b_times_c} = {result}." /></div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+              <div><label style={labelStyle}>Difficulty</label>
+                <select style={inputStyle} value={form.proposed_data.base_difficulty} onChange={(e) => handleChange("base_difficulty", e.target.value)}>
+                  <option value="Novice">Novice</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Advanced">Advanced</option>
+                  <option value="Expert">Expert</option>
+                </select>
+              </div>
+              <div><label style={labelStyle}>Word Problem?</label>
+                <select style={inputStyle} value={form.proposed_data.is_word_problem} onChange={(e) => handleChange("is_word_problem", e.target.value === "true")}>
+                  <option value="false">No</option>
+                  <option value="true">Yes</option>
+                </select>
+              </div>
+            </div>
+            <div><label style={labelStyle}>Rationale (why is this template needed?)</label><textarea style={{ ...inputStyle, minHeight: "40px" }} value={form.proposed_data.rationale} onChange={(e) => handleChange("rationale", e.target.value)} placeholder="Explain why this template would be useful..." /></div>
+            <p style={{ fontSize: "0.7rem", color: "#6366f1", textAlign: "center", margin: "0" }}>
+              This will be submitted as a change request. An admin will review it, and a developer will implement the generator code.
+            </p>
+            <button type="submit" style={styles.saveBtn}>Submit Template Request</button>
           </form>
         </div>
       </div>

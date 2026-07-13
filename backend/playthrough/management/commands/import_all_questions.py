@@ -46,6 +46,7 @@ class Command(BaseCommand):
         self.stdout.write("=" * 60)
         
         total_imported = 0
+        total_verified = 0
         
         # 1. Import training data
         if not options['skip_train']:
@@ -216,9 +217,16 @@ class Command(BaseCommand):
     def generate_seed_questions(self, count_per_domain):
         """
         Generate procedurally generated questions using EquinoxQuestionGenerator.
+        Also registers all 50 templates in the QuestionTemplate table.
+        Seed questions are auto-verified since they are mathematically correct.
         """
         gen = EquinoxQuestionGenerator()
         domains = ["Arithmetic", "Algebra", "Geometry", "Statistics", "Trigonometry"]
+        
+        # Step 1: Register all templates in the QuestionTemplate table
+        self.stdout.write("    Registering question templates...")
+        created_count, updated_count = gen.register_templates()
+        self.stdout.write(f"    ✓ Templates: {created_count} created, {updated_count} updated")
         
         # Get or create topics
         topic_objects = {}
@@ -241,7 +249,6 @@ class Command(BaseCommand):
             # Calculate questions per template
             templates = gen.registry[domain]
             num_templates = len(templates)
-            # count_per_domain is total per domain, divide by number of templates
             questions_per_template = max(1, count_per_domain // num_templates)
             
             created_for_domain = 0
@@ -250,11 +257,21 @@ class Command(BaseCommand):
                 for _ in range(questions_per_template):
                     try:
                         raw_data = gen.generate(domain, template_index=template_idx)
+                        template_id = raw_data['id']
+                        solution_text = raw_data.get('solution', '')
+                        correct_ans = raw_data['answer']
+                        
+                        # Parse difficulty
+                        difficulty = raw_data.get('base_difficulty', 'Novice')
+                        if isinstance(difficulty, str):
+                            difficulty_map = {'Novice': 1.0, 'Intermediate': 2.0, 'Advanced': 3.0, 'Expert': 4.0}
+                            difficulty = difficulty_map.get(difficulty, 1.0)
+                        else:
+                            difficulty = float(difficulty)
                         
                         # 50/50 split between MCQ and text-box
                         if random.random() < 0.5:
                             # MCQ format
-                            correct_ans = raw_data['answer']
                             try:
                                 val = int(float(correct_ans))
                                 distractors = [
@@ -276,51 +293,39 @@ class Command(BaseCommand):
                             elif choices[2] == str(correct_ans): correct_letter = "C"
                             elif choices[3] == str(correct_ans): correct_letter = "D"
                             
-                            # Parse difficulty (must be float)
-                            difficulty = raw_data.get('base_difficulty', 'Novice')
-                            if isinstance(difficulty, str):
-                                difficulty_map = {'Novice': 1.0, 'Intermediate': 2.0, 'Advanced': 3.0, 'Expert': 4.0}
-                                difficulty = difficulty_map.get(difficulty, 1.0)
-                            else:
-                                difficulty = float(difficulty)
-                            
                             Question.objects.create(
                                 topic=topic_instance,
                                 question_text=raw_data['question'],
-                                question_solution=f"Step-by-step solution:\n1. Identify the given values\n2. Apply the relevant formula\n3. Calculate the result\n4. Verify the answer\n\nAnswer: {correct_ans}",
+                                question_solution=solution_text,
                                 choice_a=choices[0],
                                 choice_b=choices[1],
                                 choice_c=choices[2],
                                 choice_d=choices[3],
                                 correct_answer=correct_letter,
                                 difficulty=difficulty,
-                                grade_level=7,  # Junior High = grade 7
+                                grade_level=7,
                                 source='seed',
-                                is_word_problem=False
+                                is_word_problem=False,
+                                is_verified=True,  # Auto-verify: mathematically correct by construction
+                                template_id=template_id
                             )
                         else:
                             # Text-box format
-                            # Parse difficulty (must be float)
-                            difficulty = raw_data.get('base_difficulty', 'Novice')
-                            if isinstance(difficulty, str):
-                                difficulty_map = {'Novice': 1.0, 'Intermediate': 2.0, 'Advanced': 3.0, 'Expert': 4.0}
-                                difficulty = difficulty_map.get(difficulty, 1.0)
-                            else:
-                                difficulty = float(difficulty)
-                            
                             Question.objects.create(
                                 topic=topic_instance,
                                 question_text=raw_data['question'],
-                                question_solution=f"Step-by-step solution:\n1. Identify the given values\n2. Apply the relevant formula\n3. Calculate the result\n4. Verify the answer\n\nAnswer: {raw_data['answer']}",
+                                question_solution=solution_text,
                                 choice_a=None,
                                 choice_b=None,
                                 choice_c=None,
                                 choice_d=None,
-                                correct_answer=raw_data['answer'],
+                                correct_answer=correct_ans,
                                 difficulty=difficulty,
-                                grade_level=7,  # Junior High = grade 7
+                                grade_level=7,
                                 source='seed',
-                                is_word_problem=False
+                                is_word_problem=False,
+                                is_verified=True,  # Auto-verify: mathematically correct by construction
+                                template_id=template_id
                             )
                         
                         created_for_domain += 1

@@ -548,6 +548,7 @@ if (gameState?.is_completed) {
                 </div>
               )}
               {activeMods.includes('one_life') && <div style={streakStyles.oneLife}>❤️‍🔥 One Life</div>}
+              {activeMods.includes('easy_going') && <div style={streakStyles.easyGoing}>🍃 Easy-Going Mode</div>}
               {gameState.active_modifier_type && (
                 <div style={{ ...streakStyles.itemBadge, borderColor: '#2563eb', color: '#2563eb' }}>
                   ⚙️ {gameState.active_modifier_type.replace('_', ' ')}
@@ -771,11 +772,12 @@ const streakStyles = {
   timer: { backgroundColor: '#f8fafc', padding: '0.3rem 0.6rem', borderRadius: '6px', fontWeight: 'bold', fontSize: '0.8rem', border: '1px solid #e2e8f0', fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif" },
   oneLife: { backgroundColor: '#fef2f2', color: '#dc2626', padding: '0.3rem 0.6rem', borderRadius: '6px', fontWeight: 'bold', fontSize: '0.8rem', fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif" },
   itemBadge: { padding: '0.3rem 0.6rem', borderRadius: '6px', border: '1px solid', fontWeight: 'bold', fontSize: '0.8rem', backgroundColor: '#f8fafc', fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif" },
+  easyGoing: { backgroundColor: '#f0fdf4', color: '#16a34a', padding: '0.3rem 0.6rem', borderRadius: '6px', fontWeight: 'bold', fontSize: '0.8rem', fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif" },
 };
 
 const styles = {
   container: {
-    minHeight: 'calc(100vh - 60px)',
+    minHeight: '100vh',
     backgroundColor: '#f5f3f0',
     backgroundImage: [
       `url('data:image/svg+xml;utf8,<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg"><text x="50" y="70" font-size="48" font-weight="bold" fill="rgba(239,68,68,0.25)" text-anchor="middle">+</text><text x="200" y="120" font-size="48" font-weight="bold" fill="rgba(251,191,36,0.25)" text-anchor="middle">−</text><text x="350" y="170" font-size="48" font-weight="bold" fill="rgba(79,70,229,0.25)" text-anchor="middle">×</text><text x="100" y="220" font-size="48" font-weight="bold" fill="rgba(34,197,94,0.3)" text-anchor="middle">÷</text><text x="300" y="280" font-size="48" font-weight="bold" fill="rgba(239,68,68,0.25)" text-anchor="middle">+</text><text x="150" y="330" font-size="48" font-weight="bold" fill="rgba(251,191,36,0.25)" text-anchor="middle">−</text></svg>')`,
