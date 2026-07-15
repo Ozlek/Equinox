@@ -16,6 +16,8 @@ export default function AdminPage() {
   const [selectedTopicId, setSelectedTopicId] = useState(null);
   const [selectedGrade, setSelectedGrade] = useState(null);
   const [editModal, setEditModal] = useState(null);
+  const [questionSearchQuery, setQuestionSearchQuery] = useState("");
+  const [verifiedFilter, setVerifiedFilter] = useState("all"); // 'all' | 'verified' | 'unverified'
   const [pendingCount, setPendingCount] = useState(0);
   const [lessonPendingCount, setLessonPendingCount] = useState(0);
   const [rejectModal, setRejectModal] = useState(null); // { requestId, request } or null
@@ -584,6 +586,15 @@ const fetchChangeRequests = useCallback(async () => {
                             </span>
                           </div>
                           <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                            {selectedTopicId === topic.id && (
+                              <input
+                                type="text"
+                                placeholder="🔍 Search questions..."
+                                value={questionSearchQuery}
+                                onChange={(e) => { setQuestionSearchQuery(e.target.value); setQuestionsPage(1); }}
+                                style={styles.questionSearchInput}
+                              />
+                            )}
                             <button
                               style={{
                                 ...styles.visibilityToggle,
@@ -645,11 +656,32 @@ const fetchChangeRequests = useCallback(async () => {
                                   Grade {g}
                                 </button>
                               ))}
+                              {/* Verified filter toggles */}
+                              <div style={{ marginLeft: "auto", display: "flex", gap: "4px" }}>
+                                <button
+                                  style={{ ...styles.gradeChip, backgroundColor: verifiedFilter === "all" ? "#3b82f6" : "#e2e8f0", color: verifiedFilter === "all" ? "#fff" : "#475569" }}
+                                  onClick={() => { setVerifiedFilter("all"); setQuestionsPage(1); }}
+                                >All</button>
+                                <button
+                                  style={{ ...styles.gradeChip, backgroundColor: verifiedFilter === "verified" ? "#059669" : "#e2e8f0", color: verifiedFilter === "verified" ? "#fff" : "#475569" }}
+                                  onClick={() => { setVerifiedFilter("verified"); setQuestionsPage(1); }}
+                                >✅ Verified</button>
+                                <button
+                                  style={{ ...styles.gradeChip, backgroundColor: verifiedFilter === "unverified" ? "#6b7280" : "#e2e8f0", color: verifiedFilter === "unverified" ? "#fff" : "#475569" }}
+                                  onClick={() => { setVerifiedFilter("unverified"); setQuestionsPage(1); }}
+                                >⬜ Unverified</button>
+                              </div>
                             </div>
 
                             {(() => {
-                              const filteredQuestions = questions
-                                .filter((q) => q.topic_id === topic.id && (!selectedGrade || q.grade_level === selectedGrade));
+                              const filteredQuestions = questions.filter((q) => {
+                                if (q.topic_id !== topic.id) return false;
+                                if (selectedGrade && q.grade_level !== selectedGrade) return false;
+                                if (questionSearchQuery && !q.question_text.toLowerCase().includes(questionSearchQuery.toLowerCase())) return false;
+                                if (verifiedFilter === "verified" && !q.is_verified) return false;
+                                if (verifiedFilter === "unverified" && q.is_verified) return false;
+                                return true;
+                              });
                               const totalQPages = Math.max(1, Math.ceil(filteredQuestions.length / ITEMS_PER_PAGE));
                               const safeQPage = Math.min(questionsPage, totalQPages);
                               const paginatedQuestions = filteredQuestions.slice(
@@ -1829,6 +1861,17 @@ const styles = {
     backgroundColor: "#f1f5f9",
     borderColor: "#94a3b8",
     color: "#64748b",
+  },
+  questionSearchInput: {
+    padding: "3px 8px",
+    border: "1px solid #cbd5e1",
+    borderRadius: "4px",
+    fontSize: "0.7rem",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
+    outline: "none",
+    width: "140px",
+    backgroundColor: "#fff",
+    color: "#000",
   },
   addQBtn: {
     padding: "3px 8px",

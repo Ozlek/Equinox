@@ -23,6 +23,8 @@ export default function InstructorPage() {
   const [templateModal, setTemplateModal] = useState(null);
   const [requestsLoading, setRequestsLoading] = useState(false);
   const [instructorProfile, setInstructorProfile] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [verifiedFilter, setVerifiedFilter] = useState("all"); // 'all' | 'verified' | 'unverified'
   const { showToast, ToastContainer } = useToast();
   const { confirm, ConfirmDialogComponent } = useConfirmDialog();
 
@@ -343,6 +345,15 @@ export default function InstructorPage() {
                               <strong style={{ color: "#1e293b", fontSize: "1rem" }}>{topic.name}</strong>
                               <span style={styles.topicMeta}>Grades {topic.grade_level_min}–{topic.grade_level_max} · {topic.total_questions} questions</span>
                             </div>
+                            {selectedTopicId === topic.id && (
+                              <input
+                                type="text"
+                                placeholder="🔍 Search questions..."
+                                value={searchQuery}
+                                onChange={(e) => { setSearchQuery(e.target.value); setQuestionsPage(1); }}
+                                style={styles.searchInput}
+                              />
+                            )}
                             <button style={styles.addQBtn} onClick={() => { setSelectedTopicId(topic.id); setEditModal({ type: "question", mode: "add", data: { topic_id: topic.id, grade_level: topic.grade_level_min } }); }}>+ Add Question</button>
                           </div>
                           {selectedTopicId === topic.id && (
@@ -351,9 +362,31 @@ export default function InstructorPage() {
                                 {Array.from({ length: topic.grade_level_max - topic.grade_level_min + 1 }, (_, i) => topic.grade_level_min + i).map((g) => (
                                   <button key={g} style={{ ...styles.gradeChip, backgroundColor: selectedGrade === g ? "#6366f1" : "#e2e8f0", color: selectedGrade === g ? "#fff" : "#475569" }} onClick={() => { setSelectedGrade(selectedGrade === g ? null : g); setQuestionsPage(1); }}>Grade {g}</button>
                                 ))}
+                                {/* Verified filter toggles */}
+                                <div style={{ marginLeft: "auto", display: "flex", gap: "4px" }}>
+                                  <button
+                                    style={{ ...styles.gradeChip, backgroundColor: verifiedFilter === "all" ? "#6366f1" : "#e2e8f0", color: verifiedFilter === "all" ? "#fff" : "#475569" }}
+                                    onClick={() => { setVerifiedFilter("all"); setQuestionsPage(1); }}
+                                  >All</button>
+                                  <button
+                                    style={{ ...styles.gradeChip, backgroundColor: verifiedFilter === "verified" ? "#059669" : "#e2e8f0", color: verifiedFilter === "verified" ? "#fff" : "#475569" }}
+                                    onClick={() => { setVerifiedFilter("verified"); setQuestionsPage(1); }}
+                                  >✅ Verified</button>
+                                  <button
+                                    style={{ ...styles.gradeChip, backgroundColor: verifiedFilter === "unverified" ? "#6b7280" : "#e2e8f0", color: verifiedFilter === "unverified" ? "#fff" : "#475569" }}
+                                    onClick={() => { setVerifiedFilter("unverified"); setQuestionsPage(1); }}
+                                  >⬜ Unverified</button>
+                                </div>
                               </div>
                               {(() => {
-                                const filteredQuestions = questions.filter((q) => q.topic_id === topic.id && (!selectedGrade || q.grade_level === selectedGrade));
+                                const filteredQuestions = questions.filter((q) => {
+                                  if (q.topic_id !== topic.id) return false;
+                                  if (selectedGrade && q.grade_level !== selectedGrade) return false;
+                                  if (searchQuery && !q.question_text.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+                                  if (verifiedFilter === "verified" && !q.is_verified) return false;
+                                  if (verifiedFilter === "unverified" && q.is_verified) return false;
+                                  return true;
+                                });
                                 const totalQPages = Math.max(1, Math.ceil(filteredQuestions.length / ITEMS_PER_PAGE));
                                 const safeQPage = Math.min(questionsPage, totalQPages);
                                 const paginatedQuestions = filteredQuestions.slice((safeQPage - 1) * ITEMS_PER_PAGE, safeQPage * ITEMS_PER_PAGE);
@@ -864,6 +897,7 @@ const styles = {
   editBtn: { background: "none", border: "none", cursor: "pointer", fontSize: "0.85rem", padding: "2px" },
   deleteBtn: { background: "none", border: "none", cursor: "pointer", fontSize: "0.85rem", padding: "2px" },
   verifyBtn: { border: "none", borderRadius: "4px", color: "#fff", cursor: "pointer", fontSize: "0.6rem", fontWeight: "bold", padding: "3px 6px", fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif", whiteSpace: "nowrap" },
+  searchInput: { padding: "3px 8px", border: "1px solid #cbd5e1", borderRadius: "4px", fontSize: "0.7rem", fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif", outline: "none", width: "140px", backgroundColor: "#fff", color: "#000" },
   addQBtn: { padding: "3px 8px", border: "1px solid #6366f1", borderRadius: "4px", background: "#eef2ff", color: "#4338ca", cursor: "pointer", fontSize: "0.7rem", fontWeight: "bold", fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif" },
   addQuestionBtn: { width: "100%", padding: "0.35rem", border: "1px dashed #6366f1", borderRadius: "4px", background: "none", color: "#6366f1", cursor: "pointer", marginTop: "0.5rem", fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif", fontSize: "0.75rem" },
   pagination: { display: "flex", justifyContent: "center", alignItems: "center", gap: "12px", padding: "0.75rem 0", flexWrap: "wrap" },

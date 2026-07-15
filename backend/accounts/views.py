@@ -400,11 +400,20 @@ def admin_questions_list(request):
 
     topic_id = request.query_params.get('topic_id')
     grade_level = request.query_params.get('grade_level')
+    search_query = request.query_params.get('search')
+    verified_filter = request.query_params.get('is_verified')
 
     if topic_id:
         qs = qs.filter(topic_id=topic_id)
     if grade_level:
         qs = qs.filter(grade_level=grade_level)
+    if search_query:
+        qs = qs.filter(question_text__icontains=search_query)
+    if verified_filter is not None:
+        if verified_filter.lower() == 'true':
+            qs = qs.filter(is_verified=True)
+        elif verified_filter.lower() == 'false':
+            qs = qs.filter(is_verified=False)
 
     data = [{
         "id": q.id,
@@ -725,11 +734,20 @@ def instructor_questions_list(request):
 
     topic_id = request.query_params.get('topic_id')
     grade_level = request.query_params.get('grade_level')
+    search_query = request.query_params.get('search')
+    verified_filter = request.query_params.get('is_verified')
 
     if topic_id:
         qs = qs.filter(topic_id=topic_id)
     if grade_level:
         qs = qs.filter(grade_level=grade_level)
+    if search_query:
+        qs = qs.filter(question_text__icontains=search_query)
+    if verified_filter is not None:
+        if verified_filter.lower() == 'true':
+            qs = qs.filter(is_verified=True)
+        elif verified_filter.lower() == 'false':
+            qs = qs.filter(is_verified=False)
 
     data = [{
         "id": q.id,
