@@ -58,6 +58,7 @@ const padStyles = {
     padding: '0.75rem 0',
     fontSize: '1.1rem',
     fontWeight: 'bold',
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     cursor: 'pointer',
     minHeight: '48px', 
     display: 'flex',

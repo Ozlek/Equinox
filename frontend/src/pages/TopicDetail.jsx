@@ -930,7 +930,7 @@ const styles = {
   message: {
     textAlign: 'center',
     color: '#475569',
-    fontFamily: "'Georgia', 'Times New Roman', serif",
+    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
     fontSize: '1rem',
     fontStyle: 'italic',
     padding: '5rem',

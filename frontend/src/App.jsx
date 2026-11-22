@@ -231,7 +231,7 @@ export default function App() {
       <div className="d-flex justify-content-center align-items-center vh-100 bg-dark text-white">
         <div className="text-center">
           <div className="spinner-border text-info mb-3" role="status"></div>
-          <div className="fw-bold tracking-wide">Synchronizing Equinox Core Engine...</div>
+          <div className="fw-bold tracking-wide">Loading...</div>
         </div>
       </div>
     );
@@ -483,7 +483,7 @@ export default function App() {
                     fontSize: '0.85rem',
                     fontWeight: '600',
                     cursor: 'pointer',
-                    fontFamily: "'Courier New', monospace",
+                    fontFamily: "'Patrick Hand', 'Segoe UI', system-ui, sans-serif",
                     letterSpacing: '0.05em',
                     outline: 'none',
                   }}
